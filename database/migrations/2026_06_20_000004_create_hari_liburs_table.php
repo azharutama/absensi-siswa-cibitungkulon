@@ -11,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('gurus', function (Blueprint $table) {
+        Schema::create('hari_liburs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('periode_id')->constrained('periodes');
+            $table->string('nama_libur');
+            $table->string('jenis');
+            $table->date('tanggal');
+            $table->string('hari');
             $table->timestamps();
         });
     }
@@ -22,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('gurus');
+        Schema::dropIfExists('hari_liburs');
     }
 };
