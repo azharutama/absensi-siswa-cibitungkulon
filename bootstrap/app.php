@@ -13,9 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'guru' => \App\Http\Middleware\GuruMiddleware::class,
-            'operator' => \App\Http\Middleware\OperatorMiddleware::class,
-            'kepala_sekolah' => \App\Http\Middleware\KepalaSekolahMiddleware::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
