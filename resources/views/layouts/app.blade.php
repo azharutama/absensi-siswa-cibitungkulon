@@ -14,23 +14,40 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
-            @include('layouts.navigation')
+    <body class="font-sans antialiased bg-gray-50">
+        <div class="flex h-screen">
+            <!-- Sidebar -->
+            @include('layouts.sidebar')
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
+            <!-- Main Content -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Top Header -->
+                <header class="bg-white border-b border-gray-200">
+                    <div class="px-8 py-4 flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">
+                                @if(auth()->user()->role === 'guru')
+                                    Dashboard Guru
+                                @elseif(auth()->user()->role === 'operator')
+                                    Dashboard Operator
+                                @elseif(auth()->user()->role === 'kepala_sekolah')
+                                    Dashboard Kepala Sekolah
+                                @endif
+                            </h1>
+                        </div>
+                        <span class="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-50 rounded-full capitalize">
+                            {{ auth()->user()->role }}
+                        </span>
                     </div>
                 </header>
-            @endisset
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+                <!-- Page Content -->
+                <main class="flex-1 overflow-auto">
+                    <div class="px-8 py-6">
+                        {{ $slot }}
+                    </div>
+                </main>
+            </div>
         </div>
     </body>
 </html>
