@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
     {
         User::create([
             'nama' => 'Operator SD',
-            'email' => 'operator@cibitungkulon.test',
+            'email' => 'operator@gmail.com',
             'no_telepon' => '081234567890',
             'role' => 'operator',
             'jenis_kelamin' => 'laki-laki',
@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
 
         User::create([
             'nama' => 'Guru SD',
-            'email' => 'guru@cibitungkulon.test',
+            'email' => 'guru@gmail.com',
             'no_telepon' => '081234567891',
             'role' => 'guru',
             'jenis_kelamin' => 'perempuan',
@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
 
         User::create([
             'nama' => 'Kepala Sekolah',
-            'email' => 'kepsek@cibitungkulon.test',
+            'email' => 'kepsek@gmail.com',
             'no_telepon' => '081234567892',
             'role' => 'kepala_sekolah',
             'jenis_kelamin' => 'laki-laki',
