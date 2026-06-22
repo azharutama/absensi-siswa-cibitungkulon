@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -36,5 +37,15 @@ class User extends Authenticatable
     public function rekaps(): HasMany
     {
         return $this->hasMany(Rekap::class);
+    }
+
+    /**
+     * Relasi many-to-many ke model Kelas
+     */
+    public function kelas(): BelongsToMany
+    {
+        return $this->belongsToMany(Kelas::class, 'kelas_user', 'user_id', 'kelas_id')
+            ->withPivot('is_wali_kelas')
+            ->withTimestamps();
     }
 }
