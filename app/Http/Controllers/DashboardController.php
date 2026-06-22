@@ -14,13 +14,13 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // Inisialisasi variabel untuk counter card
+
         $totalKelas = 0;
         $totalSiswa = 0;
-        $totalGuru = 0; // Hanya untuk Operator/Kepala Sekolah
+        $totalGuru = 0;
 
         if ($user->role === 'operator' || $user->role === 'kepala sekolah') {
-            // Operator & Kepala Sekolah bisa melihat SEMUA data
+            // Operator & Kepala 
             $totalKelas = Kelas::count();
             $totalSiswa = Siswa::count();
             $totalGuru  = User::where('role', 'guru')->count();
