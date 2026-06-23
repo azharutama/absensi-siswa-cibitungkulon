@@ -24,8 +24,14 @@ class SiswaController extends Controller
 
         $siswas = Siswa::query()
             ->select([
-                'id', 'nis', 'nisn', 'nama_siswa', 'jenis_kelamin',
-                'kelas_id', 'periode_id', 'status',
+                'id',
+                'nis',
+                'nisn',
+                'nama_siswa',
+                'jenis_kelamin',
+                'kelas_id',
+                'periode_id',
+                'status',
             ])
             ->with([
                 'kelas:id,nama_kelas',
@@ -38,9 +44,9 @@ class SiswaController extends Controller
                         ->orWhere('nisn', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['kelas_id'] ?? null, fn ($query, $kelasId) => $query->where('kelas_id', $kelasId))
-            ->when($filters['periode_id'] ?? null, fn ($query, $periodeId) => $query->where('periode_id', $periodeId))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['kelas_id'] ?? null, fn($query, $kelasId) => $query->where('kelas_id', $kelasId))
+            ->when($filters['periode_id'] ?? null, fn($query, $periodeId) => $query->where('periode_id', $periodeId))
+            ->when($filters['status'] ?? null, fn($query, $status) => $query->where('status', $status))
             ->latest()
             ->paginate(15)
             ->withQueryString();
@@ -65,7 +71,16 @@ class SiswaController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Siswa::create($this->validatedData($request));
+        $data = $this->validatedData($request);
+
+        // Cari data kelas terpilih untuk mengekstrak periode_id bawaannya
+        $kelasSelected = Kelas::findOrFail($data['kelas_id']);
+
+        // Inject otomatis data periode_id dan status default siswa baru
+        $data['periode_id'] = $kelasSelected->periode_id;
+        $data['status'] = 'aktif';
+
+        Siswa::create($data);
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil ditambahkan.');
@@ -88,7 +103,13 @@ class SiswaController extends Controller
 
     public function update(Request $request, Siswa $siswa): RedirectResponse
     {
-        $siswa->update($this->validatedData($request, $siswa));
+        $data = $this->validatedData($request, $siswa);
+
+        // Jika kelas diubah, update juga periode_id agar mengikuti kelas yang baru
+        $kelasSelected = Kelas::findOrFail($data['kelas_id']);
+        $data['periode_id'] = $kelasSelected->periode_id;
+
+        $siswa->update($data);
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil diperbarui.');
@@ -107,11 +128,15 @@ class SiswaController extends Controller
     {
         return $request->validate([
             'nis' => [
-                'nullable', 'string', 'max:50',
+                'nullable',
+                'string',
+                'max:50',
                 Rule::unique('siswas', 'nis')->ignore($siswa),
             ],
             'nisn' => [
-                'nullable', 'string', 'max:50',
+                'nullable',
+                'string',
+                'max:50',
                 Rule::unique('siswas', 'nisn')->ignore($siswa),
             ],
             'nama_siswa' => ['required', 'string', 'max:255'],
@@ -123,8 +148,7 @@ class SiswaController extends Controller
             'nama_wali' => ['nullable', 'string', 'max:255'],
             'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
             'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-            'periode_id' => ['required', 'integer', 'exists:periodes,id'],
-            'status' => ['required', 'string', 'max:50'],
+            'alamat' => ['nullable', 'string'],
         ]);
     }
 

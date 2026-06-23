@@ -34,7 +34,7 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $index + 1 }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b font-mono">{{ $siswa->nisn }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $siswa->nama }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $siswa->nama_siswa }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->kelas->nama_kelas ?? '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b capitalize">{{ $siswa->jenis_kelamin }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
