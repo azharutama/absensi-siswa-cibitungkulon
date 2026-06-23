@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuruController;
+use App\Http\Controllers\KelasController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SiswaController;
 use Illuminate\Support\Facades\Route;
@@ -21,8 +22,7 @@ Route::middleware(['auth'])->group(function () {
         // Kelola Siswa (Otomatis menghasilkan URL: /siswa, /siswa/create, dll)
         Route::resource('siswa', SiswaController::class);
 
-        Route::get('/kelas', fn() => view('pages.placeholder', ['title' => 'Data Kelas']))->name('kelas.index');
-        Route::delete('/destroy/{id}', [GuruController::class, 'destroy'])->name('guru.destroy');
+        Route::resource('kelas', KelasController::class);
 
         Route::get('/periode', fn() => view('pages.placeholder', ['title' => 'Data Periode']))->name('periode.index');
     });

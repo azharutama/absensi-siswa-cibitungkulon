@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nama_kelas');
 
-            $table->foreignId('periode_id')->constrained('periodes');
+            $table->foreignId('periode_id')->nullable()->constrained('periodes');
             $table->string('status');
             $table->timestamps();
         });
