@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuruController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SiswaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -14,14 +15,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware('role:operator')->group(function () {
 
-        //kelola guru 
-        Route::get('/index', [GuruController::class, 'index'])->name('guru.index');
-        Route::get('/create', [GuruController::class, 'create'])->name('guru.create');
-        Route::post('/store', [GuruController::class, 'store'])->name('guru.store');
-        Route::get('/edit/{id}', [GuruController::class, 'edit'])->name('guru.edit');
-        Route::patch('/update/{id}', [GuruController::class, 'update'])->name('guru.update');
+        // Kelola Guru (Otomatis menghasilkan URL: /guru, /guru/create, dll)
+        Route::resource('guru', GuruController::class);
 
-        Route::get('/siswa', fn() => view('pages.placeholder', ['title' => 'Data Siswa']))->name('siswa.index');
+        // Kelola Siswa (Otomatis menghasilkan URL: /siswa, /siswa/create, dll)
+        Route::resource('siswa', SiswaController::class);
+
         Route::get('/kelas', fn() => view('pages.placeholder', ['title' => 'Data Kelas']))->name('kelas.index');
         Route::delete('/destroy/{id}', [GuruController::class, 'destroy'])->name('guru.destroy');
 
