@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('hari_liburs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('periode_id')->constrained('periodes');
-            $table->string('nama_libur');
-            $table->string('jenis');
-            $table->date('tanggal');
-            $table->string('hari');
+            $table->foreignId('periode_id')->constrained('periodes')->onDelete('cascade');
+            $table->enum('tipe', ['mingguan', 'nasional']);
+            $table->string('hari')->nullable(); // Diisi 'Minggu' atau 'Sabtu' jika tipe mingguan
+            $table->date('tanggal')->nullable(); // Diisi spesifik tanggal jika tipe nasional
+            $table->string('keterangan');
             $table->timestamps();
         });
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Periode;
+use App\Models\HariLibur;
 use Illuminate\Http\Request;
 
 class PeriodeController extends Controller
@@ -10,11 +11,9 @@ class PeriodeController extends Controller
     public function index(Request $request)
     {
         $query = Periode::query();
-
         if ($request->has('search') && $request->search != '') {
             $query->where('nama_periode', 'like', '%' . $request->search . '%');
         }
-
         $periodes = $query->latest()->get();
 
         return view('periode.index', compact('periodes'));
@@ -28,30 +27,63 @@ class PeriodeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_periode'   => 'required|string|max:100|unique:periodes,nama_periode',
-            'tanggal_mulai'  => 'required|date',
+            'nama_periode'    => 'required|string|max:100|unique:periodes,nama_periode',
+            'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'status_aktif'   => 'required|boolean',
+            'status_aktif'    => 'required|boolean',
+
+            // Validasi Array Hari Libur
+            'libur_mingguan'  => 'nullable|array',
+            'libur_mingguan.*.hari' => 'required|string',
+            'libur_mingguan.*.keterangan' => 'required|string|max:255',
+
+            'libur_nasional'  => 'nullable|array',
+            'libur_nasional.*.tanggal' => 'required|date',
+            'libur_nasional.*.nama_libur' => 'required|string|max:255',
+            'libur_nasional.*.keterangan' => 'nullable|string|max:255',
         ]);
 
-        // Jika periode baru ini diset aktif, nonaktifkan periode lain terlebih dahulu
         if ($request->status_aktif == 1) {
             Periode::where('status_aktif', true)->update(['status_aktif' => false]);
         }
 
-        Periode::create([
-            'nama_periode'   => $request->nama_periode,
-            'tanggal_mulai'  => $request->tanggal_mulai,
+        // 1. Simpan Induk Periode
+        $periode = Periode::create([
+            'nama_periode'    => $request->nama_periode,
+            'tanggal_mulai'   => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
-            'status_aktif'   => $request->status_aktif,
+            'status_aktif'    => $request->status_aktif,
         ]);
 
-        return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil ditambahkan.');
+        // 2. Simpan Libur Mingguan jika ada
+        if ($request->has('libur_mingguan')) {
+            foreach ($request->libur_mingguan as $lm) {
+                $periode->hariLiburs()->create([
+                    'tipe' => 'mingguan',
+                    'hari' => $lm['hari'],
+                    'keterangan' => $lm['keterangan']
+                ]);
+            }
+        }
+
+        // 3. Simpan Libur Nasional jika ada
+        if ($request->has('libur_nasional')) {
+            foreach ($request->libur_nasional as $ln) {
+                $periode->hariLiburs()->create([
+                    'tipe' => 'nasional',
+                    'tanggal' => $ln['tanggal'],
+                    'keterangan' => $ln['nama_libur'] . ($ln['keterangan'] ? ' - ' . $ln['keterangan'] : '')
+                ]);
+            }
+        }
+
+        return redirect()->route('periode.index')->with('success', 'Periode akademik dan hari libur berhasil disimpan.');
     }
 
     public function edit($id)
     {
-        $periode = Periode::findOrFail($id);
+        // Muat periode beserta relasi hari liburnya agar otomatis ter-fetch di form edit
+        $periode = Periode::with('hariLiburs')->findOrFail($id);
         return view('periode.edit', compact('periode'));
     }
 
@@ -60,10 +92,13 @@ class PeriodeController extends Controller
         $periode = Periode::findOrFail($id);
 
         $request->validate([
-            'nama_periode'   => 'required|string|max:100|unique:periodes,nama_periode,' . $periode->id,
-            'tanggal_mulai'  => 'required|date',
+            'nama_periode'    => 'required|string|max:100|unique:periodes,nama_periode,' . $periode->id,
+            'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'status_aktif'   => 'required|boolean',
+            'status_aktif'    => 'required|boolean',
+
+            'libur_mingguan'  => 'nullable|array',
+            'libur_nasional'  => 'nullable|array',
         ]);
 
         if ($request->status_aktif == 1) {
@@ -71,11 +106,34 @@ class PeriodeController extends Controller
         }
 
         $periode->update([
-            'nama_periode'   => $request->nama_periode,
-            'tanggal_mulai'  => $request->tanggal_mulai,
+            'nama_periode'    => $request->nama_periode,
+            'tanggal_mulai'   => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
-            'status_aktif'   => $request->status_aktif,
+            'status_aktif'    => $request->status_aktif,
         ]);
+
+        // Hapus data libur lama terlebih dahulu sebelum menimpa dengan data baru hasil edit
+        $periode->hariLiburs()->delete();
+
+        if ($request->has('libur_mingguan')) {
+            foreach ($request->libur_mingguan as $lm) {
+                $periode->hariLiburs()->create([
+                    'tipe' => 'mingguan',
+                    'hari' => $lm['hari'],
+                    'keterangan' => $lm['keterangan']
+                ]);
+            }
+        }
+
+        if ($request->has('libur_nasional')) {
+            foreach ($request->libur_nasional as $ln) {
+                $periode->hariLiburs()->create([
+                    'tipe' => 'nasional',
+                    'tanggal' => $ln['tanggal'],
+                    'keterangan' => $ln['keterangan'] ?? $ln['nama_libur']
+                ]);
+            }
+        }
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil diperbarui.');
     }
@@ -83,13 +141,7 @@ class PeriodeController extends Controller
     public function destroy($id)
     {
         $periode = Periode::findOrFail($id);
-
-        if ($periode->kelas()->exists()) {
-            return redirect()->route('periode.index')->with('error', 'Periode tidak bisa dihapus karena memiliki data keterikatan kelas.');
-        }
-
-        $periode->delete();
-
+        $periode->delete(); // Otomatis menghapus libur karena cascade
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
     }
 }

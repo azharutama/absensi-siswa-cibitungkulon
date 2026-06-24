@@ -12,12 +12,13 @@ class HariLibur extends Model
 
     protected $table = 'hari_liburs';
 
+    // Diselaraskan dengan file migration dan controller penampung array request
     protected $fillable = [
         'periode_id',
-        'nama_libur',
-        'jenis',
-        'tanggal',
+        'tipe',
         'hari',
+        'tanggal',
+        'keterangan',
     ];
 
     protected function casts(): array
@@ -27,6 +28,9 @@ class HariLibur extends Model
         ];
     }
 
+    /**
+     * Relasi balik ke Periode Akademik
+     */
     public function periode(): BelongsTo
     {
         return $this->belongsTo(Periode::class);
