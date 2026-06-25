@@ -54,13 +54,9 @@
                                         Edit
                                     </a>
                                     
-                                    <form action="{{ route('guru.destroy', $guru->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data guru ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
-                                            Hapus
-                                        </button>
-                                    </form>
+                                    <button type="button" onclick="openDeleteModal(@js(route('guru.destroy', $guru->id)))" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
+                                        Hapus
+                                    </button>
                                 </td>
                             </tr>
                         @endforeach
@@ -83,4 +79,6 @@
             </div> 
         </div>
     </div>
+
+    <x-confirm-modal />
 </x-app-layout>

@@ -50,11 +50,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2 w-48">
                                     <a href="{{ route('periode.edit', $p->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">Edit</a>
                                     
-                                    <form action="{{ route('periode.destroy', $p->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus periode ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">Hapus</button>
-                                    </form>
+                                    <button type="button" onclick="openDeleteModal(@js(route('periode.destroy', $p->id)))" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">Hapus</button>
                                 </td>
                             </tr>
                         @endforeach
@@ -66,4 +62,6 @@
             </div> 
         </div>
     </div>
+
+    <x-confirm-modal />
 </x-app-layout>
