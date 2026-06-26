@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuruController;
 use App\Http\Controllers\KelasController;
@@ -29,7 +30,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware('role:guru')->group(function () {
-        Route::get('/absensi', fn() => view('pages.placeholder', ['title' => 'Absensi']))->name('absensi.index');
+        Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
+        Route::get('/absensi/create', [AbsensiController::class, 'create'])->name('absensi.create');
+        Route::post('/absensi/store', [AbsensiController::class, 'store'])->name('absensi.store');
+        Route::get('/absensi/edit', [AbsensiController::class, 'edit'])->name('absensi.edit');
+        Route::put('/absensi/update', [AbsensiController::class, 'update'])->name('absensi.update');
     });
 
     Route::middleware('role:operator,guru,kepala_sekolah')->group(function () {
