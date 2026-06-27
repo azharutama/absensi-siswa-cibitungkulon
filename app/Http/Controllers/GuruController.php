@@ -67,7 +67,7 @@ class GuruController extends Controller
             'nama'          => $request->nama,
             'email'         => $request->email,
             'no_telepon'    => $request->no_telepon,
-            'alamat'        => $request->alamat,
+            'address'       => $request->alamat,
             'role'          => $request->role,
             'jenis_kelamin' => $request->jenis_kelamin,
             'password'      => Hash::make($request->password),
@@ -102,7 +102,7 @@ class GuruController extends Controller
         $request->validate([
             'nip'           => 'nullable|string|unique:users,nip,' . $user->id,
             'nama'          => 'required|string|max:255',
-            'email'         => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email'         => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
             'no_telepon'    => 'required|string|unique:users,no_telepon,' . $user->id,
             'alamat'        => 'nullable|string|max:255',
             'role'          => 'required|string|in:operator,guru,kepala_sekolah',
@@ -118,7 +118,7 @@ class GuruController extends Controller
             'nama'          => $request->nama,
             'email'         => $request->email,
             'no_telepon'    => $request->no_telepon,
-            'alamat'        => $request->alamat,
+            'address'       => $request->alamat,
             'role'          => $request->role,
             'jenis_kelamin' => $request->jenis_kelamin,
         ];

@@ -18,7 +18,7 @@
 
                 <div>
                     <x-input-label for="email" :value="__('Alamat Email')" />
-                    <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $guru->email)" required />
+                    <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $guru->email)" />
                     <x-input-error class="mt-2" :messages="$errors->get('email')" />
                 </div>
 
