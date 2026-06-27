@@ -16,11 +16,15 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nama',
+        'username',
+        'nip',
+        'alamat',
+        'address',
+        'email',
         'no_telepon',
         'password',
         'role',
         'jenis_kelamin',
-
     ];
 
     protected $hidden = [
@@ -37,6 +41,16 @@ class User extends Authenticatable
     public function rekaps(): HasMany
     {
         return $this->hasMany(Rekap::class);
+    }
+
+    public function getAlamatAttribute(): ?string
+    {
+        return $this->address;
+    }
+
+    public function setAlamatAttribute(?string $value): void
+    {
+        $this->attributes['address'] = $value;
     }
 
     /**

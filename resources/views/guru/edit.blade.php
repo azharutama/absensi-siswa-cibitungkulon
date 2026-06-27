@@ -6,7 +6,7 @@
             @method('PUT') <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <x-input-label for="nip" :value="__('NIP (Nomor Induk Pegawai)')" />
-                    <x-text-input id="nip" name="nip" type="text" class="mt-1 block w-full" :value="old('nip', $guru->nip)" required autofocus />
+                    <x-text-input id="nip" name="nip" type="text" class="mt-1 block w-full" :value="old('nip', $guru->nip)" autofocus />
                     <x-input-error class="mt-2" :messages="$errors->get('nip')" />
                 </div>
 

@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Kelas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 class GuruController extends Controller
 {
@@ -76,7 +75,7 @@ class GuruController extends Controller
 
         // Mapping ke table pivot kelas_user kalau role-nya guru
         if ($user->role === 'guru' && $request->has('kelas')) {
-            $user->kelas()->sync($request->kelas);
+            $this->syncKelasDiampu($user, $request->kelas);
         }
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil ditambahkan.');
@@ -87,7 +86,7 @@ class GuruController extends Controller
      */
     public function edit($id)
     {
-        $guru = User::findOrFail($id);
+        $guru = User::with('kelas')->findOrFail($id);
         $kelas = Kelas::all();
 
         return view('guru.edit', compact('guru', 'kelas'));
@@ -101,7 +100,7 @@ class GuruController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'nip'           => 'required|string|unique:users,nip,' . $user->id,
+            'nip'           => 'nullable|string|unique:users,nip,' . $user->id,
             'nama'          => 'required|string|max:255',
             'email'         => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'no_telepon'    => 'required|string|unique:users,no_telepon,' . $user->id,
@@ -133,7 +132,7 @@ class GuruController extends Controller
 
         // Update data table pivot kelas_user
         if ($user->role === 'guru' && $request->has('kelas')) {
-            $user->kelas()->sync($request->kelas);
+            $this->syncKelasDiampu($user, $request->kelas);
         } else {
             // Bersihkan relasi kelas kalau role berubah dari guru ke role lain
             $user->kelas()->detach();
@@ -154,5 +153,22 @@ class GuruController extends Controller
         $user->delete();
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil dihapus.');
+    }
+
+    private function syncKelasDiampu(User $user, array $kelasIds): void
+    {
+        $waliKelasIds = $user->kelas()
+            ->wherePivot('is_wali_kelas', true)
+            ->pluck('kelas.id')
+            ->all();
+
+        $syncData = [];
+        foreach (array_unique($kelasIds) as $kelasId) {
+            $syncData[$kelasId] = [
+                'is_wali_kelas' => in_array((int) $kelasId, array_map('intval', $waliKelasIds), true),
+            ];
+        }
+
+        $user->kelas()->sync($syncData);
     }
 }

@@ -57,7 +57,9 @@ class KelasController extends Controller
             'status'     => 'aktif', // Mengisi kolom status bawaan migrasi kelas Anda
         ]);
 
-        $kelas->gurus()->attach($request->guru_id, ['is_wali_kelas' => true]);
+        $kelas->gurus()->syncWithoutDetaching([
+            $request->guru_id => ['is_wali_kelas' => true],
+        ]);
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil ditambahkan.');
     }
