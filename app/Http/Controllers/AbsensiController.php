@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Absensi;
+use App\Models\HariLibur;
 use App\Models\Kelas;
 use App\Models\Siswa;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,9 +34,20 @@ class AbsensiController extends Controller
         $siswas = [];
         $absensiSiswa = [];
         $isLocked = false;
+        $holidayMessage = null;
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId) {
+            $selectedKelas = Kelas::find($kelasId);
+
+            if ($selectedKelas) {
+                $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
+
+                if ($holiday) {
+                    $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
+                }
+            }
+
             // 1. Ambil seluruh rekam data absensi pada hari tersebut jika sudah ada
             $absensiSiswa = Absensi::where('tanggal', $tanggal)
                 ->whereHas('siswa', function ($query) use ($kelasId) {
@@ -62,7 +75,7 @@ class AbsensiController extends Controller
             }
         }
 
-        return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked'));
+        return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage'));
     }
 
     /**
@@ -79,6 +92,13 @@ class AbsensiController extends Controller
 
         $kelasId = $request->kelas_id;
         $tanggal = $request->tanggal;
+        $kelas = Kelas::findOrFail($kelasId);
+
+        $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
+        if ($holiday) {
+            return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
+        }
 
         // Double Security di sisi server sebelum proses insert data
         $sudahAbsen = Absensi::where('tanggal', $tanggal)
@@ -90,8 +110,6 @@ class AbsensiController extends Controller
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', 'Data absensi kelas ini pada tanggal tersebut sudah terisi. Gunakan menu Edit Absensi untuk melakukan perubahan.');
         }
-
-        $kelas = Kelas::findOrFail($kelasId);
 
         foreach ($request->absensi as $siswaId => $status) {
             Absensi::create([
@@ -119,9 +137,20 @@ class AbsensiController extends Controller
         $siswas = [];
         $absensiSiswa = [];
         $isLocked = false; // Halaman edit tidak pernah dikunci (selalu bisa diubah)
+        $holidayMessage = null;
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId) {
+            $selectedKelas = Kelas::find($kelasId);
+
+            if ($selectedKelas) {
+                $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
+
+                if ($holiday) {
+                    $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
+                }
+            }
+
             $siswas = Siswa::where('kelas_id', $kelasId)->orderBy('nama_siswa')->get();
             $stats['total'] = $siswas->count();
 
@@ -136,7 +165,7 @@ class AbsensiController extends Controller
             }
         }
 
-        return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked'));
+        return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage'));
     }
 
     /**
@@ -155,6 +184,12 @@ class AbsensiController extends Controller
         $tanggal = $request->tanggal;
         $kelas = Kelas::findOrFail($kelasId);
 
+        $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
+        if ($holiday) {
+            return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
+        }
+
         foreach ($request->absensi as $siswaId => $status) {
             Absensi::updateOrCreate(
                 [
@@ -171,5 +206,41 @@ class AbsensiController extends Controller
 
         return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data riwayat absensi berhasil diperbarui.');
+    }
+
+    private function findHariLibur(?int $periodeId, string $tanggal): ?HariLibur
+    {
+        $namaHari = $this->namaHariIndonesia(Carbon::parse($tanggal)->dayOfWeek);
+
+        return HariLibur::where('periode_id', $periodeId)
+            ->where(function ($query) use ($tanggal, $namaHari) {
+                $query->whereDate('tanggal', $tanggal)
+                    ->orWhere(function ($query) use ($namaHari) {
+                        $query->where('tipe', 'mingguan')
+                            ->where('hari', $namaHari);
+                    });
+            })
+            ->first();
+    }
+
+    private function formatHariLiburMessage(HariLibur $hariLibur, string $tanggal): string
+    {
+        $tanggalFormatted = Carbon::parse($tanggal)->format('d-m-Y');
+        $keterangan = $hariLibur->keterangan ?: 'Hari libur';
+
+        return "Tanggal {$tanggalFormatted} termasuk {$keterangan}. Guru tidak dapat melakukan input absensi pada hari libur.";
+    }
+
+    private function namaHariIndonesia(int $dayOfWeek): string
+    {
+        return [
+            0 => 'Minggu',
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+        ][$dayOfWeek];
     }
 }

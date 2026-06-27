@@ -24,7 +24,7 @@ class KelasController extends Controller
 
     public function create()
     {
-        $gurus = User::where('role', 'guru')->get();
+        $gurus = $this->availableWaliKelasQuery()->get();
         $periodeAktif = Periode::latest()->first();
 
         return view('kelas.create', compact('gurus', 'periodeAktif'));
@@ -37,6 +37,12 @@ class KelasController extends Controller
             'guru_id'    => 'required|exists:users,id',
         ]);
 
+        if (! $this->availableWaliKelasQuery()->where('id', $request->guru_id)->exists()) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia sebagai wali kelas.']);
+        }
+
         $periodeAktif = Periode::latest()->first();
 
         if (!$periodeAktif) {
@@ -45,23 +51,27 @@ class KelasController extends Controller
                 ->with('error', 'Gagal membuat kelas. Pastikan data Periode Akademik sudah dibuat.');
         }
 
-        Kelas::create([
+        $kelas = Kelas::create([
             'nama_kelas' => $request->nama_kelas,
-            'guru_id'    => $request->guru_id,
             'periode_id' => $periodeAktif->id,
             'status'     => 'aktif', // Mengisi kolom status bawaan migrasi kelas Anda
         ]);
+
+        $kelas->gurus()->attach($request->guru_id, ['is_wali_kelas' => true]);
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil ditambahkan.');
     }
 
     public function edit($id)
     {
-        $kelas = Kelas::findOrFail($id);
-        $gurus = User::where('role', 'guru')->get();
+        $kelas = Kelas::with('gurus')->findOrFail($id);
+        $gurus = $kelas->gurus()->where('role', 'guru')->orderBy('nama')->get();
         $periodeAktif = Periode::latest()->first();
+        $currentWaliId = $kelas->gurus()
+            ->wherePivot('is_wali_kelas', true)
+            ->value('users.id');
 
-        return view('kelas.edit', compact('kelas', 'gurus', 'periodeAktif'));
+        return view('kelas.edit', compact('kelas', 'gurus', 'periodeAktif', 'currentWaliId'));
     }
 
     public function update(Request $request, $id)
@@ -73,10 +83,21 @@ class KelasController extends Controller
             'guru_id'    => 'required|exists:users,id',
         ]);
 
+        if (! $kelas->gurus()->where('users.id', $request->guru_id)->exists()) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['guru_id' => 'Guru yang dipilih belum berelasi dengan kelas ini. Tambahkan relasi melalui menu Guru terlebih dahulu.']);
+        }
+
         $kelas->update([
             'nama_kelas' => $request->nama_kelas,
-            'guru_id'    => $request->guru_id,
         ]);
+
+        foreach ($kelas->gurus()->pluck('users.id') as $guruId) {
+            $kelas->gurus()->updateExistingPivot($guruId, ['is_wali_kelas' => false]);
+        }
+
+        $kelas->gurus()->updateExistingPivot($request->guru_id, ['is_wali_kelas' => true]);
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil diperbarui.');
     }
@@ -92,5 +113,14 @@ class KelasController extends Controller
         $kelas->delete();
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil dihapus.');
+    }
+
+    private function availableWaliKelasQuery()
+    {
+        return User::where('role', 'guru')
+            ->whereDoesntHave('kelas', function ($query) {
+                $query->where('kelas_user.is_wali_kelas', true);
+            })
+            ->orderBy('nama');
     }
 }

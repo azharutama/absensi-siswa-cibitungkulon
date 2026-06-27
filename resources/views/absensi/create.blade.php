@@ -16,7 +16,13 @@
 
         <x-absensi-filter :action="route('absensi.create')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" />
 
-        @if($kelasId && count($siswas) > 0)
+        @if($holidayMessage)
+            <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+                {{ $holidayMessage }}
+            </div>
+        @endif
+
+        @if($kelasId && count($siswas) > 0 && !$holidayMessage)
             <x-absensi-form 
                 :action="route('absensi.store')" 
                 method="POST"
