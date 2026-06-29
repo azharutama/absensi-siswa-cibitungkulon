@@ -4,6 +4,7 @@ use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuruController;
 use App\Http\Controllers\KelasController;
+use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PeriodeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RekapController;
@@ -23,6 +24,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('guru', GuruController::class);
 
         // Kelola Siswa (Otomatis menghasilkan URL: /siswa, /siswa/create, dll)
+        Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
+        Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
+        Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');
         Route::resource('siswa', SiswaController::class);
 
         Route::resource('kelas', KelasController::class);
@@ -44,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware('role:operator,guru')->group(function () {
-        Route::get('/notifikasi', fn() => view('pages.placeholder', ['title' => 'Notifikasi WhatsApp']))->name('notifikasi.index');
+        Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

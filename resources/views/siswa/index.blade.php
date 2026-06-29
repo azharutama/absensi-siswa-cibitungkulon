@@ -8,6 +8,30 @@
                 </div>
             @endif
 
+            @if (session('warning'))
+                <div class="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded shadow-sm">
+                    <p class="font-semibold">{{ session('warning') }}</p>
+
+                    @if (session('import_errors'))
+                        <ul class="mt-2 list-disc list-inside text-sm space-y-1">
+                            @foreach (array_slice(session('import_errors'), 0, 10) as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+
+                        @if (count(session('import_errors')) > 10)
+                            <p class="mt-2 text-sm">Dan {{ count(session('import_errors')) - 10 }} error lainnya.</p>
+                        @endif
+                    @endif
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                 
                 <div class="flex flex-col md:flex-row justify-between items-center p-6 gap-4 border-b border-gray-200 bg-gray-50/50">
@@ -21,6 +45,10 @@
                         <x-search :action="route('siswa.index')" 
                                   placeholder="Cari NISN atau nama siswa..." 
                                   :value="request('search')" />
+
+                        <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 transition shrink-0">
+                            Import Excel
+                        </a>
 
                         <a href="{{ route('siswa.create') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
                             + Tambah Siswa

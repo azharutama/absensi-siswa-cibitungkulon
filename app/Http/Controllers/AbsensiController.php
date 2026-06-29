@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendAlpaWhatsappNotificationJob;
 use App\Models\Absensi;
 use App\Models\HariLibur;
 use App\Models\Kelas;
 use App\Models\Siswa;
+use App\Models\WhatsappNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -112,13 +114,17 @@ class AbsensiController extends Controller
         }
 
         foreach ($request->absensi as $siswaId => $status) {
-            Absensi::create([
+            $absensi = Absensi::create([
                 'siswa_id' => $siswaId,
                 'user_id' => Auth::id(), // <-- Sudah menggunakan Auth::id()
                 'periode_id' => $kelas->periode_id,
                 'tanggal' => $tanggal,
                 'status' => $status,
             ]);
+
+            if ($status === 'alpa') {
+                $this->dispatchAlpaWhatsappNotification($absensi);
+            }
         }
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
@@ -191,7 +197,13 @@ class AbsensiController extends Controller
         }
 
         foreach ($request->absensi as $siswaId => $status) {
-            Absensi::updateOrCreate(
+            $absensi = Absensi::where('siswa_id', $siswaId)
+                ->where('tanggal', $tanggal)
+                ->first();
+
+            $oldStatus = $absensi?->status;
+
+            $absensi = Absensi::updateOrCreate(
                 [
                     'siswa_id' => $siswaId,
                     'tanggal' => $tanggal,
@@ -202,6 +214,10 @@ class AbsensiController extends Controller
                     'status' => $status,
                 ]
             );
+
+            if ($status === 'alpa' && $oldStatus !== 'alpa') {
+                $this->dispatchAlpaWhatsappNotification($absensi);
+            }
         }
 
         return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
@@ -242,5 +258,93 @@ class AbsensiController extends Controller
             5 => 'Jumat',
             6 => 'Sabtu',
         ][$dayOfWeek];
+    }
+
+    private function dispatchAlpaWhatsappNotification(Absensi $absensi): void
+    {
+        $absensi->loadMissing('siswa.kelas');
+
+        if (! $absensi->siswa) {
+            return;
+        }
+
+        [$parentName, $parentPhone] = $this->resolveParentContact($absensi->siswa);
+        $normalizedPhone = $this->normalizeWhatsappNumber($parentPhone);
+
+        $notification = WhatsappNotification::firstOrCreate(
+            [
+                'absensi_id' => $absensi->id,
+                'provider' => 'fonnte',
+            ],
+            [
+                'siswa_id' => $absensi->siswa_id,
+                'parent_name' => $parentName,
+                'parent_phone' => $normalizedPhone,
+                'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
+                'status' => 'pending',
+            ]
+        );
+
+        if (! $notification->wasRecentlyCreated && in_array($notification->status, ['failed', 'cancelled'], true)) {
+            $notification->update([
+                'parent_name' => $parentName,
+                'parent_phone' => $normalizedPhone,
+                'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
+                'status' => 'pending',
+                'last_error' => null,
+            ]);
+        }
+
+        if ($notification->wasRecentlyCreated || $notification->wasChanged('status')) {
+            SendAlpaWhatsappNotificationJob::dispatch($notification->id);
+        }
+    }
+
+    private function resolveParentContact(Siswa $siswa): array
+    {
+        $contacts = [
+            [$siswa->nama_wali, $siswa->no_whatsapp_wali],
+            [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
+            [$siswa->nama_ibu, $siswa->no_whatsapp_ibu],
+        ];
+
+        foreach ($contacts as [$name, $phone]) {
+            if (filled($phone)) {
+                return [$name, $phone];
+            }
+        }
+
+        return [null, null];
+    }
+
+    private function normalizeWhatsappNumber(?string $phone): ?string
+    {
+        if (blank($phone)) {
+            return null;
+        }
+
+        $number = preg_replace('/\D+/', '', $phone);
+
+        if (str_starts_with($number, '0')) {
+            return '62' . substr($number, 1);
+        }
+
+        if (str_starts_with($number, '8')) {
+            return '62' . $number;
+        }
+
+        return $number ?: null;
+    }
+
+    private function buildAlpaWhatsappMessage(Absensi $absensi, ?string $parentName): string
+    {
+        $siswa = $absensi->siswa;
+        $tanggal = Carbon::parse($absensi->tanggal)->format('d-m-Y');
+        $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
+        $kelas = $siswa->kelas?->nama_kelas ? " kelas {$siswa->kelas->nama_kelas}" : '';
+
+        return "Assalamu'alaikum {$sapaan},\n\n"
+            . "Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
+            . "Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.";
     }
 }
