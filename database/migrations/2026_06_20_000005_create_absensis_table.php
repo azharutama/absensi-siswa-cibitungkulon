@@ -20,6 +20,13 @@ return new class extends Migration
             $table->enum('status', ['hadir', 'izin', 'sakit', 'alpa']);
             $table->text('keterangan')->nullable();
             $table->timestamps();
+
+            $table->index('tanggal');
+            $table->index('status');
+            $table->index(['siswa_id', 'tanggal']);
+            $table->index(['tanggal', 'siswa_id']);
+            $table->index(['periode_id', 'tanggal']);
+            $table->index(['status', 'tanggal']);
         });
     }
 

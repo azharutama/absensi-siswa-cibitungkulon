@@ -27,6 +27,12 @@ return new class extends Migration
             $table->foreignId('periode_id')->constrained('periodes');
             $table->string('status');
             $table->timestamps();
+
+            $table->index('nama_siswa');
+            $table->index('status');
+            $table->index(['kelas_id', 'nama_siswa']);
+            $table->index(['periode_id', 'status']);
+            $table->index(['status', 'created_at']);
         });
     }
 

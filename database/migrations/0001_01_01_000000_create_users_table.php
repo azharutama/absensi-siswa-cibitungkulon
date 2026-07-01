@@ -23,6 +23,10 @@ return new class extends Migration
             $table->enum('role', ['operator', 'guru', 'kepala_sekolah']);
             $table->string('jenis_kelamin')->nullable();
             $table->timestamps();
+
+            $table->index('nama');
+            $table->index('role');
+            $table->index(['role', 'nama']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

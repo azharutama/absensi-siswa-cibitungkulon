@@ -20,6 +20,11 @@ return new class extends Migration
             $table->enum('status_pengiriman', ['pending', 'terkirim', 'gagal'])->default('pending');
             $table->timestamp('waktu_kirim')->nullable();
             $table->timestamps();
+
+            $table->index('nomor_bulan');
+            $table->index('status_pengiriman');
+            $table->index(['nomor_bulan', 'status_pengiriman']);
+            $table->index(['status_pengiriman', 'waktu_kirim']);
         });
     }
 

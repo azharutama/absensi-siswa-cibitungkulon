@@ -18,6 +18,10 @@ return new class extends Migration
             $table->foreignId('periode_id')->nullable()->constrained('periodes');
             $table->string('status');
             $table->timestamps();
+
+            $table->index('nama_kelas');
+            $table->index('status');
+            $table->index(['periode_id', 'status']);
         });
     }
 

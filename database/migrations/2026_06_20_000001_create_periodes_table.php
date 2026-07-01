@@ -18,6 +18,11 @@ return new class extends Migration
             $table->date('tanggal_selesai');
             $table->boolean('status_aktif');
             $table->timestamps();
+
+            $table->index('nama_periode');
+            $table->index('status_aktif');
+            $table->index('tanggal_mulai');
+            $table->index(['status_aktif', 'tanggal_mulai']);
         });
     }
 

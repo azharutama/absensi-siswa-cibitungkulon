@@ -17,6 +17,10 @@ return new class extends Migration
             // Kolom penanda apakah guru ini merupakan wali kelas di kelas tersebut
             $table->boolean('is_wali_kelas')->default(false);
             $table->timestamps();
+
+            $table->index(['kelas_id', 'user_id']);
+            $table->index(['user_id', 'is_wali_kelas']);
+            $table->index(['kelas_id', 'is_wali_kelas']);
         });
     }
 

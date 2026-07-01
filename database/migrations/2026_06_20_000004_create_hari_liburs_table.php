@@ -19,6 +19,9 @@ return new class extends Migration
             $table->date('tanggal')->nullable(); // Diisi spesifik tanggal jika tipe nasional
             $table->string('keterangan');
             $table->timestamps();
+
+            $table->index(['periode_id', 'tanggal']);
+            $table->index(['periode_id', 'tipe', 'hari']);
         });
     }
 
