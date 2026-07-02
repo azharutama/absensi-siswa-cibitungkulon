@@ -33,7 +33,7 @@
                         @foreach ($gurus as $index => $guru)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
-                                    {{ $index + 1 }}
+                                    {{ $gurus->firstItem() + $index }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b font-mono">
                                     {{ $guru->nip ?? '-' }}
@@ -76,7 +76,13 @@
                     </div>
                 @endif
 
-            </div> 
+            </div>
+
+            @if($gurus->hasPages())
+                <div class="mt-4">
+                    {{ $gurus->links() }}
+                </div>
+            @endif
         </div>
     </div>
 

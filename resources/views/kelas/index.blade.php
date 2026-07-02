@@ -30,7 +30,7 @@
                         @foreach ($kelas as $index => $k)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-20">
-                                    {{ $index + 1 }}
+                                    {{ $kelas->firstItem() + $index }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">
                                     {{ $k->nama_kelas }}
@@ -48,7 +48,13 @@
                     </div>
                 @endif
 
-            </div> 
+            </div>
+
+            @if($kelas->hasPages())
+                <div class="mt-4">
+                    {{ $kelas->links() }}
+                </div>
+            @endif
         </div>
     </div>
 

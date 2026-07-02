@@ -23,7 +23,7 @@
                 <select id="guru_id" name="guru_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
                     <option value="" disabled>-- Pilih Wali Kelas --</option>
                     @foreach($gurus as $guru)
-                        <option value="{{ $guru->id }}" {{ old('guru_id', $kelas->guru_id) == $guru->id ? 'selected' : '' }}>
+                        <option value="{{ $guru->id }}" {{ old('guru_id', $currentWaliId) == $guru->id ? 'selected' : '' }}>
                             {{ $guru->nama }} (NIP: {{ $guru->nip ?? '-' }})
                         </option>
                     @endforeach

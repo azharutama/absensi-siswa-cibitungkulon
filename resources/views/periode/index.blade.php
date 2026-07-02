@@ -36,7 +36,7 @@
                     <x-table :headers="['No', 'Nama Periode', 'Tanggal Mulai', 'Tanggal Selesai', 'Status', 'Aksi']">
                         @foreach ($periodes as $index => $p)
                             <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-16">{{ $index + 1 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-16">{{ $periodes->firstItem() + $index }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $p->nama_periode }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">{{ \Carbon\Carbon::parse($p->tanggal_mulai)->format('d M Y') }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">{{ \Carbon\Carbon::parse($p->tanggal_selesai)->format('d M Y') }}</td>
@@ -59,7 +59,13 @@
                     <div class="p-12 text-center text-gray-500">Data Periode Akademik kosong.</div>
                 @endif
 
-            </div> 
+            </div>
+
+            @if($periodes->hasPages())
+                <div class="mt-4">
+                    {{ $periodes->links() }}
+                </div>
+            @endif
         </div>
     </div>
 
