@@ -13,7 +13,10 @@ class RekapController extends Controller
 {
     public function index(Request $request): View
     {
-        $kelas = Kelas::orderBy('nama_kelas')->get();
+        $kelas = Kelas::query()
+            ->select(['id', 'nama_kelas'])
+            ->orderBy('nama_kelas')
+            ->get();
 
         $kelasId = $request->input('kelas_id');
         // Default rentang tanggal: awal bulan ini sampai hari ini (Tahun 2026)
@@ -30,7 +33,12 @@ class RekapController extends Controller
 
         if ($kelasId) {
             // 1. Ambil daftar siswa aktif di kelas tersebut
-            $siswas = Siswa::where('kelas_id', $kelasId)->orderBy('nama_siswa')->get();
+            $siswas = Siswa::query()
+                ->select(['id', 'nama_siswa', 'kelas_id'])
+                ->with('kelas:id,nama_kelas')
+                ->where('kelas_id', $kelasId)
+                ->orderBy('nama_siswa')
+                ->get();
 
             // 2. Ambil data absensi grup berdasarkan siswa_id dan status dalam rentang tanggal
             $absensiData = Absensi::whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])

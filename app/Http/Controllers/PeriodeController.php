@@ -10,11 +10,17 @@ class PeriodeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Periode::query();
+        $query = Periode::query()
+            ->select(['id', 'nama_periode', 'tanggal_mulai', 'tanggal_selesai', 'status_aktif', 'created_at']);
+
         if ($request->has('search') && $request->search != '') {
             $query->where('nama_periode', 'like', '%' . $request->search . '%');
         }
-        $periodes = $query->latest()->get();
+
+        $periodes = $query
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
 
         return view('periode.index', compact('periodes'));
     }

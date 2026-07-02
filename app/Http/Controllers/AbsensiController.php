@@ -29,7 +29,10 @@ class AbsensiController extends Controller
      */
     public function create(Request $request): View
     {
-        $kelas = Kelas::orderBy('nama_kelas')->get();
+        $kelas = Kelas::query()
+            ->select(['id', 'nama_kelas'])
+            ->orderBy('nama_kelas')
+            ->get();
         $kelasId = $request->input('kelas_id');
         $tanggal = $request->input('tanggal', date('Y-m-d'));
 
@@ -40,7 +43,9 @@ class AbsensiController extends Controller
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId) {
-            $selectedKelas = Kelas::find($kelasId);
+            $selectedKelas = Kelas::query()
+                ->select(['id', 'periode_id'])
+                ->find($kelasId);
 
             if ($selectedKelas) {
                 $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
@@ -63,7 +68,11 @@ class AbsensiController extends Controller
                 $isLocked = true;
             }
 
-            $siswas = Siswa::where('kelas_id', $kelasId)->orderBy('nama_siswa')->get();
+            $siswas = Siswa::query()
+                ->select(['id', 'nama_siswa'])
+                ->where('kelas_id', $kelasId)
+                ->orderBy('nama_siswa')
+                ->get();
             $stats['total'] = $siswas->count();
 
             // 3. Kalkulasi data statistik untuk widget card atas
@@ -94,7 +103,9 @@ class AbsensiController extends Controller
 
         $kelasId = $request->kelas_id;
         $tanggal = $request->tanggal;
-        $kelas = Kelas::findOrFail($kelasId);
+        $kelas = Kelas::query()
+            ->select(['id', 'periode_id'])
+            ->findOrFail($kelasId);
 
         $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
         if ($holiday) {
@@ -136,7 +147,10 @@ class AbsensiController extends Controller
      */
     public function edit(Request $request): View
     {
-        $kelas = Kelas::orderBy('nama_kelas')->get();
+        $kelas = Kelas::query()
+            ->select(['id', 'nama_kelas'])
+            ->orderBy('nama_kelas')
+            ->get();
         $kelasId = $request->input('kelas_id');
         $tanggal = $request->input('tanggal', date('Y-m-d'));
 
@@ -147,7 +161,9 @@ class AbsensiController extends Controller
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId) {
-            $selectedKelas = Kelas::find($kelasId);
+            $selectedKelas = Kelas::query()
+                ->select(['id', 'periode_id'])
+                ->find($kelasId);
 
             if ($selectedKelas) {
                 $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
@@ -157,7 +173,11 @@ class AbsensiController extends Controller
                 }
             }
 
-            $siswas = Siswa::where('kelas_id', $kelasId)->orderBy('nama_siswa')->get();
+            $siswas = Siswa::query()
+                ->select(['id', 'nama_siswa'])
+                ->where('kelas_id', $kelasId)
+                ->orderBy('nama_siswa')
+                ->get();
             $stats['total'] = $siswas->count();
 
             $absensiSiswa = Absensi::where('tanggal', $tanggal)
@@ -188,7 +208,9 @@ class AbsensiController extends Controller
 
         $kelasId = $request->kelas_id;
         $tanggal = $request->tanggal;
-        $kelas = Kelas::findOrFail($kelasId);
+        $kelas = Kelas::query()
+            ->select(['id', 'periode_id'])
+            ->findOrFail($kelasId);
 
         $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
         if ($holiday) {

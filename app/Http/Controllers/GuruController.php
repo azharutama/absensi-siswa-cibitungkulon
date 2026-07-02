@@ -16,7 +16,8 @@ class GuruController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = User::query()
+            ->select(['id', 'nip', 'nama', 'no_telepon', 'role']);
 
         // Cari berdasarkan nama, wa, atau nip
         if ($request->has('search') && $request->search != '') {
@@ -27,7 +28,10 @@ class GuruController extends Controller
             });
         }
 
-        $gurus = $query->get();
+        $gurus = $query
+            ->orderBy('nama')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('guru.index', compact('gurus'));
     }
@@ -38,7 +42,11 @@ class GuruController extends Controller
     public function create()
     {
         // Tetap kirim data kelas untuk opsi checkbox di view
-        $kelas = Kelas::all();
+        $kelas = Kelas::query()
+            ->select(['id', 'nama_kelas'])
+            ->orderBy('nama_kelas')
+            ->get();
+
         return view('guru.create', compact('kelas'));
     }
 
@@ -86,8 +94,15 @@ class GuruController extends Controller
      */
     public function edit($id)
     {
-        $guru = User::with('kelas')->findOrFail($id);
-        $kelas = Kelas::all();
+        $guru = User::query()
+            ->select(['id', 'nip', 'nama', 'email', 'no_telepon', 'address', 'role', 'jenis_kelamin'])
+            ->with('kelas:id,nama_kelas')
+            ->findOrFail($id);
+
+        $kelas = Kelas::query()
+            ->select(['id', 'nama_kelas'])
+            ->orderBy('nama_kelas')
+            ->get();
 
         return view('guru.edit', compact('guru', 'kelas'));
     }

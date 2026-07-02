@@ -11,13 +11,17 @@ class KelasController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Kelas::query();
+        $query = Kelas::query()
+            ->select(['id', 'nama_kelas']);
 
         if ($request->has('search') && $request->search != '') {
             $query->where('nama_kelas', 'like', '%' . $request->search . '%');
         }
 
-        $kelas = $query->get();
+        $kelas = $query
+            ->orderBy('nama_kelas')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('kelas.index', compact('kelas'));
     }
@@ -25,7 +29,10 @@ class KelasController extends Controller
     public function create()
     {
         $gurus = $this->availableWaliKelasQuery()->get();
-        $periodeAktif = Periode::latest()->first();
+        $periodeAktif = Periode::query()
+            ->select(['id', 'nama_periode'])
+            ->latest()
+            ->first();
 
         return view('kelas.create', compact('gurus', 'periodeAktif'));
     }
@@ -66,9 +73,22 @@ class KelasController extends Controller
 
     public function edit($id)
     {
-        $kelas = Kelas::with('gurus')->findOrFail($id);
-        $gurus = $kelas->gurus()->where('role', 'guru')->orderBy('nama')->get();
-        $periodeAktif = Periode::latest()->first();
+        $kelas = Kelas::query()
+            ->select(['id', 'nama_kelas', 'periode_id'])
+            ->with('periode:id,nama_periode')
+            ->findOrFail($id);
+
+        $gurus = $kelas->gurus()
+            ->select(['users.id', 'users.nama', 'users.nip'])
+            ->where('role', 'guru')
+            ->orderBy('nama')
+            ->get();
+
+        $periodeAktif = Periode::query()
+            ->select(['id', 'nama_periode'])
+            ->latest()
+            ->first();
+
         $currentWaliId = $kelas->gurus()
             ->wherePivot('is_wali_kelas', true)
             ->value('users.id');
@@ -108,7 +128,7 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id);
 
-        if ($kelas->siswa()->exists()) {
+        if ($kelas->siswas()->exists()) {
             return redirect()->route('kelas.index')->with('error', 'Kelas tidak bisa dihapus karena masih memiliki data siswa.');
         }
 
@@ -119,7 +139,9 @@ class KelasController extends Controller
 
     private function availableWaliKelasQuery()
     {
-        return User::where('role', 'guru')
+        return User::query()
+            ->select(['id', 'nama', 'nip'])
+            ->where('role', 'guru')
             ->whereDoesntHave('kelas', function ($query) {
                 $query->where('kelas_user.is_wali_kelas', true);
             })
