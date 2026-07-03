@@ -7,7 +7,7 @@ export default defineConfig({
             input: [
                 "resources/css/app.css",
                 "resources/js/app.js",
-                "resources/js/search-reset.js",
+                "resources/js/search.js",
                 "resources/js/form-guru.js",
                 "resources/js/confirm-modal.js",
             ],

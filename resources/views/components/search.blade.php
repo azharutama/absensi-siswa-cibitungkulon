@@ -29,4 +29,4 @@
     </a>
 </form>
 
-@vite(['resources/js/search-reset.js'])
+@vite(['resources/js/search.js'])

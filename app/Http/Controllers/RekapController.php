@@ -4,10 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Kelas;
 use App\Models\Siswa;
-use App\Models\Absensi;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\DB;
 
 class RekapController extends Controller
 {
@@ -32,37 +30,41 @@ class RekapController extends Controller
         ];
 
         if ($kelasId) {
-            // 1. Ambil daftar siswa aktif di kelas tersebut
+            $selectedKelas = $kelas->firstWhere('id', (int) $kelasId);
+
             $siswas = Siswa::query()
-                ->select(['id', 'nama_siswa', 'kelas_id'])
-                ->with('kelas:id,nama_kelas')
+                ->select(['id', 'nama_siswa'])
                 ->where('kelas_id', $kelasId)
                 ->orderBy('nama_siswa')
                 ->get();
 
-            // 2. Ambil data absensi grup berdasarkan siswa_id dan status dalam rentang tanggal
-            $absensiData = Absensi::whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])
-                ->whereIn('siswa_id', $siswas->pluck('id'))
-                ->select('siswa_id', 'status', DB::raw('count(*) as total'))
-                ->groupBy('siswa_id', 'status')
-                ->get()
-                ->groupBy('siswa_id');
+            $absensiTotals = Siswa::query()
+                ->where('kelas_id', $kelasId)
+                ->withCount([
+                    'absensis as hadir' => fn($query) => $query->where('status', 'hadir')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
+                    'absensis as sakit' => fn($query) => $query->where('status', 'sakit')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
+                    'absensis as izin' => fn($query) => $query->where('status', 'izin')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
+                    'absensis as alpa' => fn($query) => $query->where('status', 'alpa')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
+                ])
+                ->get(['id'])
+                ->keyBy('id');
 
             $totalPersentaseSemuaSiswa = 0;
+            $namaKelas = $selectedKelas?->nama_kelas ?? '-';
 
             foreach ($siswas as $siswa) {
-                // Kelompokkan hitungan per siswa
-                $hadir = $absensiData->get($siswa->id)?->where('status', 'hadir')->first()?->total ?? 0;
-                $sakit = $absensiData->get($siswa->id)?->where('status', 'sakit')->first()?->total ?? 0;
-                $izin = $absensiData->get($siswa->id)?->where('status', 'izin')->first()?->total ?? 0;
-                $alpa = $absensiData->get($siswa->id)?->where('status', 'alpa')->first()?->total ?? 0;
+                $totals = $absensiTotals->get($siswa->id);
+                $hadir = $totals->hadir ?? 0;
+                $sakit = $totals->sakit ?? 0;
+                $izin = $totals->izin ?? 0;
+                $alpa = $totals->alpa ?? 0;
 
                 $totalHariMasuk = $hadir + $sakit + $izin + $alpa;
                 $persentase = $totalHariMasuk > 0 ? round(($hadir / $totalHariMasuk) * 100, 1) : 0;
 
                 $rekapSiswa[] = [
                     'nama_siswa' => $siswa->nama_siswa,
-                    'nama_kelas' => $siswa->kelas->nama_kelas ?? '-',
+                    'nama_kelas' => $namaKelas,
                     'hadir' => $hadir,
                     'sakit' => $sakit,
                     'izin' => $izin,

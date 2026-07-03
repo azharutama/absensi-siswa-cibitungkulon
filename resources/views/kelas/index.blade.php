@@ -8,6 +8,12 @@
                 </div>
             @endif
 
+            @if (session('error'))
+                <div class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                 
                 <div class="flex flex-col md:flex-row justify-between items-center p-6 gap-4 border-b border-gray-200 bg-gray-50/50">
@@ -26,14 +32,23 @@
                 </div>
 
                 @if($kelas->isNotEmpty())
-                    <x-table :headers="['No', 'Nama Kelas', 'Aksi']">
+                    <x-table :headers="['No', 'Nama Kelas', 'Periode', 'Wali Kelas', 'Aksi']">
                         @foreach ($kelas as $index => $k)
+                            @php
+                                $waliKelas = $k->gurus->first();
+                            @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-20">
                                     {{ $kelas->firstItem() + $index }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">
                                     {{ $k->nama_kelas }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
+                                    {{ $k->periode->nama_periode ?? '-' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
+                                    {{ $waliKelas?->nama ?? 'Belum ditentukan' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2 w-48">
                                     <a href="{{ route('kelas.edit', $k->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">Edit</a>

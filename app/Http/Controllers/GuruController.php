@@ -65,8 +65,8 @@ class GuruController extends Controller
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
             'password'      => 'required|string|min:8|confirmed',
 
-            // Input kelas wajib masuk array jika role-nya guru
-            'kelas'         => 'required_if:role,guru|array',
+            // Relasi kelas boleh dilengkapi setelah data guru dan kelas tersedia.
+            'kelas'         => 'nullable|array',
             'kelas.*'       => 'exists:kelas,id',
         ]);
 
@@ -82,8 +82,8 @@ class GuruController extends Controller
         ]);
 
         // Mapping ke table pivot kelas_user kalau role-nya guru
-        if ($user->role === 'guru' && $request->has('kelas')) {
-            $this->syncKelasDiampu($user, $request->kelas);
+        if ($user->role === 'guru' && $request->filled('kelas')) {
+            $this->syncKelasDiampu($user, $request->input('kelas', []));
         }
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil ditambahkan.');
@@ -124,7 +124,7 @@ class GuruController extends Controller
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
             'password'      => 'nullable|string|min:8|confirmed',
 
-            'kelas'         => 'required_if:role,guru|array',
+            'kelas'         => 'nullable|array',
             'kelas.*'       => 'exists:kelas,id',
         ]);
 
@@ -146,8 +146,8 @@ class GuruController extends Controller
         $user->update($data);
 
         // Update data table pivot kelas_user
-        if ($user->role === 'guru' && $request->has('kelas')) {
-            $this->syncKelasDiampu($user, $request->kelas);
+        if ($user->role === 'guru') {
+            $this->syncKelasDiampu($user, $request->input('kelas', []));
         } else {
             // Bersihkan relasi kelas kalau role berubah dari guru ke role lain
             $user->kelas()->detach();

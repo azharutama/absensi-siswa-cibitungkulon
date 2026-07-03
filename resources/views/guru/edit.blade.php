@@ -57,16 +57,22 @@
             </div>
 
             <div id="kelas-section" class="hidden bg-gray-50 p-4 rounded-md border border-gray-200">
-                <h3 class="text-sm font-medium text-gray-700 mb-2 font-semibold">Pilih Kelas Yang Diampu:</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    @foreach($kelas as $k)
-                        <label class="inline-flex items-center text-sm text-gray-600 cursor-pointer">
-                            <input type="checkbox" name="kelas[]" value="{{ $k->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" 
-                                {{ (is_array(old('kelas')) && in_array($k->id, old('kelas'))) || (!is_array(old('kelas')) && $guru->kelas->contains($k->id)) ? 'checked' : '' }}>
-                            <span class="ms-2">{{ $k->nama_kelas }}</span>
-                        </label>
-                    @endforeach
-                </div>
+                <h3 class="text-sm font-medium text-gray-700 mb-2 font-semibold">Pilih Kelas Yang Diampu (Opsional):</h3>
+                @if($kelas->isNotEmpty())
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        @foreach($kelas as $k)
+                            <label class="inline-flex items-center text-sm text-gray-600 cursor-pointer">
+                                <input type="checkbox" name="kelas[]" value="{{ $k->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" 
+                                    {{ (is_array(old('kelas')) && in_array($k->id, old('kelas'))) || (!is_array(old('kelas')) && $guru->kelas->contains($k->id)) ? 'checked' : '' }}>
+                                <span class="ms-2">{{ $k->nama_kelas }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">
+                        Belum ada data kelas. Relasi kelas diampu dapat dilengkapi setelah kelas dibuat.
+                    </p>
+                @endif
                 <x-input-error class="mt-2" :messages="$errors->get('kelas')" />
             </div>
 

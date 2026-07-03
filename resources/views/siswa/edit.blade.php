@@ -74,7 +74,7 @@
                     </div>
 
                     <div>
-                        <x-input-label_for="nama_ibu" :value="__('Nama Ibu')" />
+                        <x-input-label for="nama_ibu" :value="__('Nama Ibu')" />
                         <x-text-input id="nama_ibu" name="nama_ibu" type="text" class="mt-1 block w-full" :value="old('nama_ibu', $siswa->nama_ibu)" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nama_ibu')" />
                     </div>

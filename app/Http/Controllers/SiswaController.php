@@ -83,6 +83,11 @@ class SiswaController extends Controller
             'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
         ]);
 
+        if (! Kelas::query()->exists()) {
+            return back()
+                ->with('error', 'Import siswa belum bisa dilakukan karena data kelas belum tersedia.');
+        }
+
         try {
             $summary = $importService->import($request->file('file'));
         } catch (RuntimeException $exception) {
@@ -221,17 +226,13 @@ class SiswaController extends Controller
         ]);
     }
 
-    /** @return array{kelas: Collection, periodes: Collection} */
+    /** @return array{kelas: Collection} */
     private function formOptions(): array
     {
         return [
             'kelas' => Kelas::query()
                 ->select('id', 'nama_kelas', 'periode_id')
                 ->orderBy('nama_kelas')
-                ->get(),
-            'periodes' => Periode::query()
-                ->select('id', 'nama_periode')
-                ->latest('tanggal_mulai')
                 ->get(),
         ];
     }

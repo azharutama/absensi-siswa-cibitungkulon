@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $totalSiswa = 0;
         $totalGuru = 0;
 
-        if ($user->role === 'operator' || $user->role === 'kepala sekolah') {
+        if ($user->role === 'operator' || $user->role === 'kepala_sekolah') {
             // Operator & Kepala 
             $totalKelas = Kelas::count();
             $totalSiswa = Siswa::count();

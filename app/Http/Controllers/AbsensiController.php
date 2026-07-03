@@ -13,6 +13,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; // <-- Pastikan ini sudah di-import
+use Illuminate\Support\Facades\DB;
 
 class AbsensiController extends Controller
 {
@@ -55,11 +56,17 @@ class AbsensiController extends Controller
                 }
             }
 
+            $siswas = Siswa::query()
+                ->select(['id', 'nama_siswa'])
+                ->where('kelas_id', $kelasId)
+                ->orderBy('nama_siswa')
+                ->get();
+            $siswaIds = $siswas->pluck('id');
+            $stats['total'] = $siswas->count();
+
             // 1. Ambil seluruh rekam data absensi pada hari tersebut jika sudah ada
             $absensiSiswa = Absensi::where('tanggal', $tanggal)
-                ->whereHas('siswa', function ($query) use ($kelasId) {
-                    $query->where('kelas_id', $kelasId);
-                })
+                ->whereIn('siswa_id', $siswaIds)
                 ->pluck('status', 'siswa_id')
                 ->toArray();
 
@@ -67,13 +74,6 @@ class AbsensiController extends Controller
             if (!empty($absensiSiswa)) {
                 $isLocked = true;
             }
-
-            $siswas = Siswa::query()
-                ->select(['id', 'nama_siswa'])
-                ->where('kelas_id', $kelasId)
-                ->orderBy('nama_siswa')
-                ->get();
-            $stats['total'] = $siswas->count();
 
             // 3. Kalkulasi data statistik untuk widget card atas
             if ($isLocked) {
@@ -103,6 +103,7 @@ class AbsensiController extends Controller
 
         $kelasId = $request->kelas_id;
         $tanggal = $request->tanggal;
+        $userId = Auth::id();
         $kelas = Kelas::query()
             ->select(['id', 'periode_id'])
             ->findOrFail($kelasId);
@@ -113,30 +114,52 @@ class AbsensiController extends Controller
                 ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
         }
 
+        $siswaIds = Siswa::query()
+            ->where('kelas_id', $kelasId)
+            ->whereIn('id', array_keys($request->absensi))
+            ->pluck('id')
+            ->all();
+
         // Double Security di sisi server sebelum proses insert data
         $sudahAbsen = Absensi::where('tanggal', $tanggal)
-            ->whereHas('siswa', function ($query) use ($kelasId) {
-                $query->where('kelas_id', $kelasId);
-            })->exists();
+            ->whereIn('siswa_id', $siswaIds)
+            ->exists();
 
         if ($sudahAbsen) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', 'Data absensi kelas ini pada tanggal tersebut sudah terisi. Gunakan menu Edit Absensi untuk melakukan perubahan.');
         }
 
-        foreach ($request->absensi as $siswaId => $status) {
-            $absensi = Absensi::create([
+        $now = now();
+        $rows = [];
+        $alpaSiswaIds = [];
+
+        foreach ($siswaIds as $siswaId) {
+            $status = $request->absensi[$siswaId];
+            $rows[] = [
                 'siswa_id' => $siswaId,
-                'user_id' => Auth::id(), // <-- Sudah menggunakan Auth::id()
+                'user_id' => $userId,
                 'periode_id' => $kelas->periode_id,
                 'tanggal' => $tanggal,
                 'status' => $status,
-            ]);
-
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
             if ($status === 'alpa') {
-                $this->dispatchAlpaWhatsappNotification($absensi);
+                $alpaSiswaIds[] = $siswaId;
             }
         }
+
+        if ($rows === []) {
+            return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('error', 'Tidak ada data siswa yang valid untuk disimpan.');
+        }
+
+        DB::transaction(function () use ($rows): void {
+            Absensi::insert($rows);
+        });
+
+        $this->dispatchAlpaNotificationsFor($alpaSiswaIds, $tanggal);
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data absensi baru berhasil disimpan.');
@@ -208,6 +231,7 @@ class AbsensiController extends Controller
 
         $kelasId = $request->kelas_id;
         $tanggal = $request->tanggal;
+        $userId = Auth::id();
         $kelas = Kelas::query()
             ->select(['id', 'periode_id'])
             ->findOrFail($kelasId);
@@ -218,29 +242,76 @@ class AbsensiController extends Controller
                 ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
         }
 
-        foreach ($request->absensi as $siswaId => $status) {
-            $absensi = Absensi::where('siswa_id', $siswaId)
-                ->where('tanggal', $tanggal)
-                ->first();
+        $siswaIds = Siswa::query()
+            ->where('kelas_id', $kelasId)
+            ->whereIn('id', array_keys($request->absensi))
+            ->pluck('id')
+            ->all();
 
-            $oldStatus = $absensi?->status;
+        $existingAbsensis = Absensi::query()
+            ->where('tanggal', $tanggal)
+            ->whereIn('siswa_id', $siswaIds)
+            ->get()
+            ->keyBy('siswa_id');
 
-            $absensi = Absensi::updateOrCreate(
-                [
+        $now = now();
+        $insertRows = [];
+        $updates = [];
+        $alpaSiswaIds = [];
+
+        foreach ($siswaIds as $siswaId) {
+            $status = $request->absensi[$siswaId];
+            $existing = $existingAbsensis->get($siswaId);
+            $oldStatus = $existing?->status;
+
+            if ($existing) {
+                if ($oldStatus !== $status || (int) $existing->user_id !== (int) $userId) {
+                    $updates[] = [
+                        'id' => $existing->id,
+                        'user_id' => $userId,
+                        'periode_id' => $kelas->periode_id,
+                        'status' => $status,
+                        'updated_at' => $now,
+                    ];
+                }
+            } else {
+                $insertRows[] = [
                     'siswa_id' => $siswaId,
-                    'tanggal' => $tanggal,
-                ],
-                [
-                    'user_id' => Auth::id(), // <-- Sudah menggunakan Auth::id()
+                    'user_id' => $userId,
                     'periode_id' => $kelas->periode_id,
+                    'tanggal' => $tanggal,
                     'status' => $status,
-                ]
-            );
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
 
             if ($status === 'alpa' && $oldStatus !== 'alpa') {
-                $this->dispatchAlpaWhatsappNotification($absensi);
+                $alpaSiswaIds[] = $siswaId;
             }
         }
+
+        if ($insertRows === [] && $updates === []) {
+            return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('success', 'Tidak ada perubahan data absensi.');
+        }
+
+        DB::transaction(function () use ($insertRows, $updates): void {
+            if ($insertRows !== []) {
+                Absensi::insert($insertRows);
+            }
+
+            foreach ($updates as $update) {
+                Absensi::whereKey($update['id'])->update([
+                    'user_id' => $update['user_id'],
+                    'periode_id' => $update['periode_id'],
+                    'status' => $update['status'],
+                    'updated_at' => $update['updated_at'],
+                ]);
+            }
+        });
+
+        $this->dispatchAlpaNotificationsFor($alpaSiswaIds, $tanggal);
 
         return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data riwayat absensi berhasil diperbarui.');
@@ -320,6 +391,24 @@ class AbsensiController extends Controller
         if ($notification->wasRecentlyCreated || $notification->wasChanged('status')) {
             SendAlpaWhatsappNotificationJob::dispatch($notification->id);
         }
+    }
+
+    /**
+     * @param array<int, int> $siswaIds
+     */
+    private function dispatchAlpaNotificationsFor(array $siswaIds, string $tanggal): void
+    {
+        if ($siswaIds === []) {
+            return;
+        }
+
+        Absensi::query()
+            ->with('siswa.kelas')
+            ->where('tanggal', $tanggal)
+            ->whereIn('siswa_id', array_unique($siswaIds))
+            ->where('status', 'alpa')
+            ->get()
+            ->each(fn(Absensi $absensi) => $this->dispatchAlpaWhatsappNotification($absensi));
     }
 
     private function resolveParentContact(Siswa $siswa): array

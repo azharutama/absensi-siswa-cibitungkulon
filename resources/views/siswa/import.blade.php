@@ -18,6 +18,13 @@
             </p>
         </div>
 
+        @if($kelas->isEmpty())
+            <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-md text-sm text-red-700">
+                Belum ada kelas yang bisa dicocokkan dengan file import.
+                <a href="{{ route('kelas.create') }}" class="font-semibold underline">Tambah Kelas</a>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('siswa.import') }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
 
@@ -48,7 +55,7 @@
                 <a href="{{ route('siswa.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
                     Batal
                 </a>
-                <x-primary-button class="bg-emerald-600 hover:bg-emerald-700">
+                <x-primary-button class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="$kelas->isEmpty()">
                     {{ __('Import Data') }}
                 </x-primary-button>
             </div>

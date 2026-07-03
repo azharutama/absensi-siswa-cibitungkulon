@@ -1,6 +1,13 @@
 <x-app-layout>
     <x-form-card :title="__('Tambah Data Siswa Baru')" :backUrl="route('siswa.index')">
         
+        @if($kelas->isEmpty())
+            <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-md text-sm text-red-700">
+                Belum ada kelas yang bisa dipilih. Buat kelas terlebih dahulu sebelum menambah siswa.
+                <a href="{{ route('kelas.create') }}" class="font-semibold underline">Tambah Kelas</a>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('siswa.store') }}" class="space-y-6">
             @csrf
 
@@ -94,7 +101,7 @@
             </div>
 
             <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
-                <x-primary-button class="bg-blue-600 hover:bg-blue-700">
+                <x-primary-button class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="$kelas->isEmpty()">
                     {{ __('Simpan Data Siswa') }}
                 </x-primary-button>
             </div>
