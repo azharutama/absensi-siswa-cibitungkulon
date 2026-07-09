@@ -10,9 +10,36 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
+        <style>
+            @keyframes page-loading-slide {
+                0% {
+                    transform: translateX(-100%);
+                }
+                50% {
+                    transform: translateX(15%);
+                }
+                100% {
+                    transform: translateX(110%);
+                }
+            }
+
+            .page-loading-bar {
+                animation: page-loading-slide 1.1s ease-in-out infinite;
+            }
+        </style>
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-gray-50">
+        <div id="page-loading" class="fixed inset-x-0 top-0 z-[9999] hidden" aria-live="polite" aria-busy="true">
+            <div class="h-1 overflow-hidden bg-blue-100">
+                <div class="page-loading-bar h-full w-1/2 bg-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.55)]"></div>
+            </div>
+            <div class="pointer-events-none fixed right-4 top-4 rounded-md border border-blue-100 bg-white/95 px-4 py-2 text-sm font-medium text-blue-700 shadow-lg">
+                Memuat data...
+            </div>
+        </div>
+
         <div class="flex h-screen overflow-hidden">
             @include('layouts.sidebar')
 
