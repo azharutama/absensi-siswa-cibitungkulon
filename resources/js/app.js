@@ -1,4 +1,5 @@
 import Alpine from "alpinejs";
+import "./confirm-modal.js";
 
 window.Alpine = Alpine;
 
@@ -24,6 +25,21 @@ function hidePageLoading() {
     if (loading) {
         loading.classList.add("hidden");
     }
+}
+
+function restoreSubmitButtons() {
+    document.querySelectorAll("[data-submit-original-html], [data-submit-original-value]").forEach((submitButton) => {
+        if (submitButton instanceof HTMLButtonElement) {
+            submitButton.innerHTML = submitButton.dataset.submitOriginalHtml ?? submitButton.innerHTML;
+        } else if (submitButton instanceof HTMLInputElement) {
+            submitButton.value = submitButton.dataset.submitOriginalValue ?? submitButton.value;
+        }
+
+        delete submitButton.dataset.submitOriginalHtml;
+        delete submitButton.dataset.submitOriginalValue;
+        submitButton.disabled = false;
+        submitButton.classList.remove("opacity-60", "cursor-not-allowed");
+    });
 }
 
 function isNavigableInternalLink(link) {
@@ -52,7 +68,9 @@ document.addEventListener("submit", (event) => {
         return;
     }
 
-    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+    const submitButton = event.submitter instanceof HTMLButtonElement || event.submitter instanceof HTMLInputElement
+        ? event.submitter
+        : form.querySelector('button[type="submit"], input[type="submit"]');
 
     showPageLoading();
 
@@ -61,10 +79,10 @@ document.addEventListener("submit", (event) => {
     }
 
     if (submitButton instanceof HTMLButtonElement) {
-        submitButton.dataset.originalText = submitButton.textContent.trim();
+        submitButton.dataset.submitOriginalHtml = submitButton.innerHTML;
         submitButton.textContent = "Memproses...";
     } else {
-        submitButton.dataset.originalText = submitButton.value;
+        submitButton.dataset.submitOriginalValue = submitButton.value;
         submitButton.value = "Memproses...";
     }
 
@@ -88,8 +106,14 @@ document.addEventListener("click", (event) => {
     }
 });
 
-window.addEventListener("pageshow", hidePageLoading);
+window.addEventListener("pageshow", () => {
+    hidePageLoading();
+    restoreSubmitButtons();
+});
 window.addEventListener("load", hidePageLoading);
-window.addEventListener("popstate", hidePageLoading);
+window.addEventListener("popstate", () => {
+    hidePageLoading();
+    restoreSubmitButtons();
+});
 
 Alpine.start();

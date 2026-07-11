@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Periode;
-use App\Models\HariLibur;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class PeriodeController extends Controller
 {
@@ -32,56 +33,27 @@ class PeriodeController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nama_periode'    => 'required|string|max:100|unique:periodes,nama_periode',
-            'tanggal_mulai'   => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'status_aktif'    => 'required|boolean',
+        $validated = $this->validatePeriode($request);
 
-            // Validasi Array Hari Libur
-            'libur_mingguan'  => 'nullable|array',
-            'libur_mingguan.*.hari' => 'required|string',
-            'libur_mingguan.*.keterangan' => 'required|string|max:255',
+        DB::transaction(function () use ($validated): void {
+            // Urutan lock yang konsisten mencegah dua aktivasi berjalan bersamaan.
+            Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
 
-            'libur_nasional'  => 'nullable|array',
-            'libur_nasional.*.tanggal' => 'required|date',
-            'libur_nasional.*.nama_libur' => 'required|string|max:255',
-            'libur_nasional.*.keterangan' => 'nullable|string|max:255',
-        ]);
-
-        if ($request->status_aktif == 1) {
-            Periode::where('status_aktif', true)->update(['status_aktif' => false]);
-        }
-
-        // 1. Simpan Induk Periode
-        $periode = Periode::create([
-            'nama_periode'    => $request->nama_periode,
-            'tanggal_mulai'   => $request->tanggal_mulai,
-            'tanggal_selesai' => $request->tanggal_selesai,
-            'status_aktif'    => $request->status_aktif,
-        ]);
-
-        // 2. Simpan Libur Mingguan jika ada
-        if ($request->has('libur_mingguan')) {
-            foreach ($request->libur_mingguan as $lm) {
-                $periode->hariLiburs()->create([
-                    'tipe' => 'mingguan',
-                    'hari' => $lm['hari'],
-                    'keterangan' => $lm['keterangan']
-                ]);
+            if ((bool) $validated['status_aktif']) {
+                Periode::query()
+                    ->where('status_aktif', true)
+                    ->update(['status_aktif' => false]);
             }
-        }
 
-        // 3. Simpan Libur Nasional jika ada
-        if ($request->has('libur_nasional')) {
-            foreach ($request->libur_nasional as $ln) {
-                $periode->hariLiburs()->create([
-                    'tipe' => 'nasional',
-                    'tanggal' => $ln['tanggal'],
-                    'keterangan' => $ln['nama_libur'] . ($ln['keterangan'] ? ' - ' . $ln['keterangan'] : '')
-                ]);
-            }
-        }
+            $periode = Periode::create([
+                'nama_periode' => $validated['nama_periode'],
+                'tanggal_mulai' => $validated['tanggal_mulai'],
+                'tanggal_selesai' => $validated['tanggal_selesai'],
+                'status_aktif' => (bool) $validated['status_aktif'],
+            ]);
+
+            $this->storeHariLiburs($periode, $validated);
+        });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik dan hari libur berhasil disimpan.');
     }
@@ -96,58 +68,114 @@ class PeriodeController extends Controller
     public function update(Request $request, $id)
     {
         $periode = Periode::findOrFail($id);
+        $validated = $this->validatePeriode($request, $periode);
 
-        $request->validate([
-            'nama_periode'    => 'required|string|max:100|unique:periodes,nama_periode,' . $periode->id,
-            'tanggal_mulai'   => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'status_aktif'    => 'required|boolean',
+        DB::transaction(function () use ($id, $validated): void {
+            Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
+            $lockedPeriode = Periode::query()->findOrFail($id);
 
-            'libur_mingguan'  => 'nullable|array',
-            'libur_nasional'  => 'nullable|array',
-        ]);
-
-        if ($request->status_aktif == 1) {
-            Periode::where('id', '!=', $periode->id)->update(['status_aktif' => false]);
-        }
-
-        $periode->update([
-            'nama_periode'    => $request->nama_periode,
-            'tanggal_mulai'   => $request->tanggal_mulai,
-            'tanggal_selesai' => $request->tanggal_selesai,
-            'status_aktif'    => $request->status_aktif,
-        ]);
-
-        // Hapus data libur lama terlebih dahulu sebelum menimpa dengan data baru hasil edit
-        $periode->hariLiburs()->delete();
-
-        if ($request->has('libur_mingguan')) {
-            foreach ($request->libur_mingguan as $lm) {
-                $periode->hariLiburs()->create([
-                    'tipe' => 'mingguan',
-                    'hari' => $lm['hari'],
-                    'keterangan' => $lm['keterangan']
-                ]);
+            if ((bool) $validated['status_aktif']) {
+                Periode::query()
+                    ->whereKeyNot($lockedPeriode->id)
+                    ->where('status_aktif', true)
+                    ->update(['status_aktif' => false]);
             }
-        }
 
-        if ($request->has('libur_nasional')) {
-            foreach ($request->libur_nasional as $ln) {
-                $periode->hariLiburs()->create([
-                    'tipe' => 'nasional',
-                    'tanggal' => $ln['tanggal'],
-                    'keterangan' => $ln['keterangan'] ?? $ln['nama_libur']
-                ]);
-            }
-        }
+            $lockedPeriode->update([
+                'nama_periode' => $validated['nama_periode'],
+                'tanggal_mulai' => $validated['tanggal_mulai'],
+                'tanggal_selesai' => $validated['tanggal_selesai'],
+                'status_aktif' => (bool) $validated['status_aktif'],
+            ]);
+
+            $lockedPeriode->hariLiburs()->delete();
+            $this->storeHariLiburs($lockedPeriode, $validated);
+        });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil diperbarui.');
     }
 
     public function destroy($id)
     {
-        $periode = Periode::findOrFail($id);
-        $periode->delete(); // Otomatis menghapus libur karena cascade
+        $periode = Periode::query()
+            ->withCount(['kelas', 'siswas', 'absensis'])
+            ->findOrFail($id);
+
+        if ($periode->status_aktif) {
+            return redirect()->route('periode.index')->with('error', 'Periode aktif tidak dapat dihapus.');
+        }
+
+        if ($periode->kelas_count > 0 || $periode->siswas_count > 0 || $periode->absensis_count > 0) {
+            return redirect()->route('periode.index')->with(
+                'error',
+                'Periode tidak dapat dihapus karena masih memiliki kelas, siswa, atau riwayat absensi.'
+            );
+        }
+
+        DB::transaction(fn() => $periode->delete());
+
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
+    }
+
+    /** @return array<string, mixed> */
+    private function validatePeriode(Request $request, ?Periode $periode = null): array
+    {
+        return $request->validate([
+            'nama_periode' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('periodes', 'nama_periode')->ignore($periode),
+            ],
+            'tanggal_mulai' => ['required', 'date'],
+            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
+            'status_aktif' => ['required', 'boolean'],
+            'libur_mingguan' => ['nullable', 'array'],
+            'libur_mingguan.*' => ['array'],
+            'libur_mingguan.*.hari' => [
+                'required',
+                'string',
+                Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']),
+                'distinct',
+            ],
+            'libur_mingguan.*.keterangan' => ['required', 'string', 'max:255'],
+            'libur_nasional' => ['nullable', 'array'],
+            'libur_nasional.*' => ['array'],
+            'libur_nasional.*.tanggal' => [
+                'required',
+                'date',
+                'after_or_equal:tanggal_mulai',
+                'before_or_equal:tanggal_selesai',
+                'distinct',
+            ],
+            'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
+            'libur_nasional.*.keterangan' => ['nullable', 'string', 'max:255'],
+        ]);
+    }
+
+    /** @param array<string, mixed> $validated */
+    private function storeHariLiburs(Periode $periode, array $validated): void
+    {
+        foreach ($validated['libur_mingguan'] ?? [] as $libur) {
+            $periode->hariLiburs()->create([
+                'tipe' => 'mingguan',
+                'hari' => $libur['hari'],
+                'keterangan' => $libur['keterangan'],
+            ]);
+        }
+
+        foreach ($validated['libur_nasional'] ?? [] as $libur) {
+            $keterangan = $libur['nama_libur'];
+
+            if (filled($libur['keterangan'] ?? null)) {
+                $keterangan .= ' - ' . $libur['keterangan'];
+            }
+
+            $periode->hariLiburs()->create([
+                'tipe' => 'nasional',
+                'tanggal' => $libur['tanggal'],
+                'keterangan' => $keterangan,
+            ]);
+        }
     }
 }

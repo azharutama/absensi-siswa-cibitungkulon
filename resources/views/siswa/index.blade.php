@@ -60,7 +60,7 @@
                     <x-table :headers="['No', 'NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Aksi']">
                         @foreach ($siswas as $index => $siswa)
                             <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $index + 1 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswas->firstItem() + $index }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b font-mono">{{ $siswa->nisn }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $siswa->nama_siswa }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->kelas->nama_kelas ?? '-' }}</td>
@@ -68,7 +68,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
                                     <a href="{{ route('siswa.edit', $siswa->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">Edit</a>
                                     
-                                    <button type="button" onclick="openDeleteModal(@js(route('siswa.destroy', $siswa->id)))" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
+                                    <button type="button" data-open-delete-modal data-delete-action="{{ route('siswa.destroy', $siswa->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
                                         Hapus
                                     </button>
                                 </td>
@@ -90,7 +90,13 @@
                     </div>
                 @endif
 
-            </div> 
+            </div>
+
+            @if($siswas->hasPages())
+                <div class="mt-4">
+                    {{ $siswas->links() }}
+                </div>
+            @endif
         </div>
     </div>
 

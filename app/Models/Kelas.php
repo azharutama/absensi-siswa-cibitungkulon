@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -20,6 +21,17 @@ class Kelas extends Model
         'periode_id',
         'status',
     ];
+
+    public function scopeAccessibleBy(Builder $query, User $user): Builder
+    {
+        return match ($user->role) {
+            'operator', 'kepala_sekolah' => $query,
+            'guru' => $query->whereHas('gurus', function (Builder $query) use ($user): void {
+                $query->where('users.id', $user->getKey());
+            }),
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
 
     public function periode(): BelongsTo
     {

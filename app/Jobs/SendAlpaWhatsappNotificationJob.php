@@ -6,6 +6,7 @@ use App\Models\WhatsappNotification;
 use App\Services\FonnteService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Throwable;
 
 class SendAlpaWhatsappNotificationJob implements ShouldQueue
@@ -19,6 +20,15 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
     public function backoff(): array
     {
         return [30, 120, 300];
+    }
+
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping("whatsapp-notification-{$this->notificationId}"))
+                ->releaseAfter(30)
+                ->expireAfter(300),
+        ];
     }
 
     /**
@@ -50,11 +60,27 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
             return;
         }
 
-        $notification->update([
-            'status' => 'processing',
-            'attempts' => $this->attempts(),
-            'last_error' => null,
-        ]);
+        $claimed = WhatsappNotification::query()
+            ->whereKey($notification->id)
+            ->where(function ($query): void {
+                $query->where('status', 'pending')
+                    ->orWhere(function ($query): void {
+                        $query->where('status', 'processing')
+                            ->where('updated_at', '<=', now()->subMinutes(5));
+                    });
+            })
+            ->update([
+                'status' => 'processing',
+                'attempts' => $this->attempts(),
+                'last_error' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($claimed === 0) {
+            return;
+        }
+
+        $notification->refresh();
 
         try {
             $result = $fonnteService->sendMessage($notification->parent_phone, $notification->message);

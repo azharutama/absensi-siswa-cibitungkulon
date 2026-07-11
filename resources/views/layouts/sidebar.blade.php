@@ -3,22 +3,31 @@
     $navItems = config("navigation.{$role}", []);
 @endphp
 
-<div x-data="{ isOpen: false }" class="relative">
+<div
+    x-data="{ isOpen: false }"
+    @keydown.escape.window="if (isOpen) { isOpen = false; $nextTick(() => $refs.sidebarToggle.focus()) }"
+    class="relative"
+>
     <button 
-        @click="isOpen = !isOpen" 
-        class="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-md text-gray-600 hover:text-gray-900 focus:outline-none"
+        x-ref="sidebarToggle"
+        type="button"
+        @click="isOpen = !isOpen"
+        :aria-expanded="isOpen.toString()"
+        :aria-label="isOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'"
+        aria-controls="sidebar-navigation"
+        class="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-md text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
     >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!isOpen">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!isOpen" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="isOpen" x-cloak>
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="isOpen" x-cloak aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
     </button>
 
     <div 
         x-show="isOpen" 
-        @click="isOpen = false" 
+        @click="isOpen = false; $nextTick(() => $refs.sidebarToggle.focus())"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
@@ -30,8 +39,10 @@
     ></div>
 
     <aside 
+        id="sidebar-navigation"
         :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
         class="fixed md:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 h-screen transition-transform duration-300 ease-in-out md:translate-x-0"
+        x-cloak
     >
         {{-- Brand --}}
         <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between">
@@ -51,11 +62,11 @@
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto" aria-label="Navigasi utama">
             @foreach ($navItems as $item)
                 <x-sidebar-link
                     :href="route($item['route'])"
-                    :active="request()->routeIs($item['route'])"
+                    :active="request()->routeIs($item['route'], explode('.', $item['route'])[0] . '.*')"
                     @click="isOpen = false"
                 >
                     {{ $item['label'] }}

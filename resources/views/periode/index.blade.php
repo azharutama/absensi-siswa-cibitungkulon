@@ -50,7 +50,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2 w-48">
                                     <a href="{{ route('periode.edit', $p->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">Edit</a>
                                     
-                                    <button type="button" onclick="openDeleteModal(@js(route('periode.destroy', $p->id)))" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">Hapus</button>
+                                    <button type="button" data-open-delete-modal data-delete-action="{{ route('periode.destroy', $p->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">Hapus</button>
                                 </td>
                             </tr>
                         @endforeach

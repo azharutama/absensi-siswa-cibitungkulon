@@ -60,10 +60,10 @@
                             {{ $item->siswa?->nama_siswa ?? '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
-                            {{ $item->siswa?->kelas?->nama_kelas ?? '-' }}
+                            {{ $item->absensi?->kelas?->nama_kelas ?? '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
-                            {{ $item->parent_phone ?? '-' }}
+                            {{ $item->maskedParentPhone() }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm border-b">
                             @php
@@ -84,7 +84,12 @@
                                 ][$item->status] ?? ucfirst($item->status);
                             @endphp
 
-                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}" title="{{ $item->last_error }}">
+                            <span
+                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}"
+                                @if (auth()->user()->role === 'operator' && $item->last_error)
+                                    title="{{ $item->last_error }}"
+                                @endif
+                            >
                                 {{ $statusLabel }}
                             </span>
                         </td>

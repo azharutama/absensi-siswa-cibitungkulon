@@ -41,6 +41,7 @@ return [
         'country_code' => env('FONNTE_COUNTRY_CODE', '62'),
         'connect_only' => env('FONNTE_CONNECT_ONLY', true),
         'timeout' => env('FONNTE_TIMEOUT', 15),
+        'retention_days' => env('FONNTE_RETENTION_DAYS', 365),
     ],
 
 ];

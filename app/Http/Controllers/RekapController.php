@@ -2,24 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Siswa;
-use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 
 class RekapController extends Controller
 {
     public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
+            'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
+        ]);
+
         $kelas = Kelas::query()
+            ->accessibleBy($request->user())
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
 
-        $kelasId = $request->input('kelas_id');
-        // Default rentang tanggal: awal bulan ini sampai hari ini (Tahun 2026)
-        $tanggalMulai = $request->input('tanggal_mulai', date('Y-m-01'));
-        $tanggalBerakhir = $request->input('tanggal_berakhir', date('Y-m-d'));
+        $kelasId = $filters['kelas_id'] ?? null;
+        $tanggalMulai = $filters['tanggal_mulai'] ?? today()->startOfMonth()->toDateString();
+        $tanggalBerakhir = $filters['tanggal_berakhir'] ?? today()->toDateString();
 
         $rekapSiswa = [];
         $stats = [
@@ -32,25 +39,35 @@ class RekapController extends Controller
         if ($kelasId) {
             $selectedKelas = $kelas->firstWhere('id', (int) $kelasId);
 
+            abort_if($selectedKelas === null, 404);
+
             $siswas = Siswa::query()
                 ->select(['id', 'nama_siswa'])
-                ->where('kelas_id', $kelasId)
+                ->where(function ($query) use ($kelasId, $tanggalBerakhir, $tanggalMulai): void {
+                    $query->where('kelas_id', $kelasId)
+                        ->orWhereHas('absensis', function ($query) use ($kelasId, $tanggalBerakhir, $tanggalMulai): void {
+                            $query->where('kelas_id', $kelasId)
+                                ->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]);
+                        });
+                })
                 ->orderBy('nama_siswa')
                 ->get();
 
-            $absensiTotals = Siswa::query()
+            $absensiTotals = Absensi::query()
+                ->select('siswa_id')
+                ->selectRaw("SUM(CASE WHEN status = 'hadir' THEN 1 ELSE 0 END) AS hadir")
+                ->selectRaw("SUM(CASE WHEN status = 'sakit' THEN 1 ELSE 0 END) AS sakit")
+                ->selectRaw("SUM(CASE WHEN status = 'izin' THEN 1 ELSE 0 END) AS izin")
+                ->selectRaw("SUM(CASE WHEN status = 'alpa' THEN 1 ELSE 0 END) AS alpa")
                 ->where('kelas_id', $kelasId)
-                ->withCount([
-                    'absensis as hadir' => fn($query) => $query->where('status', 'hadir')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
-                    'absensis as sakit' => fn($query) => $query->where('status', 'sakit')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
-                    'absensis as izin' => fn($query) => $query->where('status', 'izin')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
-                    'absensis as alpa' => fn($query) => $query->where('status', 'alpa')->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir]),
-                ])
-                ->get(['id'])
-                ->keyBy('id');
+                ->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])
+                ->whereIn('siswa_id', $siswas->pluck('id'))
+                ->groupBy('siswa_id')
+                ->get()
+                ->keyBy('siswa_id');
 
             $totalPersentaseSemuaSiswa = 0;
-            $namaKelas = $selectedKelas?->nama_kelas ?? '-';
+            $namaKelas = $selectedKelas->nama_kelas;
 
             foreach ($siswas as $siswa) {
                 $totals = $absensiTotals->get($siswa->id);

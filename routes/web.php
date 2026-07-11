@@ -21,17 +21,17 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:operator')->group(function () {
 
         // Kelola Guru (Otomatis menghasilkan URL: /guru, /guru/create, dll)
-        Route::resource('guru', GuruController::class);
+        Route::resource('guru', GuruController::class)->except('show');
 
         // Kelola Siswa (Otomatis menghasilkan URL: /siswa, /siswa/create, dll)
         Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
         Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
         Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');
-        Route::resource('siswa', SiswaController::class);
+        Route::resource('siswa', SiswaController::class)->except('show');
 
-        Route::resource('kelas', KelasController::class);
+        Route::resource('kelas', KelasController::class)->except('show');
 
-        Route::resource('periode', PeriodeController::class);
+        Route::resource('periode', PeriodeController::class)->except('show');
     });
 
     Route::middleware('role:guru')->group(function () {
@@ -53,7 +53,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__ . '/auth.php';

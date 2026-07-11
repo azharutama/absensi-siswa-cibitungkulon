@@ -10,10 +10,12 @@ use App\Models\Siswa;
 use App\Models\WhatsappNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; // <-- Pastikan ini sudah di-import
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AbsensiController extends Controller
 {
@@ -30,12 +32,18 @@ class AbsensiController extends Controller
      */
     public function create(Request $request): View
     {
+        $filters = $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
         $kelas = Kelas::query()
+            ->accessibleBy($request->user())
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
-        $kelasId = $request->input('kelas_id');
-        $tanggal = $request->input('tanggal', date('Y-m-d'));
+        $kelasId = $filters['kelas_id'] ?? null;
+        $tanggal = $filters['tanggal'] ?? today()->toDateString();
 
         $siswas = [];
         $absensiSiswa = [];
@@ -45,20 +53,20 @@ class AbsensiController extends Controller
 
         if ($kelasId) {
             $selectedKelas = Kelas::query()
+                ->accessibleBy($request->user())
                 ->select(['id', 'periode_id'])
-                ->find($kelasId);
+                ->findOrFail($kelasId);
 
-            if ($selectedKelas) {
-                $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
+            $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
 
-                if ($holiday) {
-                    $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
-                }
+            if ($holiday) {
+                $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
             }
 
             $siswas = Siswa::query()
                 ->select(['id', 'nama_siswa'])
                 ->where('kelas_id', $kelasId)
+                ->where('status', 'aktif')
                 ->orderBy('nama_siswa')
                 ->get();
             $siswaIds = $siswas->pluck('id');
@@ -94,17 +102,18 @@ class AbsensiController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'kelas_id' => 'required|exists:kelas,id',
-            'tanggal' => 'required|date',
-            'absensi' => 'required|array',
-            'absensi.*' => 'required|in:hadir,izin,sakit,alpa',
+        $data = $request->validate([
+            'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+            'tanggal' => ['required', 'date_format:Y-m-d'],
+            'absensi' => ['required', 'array'],
+            'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
         ]);
 
-        $kelasId = $request->kelas_id;
-        $tanggal = $request->tanggal;
+        $kelasId = (int) $data['kelas_id'];
+        $tanggal = $data['tanggal'];
         $userId = Auth::id();
         $kelas = Kelas::query()
+            ->accessibleBy($request->user())
             ->select(['id', 'periode_id'])
             ->findOrFail($kelasId);
 
@@ -116,13 +125,16 @@ class AbsensiController extends Controller
 
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasId)
-            ->whereIn('id', array_keys($request->absensi))
+            ->where('status', 'aktif')
+            ->orderBy('id')
             ->pluck('id')
             ->all();
 
-        // Double Security di sisi server sebelum proses insert data
-        $sudahAbsen = Absensi::where('tanggal', $tanggal)
-            ->whereIn('siswa_id', $siswaIds)
+        $this->ensureCompleteAttendancePayload($data['absensi'], $siswaIds);
+
+        $sudahAbsen = Absensi::query()
+            ->where('kelas_id', $kelasId)
+            ->where('tanggal', $tanggal)
             ->exists();
 
         if ($sudahAbsen) {
@@ -135,9 +147,10 @@ class AbsensiController extends Controller
         $alpaSiswaIds = [];
 
         foreach ($siswaIds as $siswaId) {
-            $status = $request->absensi[$siswaId];
+            $status = $data['absensi'][$siswaId];
             $rows[] = [
                 'siswa_id' => $siswaId,
+                'kelas_id' => $kelasId,
                 'user_id' => $userId,
                 'periode_id' => $kelas->periode_id,
                 'tanggal' => $tanggal,
@@ -155,9 +168,18 @@ class AbsensiController extends Controller
                 ->with('error', 'Tidak ada data siswa yang valid untuk disimpan.');
         }
 
-        DB::transaction(function () use ($rows): void {
-            Absensi::insert($rows);
-        });
+        try {
+            DB::transaction(function () use ($rows): void {
+                Absensi::insert($rows);
+            });
+        } catch (QueryException $exception) {
+            if (($exception->errorInfo[0] ?? null) !== '23000') {
+                throw $exception;
+            }
+
+            return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('error', 'Absensi pada tanggal tersebut sudah disimpan oleh proses lain. Muat ulang halaman.');
+        }
 
         $this->dispatchAlpaNotificationsFor($alpaSiswaIds, $tanggal);
 
@@ -170,12 +192,18 @@ class AbsensiController extends Controller
      */
     public function edit(Request $request): View
     {
+        $filters = $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
         $kelas = Kelas::query()
+            ->accessibleBy($request->user())
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
-        $kelasId = $request->input('kelas_id');
-        $tanggal = $request->input('tanggal', date('Y-m-d'));
+        $kelasId = $filters['kelas_id'] ?? null;
+        $tanggal = $filters['tanggal'] ?? today()->toDateString();
 
         $siswas = [];
         $absensiSiswa = [];
@@ -185,20 +213,20 @@ class AbsensiController extends Controller
 
         if ($kelasId) {
             $selectedKelas = Kelas::query()
+                ->accessibleBy($request->user())
                 ->select(['id', 'periode_id'])
-                ->find($kelasId);
+                ->findOrFail($kelasId);
 
-            if ($selectedKelas) {
-                $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
+            $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
 
-                if ($holiday) {
-                    $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
-                }
+            if ($holiday) {
+                $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
             }
 
             $siswas = Siswa::query()
                 ->select(['id', 'nama_siswa'])
                 ->where('kelas_id', $kelasId)
+                ->where('status', 'aktif')
                 ->orderBy('nama_siswa')
                 ->get();
             $stats['total'] = $siswas->count();
@@ -222,17 +250,18 @@ class AbsensiController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        $request->validate([
-            'kelas_id' => 'required|exists:kelas,id',
-            'tanggal' => 'required|date',
-            'absensi' => 'required|array',
-            'absensi.*' => 'required|in:hadir,izin,sakit,alpa',
+        $data = $request->validate([
+            'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+            'tanggal' => ['required', 'date_format:Y-m-d'],
+            'absensi' => ['required', 'array'],
+            'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
         ]);
 
-        $kelasId = $request->kelas_id;
-        $tanggal = $request->tanggal;
+        $kelasId = (int) $data['kelas_id'];
+        $tanggal = $data['tanggal'];
         $userId = Auth::id();
         $kelas = Kelas::query()
+            ->accessibleBy($request->user())
             ->select(['id', 'periode_id'])
             ->findOrFail($kelasId);
 
@@ -244,77 +273,103 @@ class AbsensiController extends Controller
 
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasId)
-            ->whereIn('id', array_keys($request->absensi))
+            ->where('status', 'aktif')
+            ->orderBy('id')
             ->pluck('id')
             ->all();
 
+        $this->ensureCompleteAttendancePayload($data['absensi'], $siswaIds);
+
         $existingAbsensis = Absensi::query()
+            ->where('kelas_id', $kelasId)
             ->where('tanggal', $tanggal)
             ->whereIn('siswa_id', $siswaIds)
             ->get()
             ->keyBy('siswa_id');
 
         $now = now();
-        $insertRows = [];
-        $updates = [];
+        $upsertRows = [];
         $alpaSiswaIds = [];
+        $hasChanges = false;
 
         foreach ($siswaIds as $siswaId) {
-            $status = $request->absensi[$siswaId];
+            $status = $data['absensi'][$siswaId];
             $existing = $existingAbsensis->get($siswaId);
             $oldStatus = $existing?->status;
 
-            if ($existing) {
-                if ($oldStatus !== $status || (int) $existing->user_id !== (int) $userId) {
-                    $updates[] = [
-                        'id' => $existing->id,
-                        'user_id' => $userId,
-                        'periode_id' => $kelas->periode_id,
-                        'status' => $status,
-                        'updated_at' => $now,
-                    ];
-                }
-            } else {
-                $insertRows[] = [
-                    'siswa_id' => $siswaId,
-                    'user_id' => $userId,
-                    'periode_id' => $kelas->periode_id,
-                    'tanggal' => $tanggal,
-                    'status' => $status,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
+            $hasChanges = $hasChanges
+                || ! $existing
+                || $oldStatus !== $status
+                || (int) $existing->user_id !== (int) $userId
+                || (int) $existing->kelas_id !== $kelasId;
+
+            $upsertRows[] = [
+                'siswa_id' => $siswaId,
+                'kelas_id' => $kelasId,
+                'user_id' => $userId,
+                'periode_id' => $kelas->periode_id,
+                'tanggal' => $tanggal,
+                'status' => $status,
+                'created_at' => $existing?->created_at ?? $now,
+                'updated_at' => $now,
+            ];
 
             if ($status === 'alpa' && $oldStatus !== 'alpa') {
                 $alpaSiswaIds[] = $siswaId;
             }
         }
 
-        if ($insertRows === [] && $updates === []) {
+        if (! $hasChanges) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('success', 'Tidak ada perubahan data absensi.');
         }
 
-        DB::transaction(function () use ($insertRows, $updates): void {
-            if ($insertRows !== []) {
-                Absensi::insert($insertRows);
-            }
-
-            foreach ($updates as $update) {
-                Absensi::whereKey($update['id'])->update([
-                    'user_id' => $update['user_id'],
-                    'periode_id' => $update['periode_id'],
-                    'status' => $update['status'],
-                    'updated_at' => $update['updated_at'],
-                ]);
-            }
+        DB::transaction(function () use ($upsertRows): void {
+            Absensi::upsert(
+                $upsertRows,
+                ['siswa_id', 'tanggal'],
+                ['kelas_id', 'user_id', 'periode_id', 'status', 'updated_at']
+            );
         });
 
         $this->dispatchAlpaNotificationsFor($alpaSiswaIds, $tanggal);
 
         return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data riwayat absensi berhasil diperbarui.');
+    }
+
+    /**
+     * @param  array<int|string, string>  $attendance
+     * @param  array<int, int>  $expectedStudentIds
+     */
+    private function ensureCompleteAttendancePayload(array $attendance, array $expectedStudentIds): void
+    {
+        $submittedStudentIds = [];
+
+        foreach (array_keys($attendance) as $studentId) {
+            if (! ctype_digit((string) $studentId) || (int) $studentId < 1) {
+                throw ValidationException::withMessages([
+                    'absensi' => 'Payload absensi mengandung ID siswa yang tidak valid.',
+                ]);
+            }
+
+            $submittedStudentIds[] = (int) $studentId;
+        }
+
+        sort($submittedStudentIds);
+        sort($expectedStudentIds);
+
+        if ($expectedStudentIds === []) {
+            throw ValidationException::withMessages([
+                'absensi' => 'Kelas ini belum memiliki siswa aktif.',
+            ]);
+        }
+
+        if ($submittedStudentIds !== $expectedStudentIds) {
+            throw ValidationException::withMessages([
+                'absensi' => 'Absensi harus memuat seluruh siswa aktif dari kelas yang dipilih.',
+            ]);
+        }
     }
 
     private function findHariLibur(?int $periodeId, string $tanggal): ?HariLibur
@@ -434,7 +489,7 @@ class AbsensiController extends Controller
             return null;
         }
 
-        $number = preg_replace('/\D+/', '', $phone);
+        $number = (string) preg_replace('/\D+/', '', $phone);
 
         if (str_starts_with($number, '0')) {
             return '62' . substr($number, 1);

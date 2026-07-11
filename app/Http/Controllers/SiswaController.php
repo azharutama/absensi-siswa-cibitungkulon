@@ -10,8 +10,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use RuntimeException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use ZipArchive;
 
 class SiswaController extends Controller
@@ -22,7 +23,7 @@ class SiswaController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'periode_id' => ['nullable', 'integer', 'exists:periodes,id'],
-            'status' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', Rule::in(['aktif', 'nonaktif'])],
         ]);
 
         $siswas = Siswa::query()
@@ -80,12 +81,12 @@ class SiswaController extends Controller
     public function import(Request $request, SiswaImportService $importService): RedirectResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:xlsx,csv', 'max:5120'],
         ]);
 
-        if (! Kelas::query()->exists()) {
+        if (! Kelas::query()->whereHas('periode', fn($query) => $query->where('status_aktif', true))->exists()) {
             return back()
-                ->with('error', 'Import siswa belum bisa dilakukan karena data kelas belum tersedia.');
+                ->with('error', 'Import siswa memerlukan kelas pada periode yang sedang aktif.');
         }
 
         try {
@@ -137,7 +138,12 @@ class SiswaController extends Controller
             ],
         ];
 
-        $filePath = storage_path('app/template_import_siswa.xlsx');
+        $filePath = tempnam(storage_path('app/private'), 'template-import-siswa-');
+
+        if ($filePath === false) {
+            throw new RuntimeException('File template sementara tidak dapat dibuat.');
+        }
+
         $this->createSimpleXlsx($filePath, $rows);
 
         return response()->download($filePath, 'template_import_siswa.xlsx')->deleteFileAfterSend();
@@ -148,7 +154,7 @@ class SiswaController extends Controller
         $data = $this->validatedData($request);
 
         // Cari data kelas terpilih untuk mengekstrak periode_id bawaannya
-        $kelasSelected = Kelas::findOrFail($data['kelas_id']);
+        $kelasSelected = $this->findActiveKelas((int) $data['kelas_id']);
 
         // Inject otomatis data periode_id dan status default siswa baru
         $data['periode_id'] = $kelasSelected->periode_id;
@@ -158,13 +164,6 @@ class SiswaController extends Controller
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil ditambahkan.');
-    }
-
-    public function show(Siswa $siswa): View
-    {
-        $siswa->load(['kelas:id,nama_kelas', 'periode:id,nama_periode']);
-
-        return view('siswa.show', compact('siswa'));
     }
 
     public function edit(Siswa $siswa): View
@@ -180,7 +179,7 @@ class SiswaController extends Controller
         $data = $this->validatedData($request, $siswa);
 
         // Jika kelas diubah, update juga periode_id agar mengikuti kelas yang baru
-        $kelasSelected = Kelas::findOrFail($data['kelas_id']);
+        $kelasSelected = $this->findActiveKelas((int) $data['kelas_id']);
         $data['periode_id'] = $kelasSelected->periode_id;
 
         $siswa->update($data);
@@ -191,6 +190,11 @@ class SiswaController extends Controller
 
     public function destroy(Siswa $siswa): RedirectResponse
     {
+        if ($siswa->absensis()->exists()) {
+            return to_route('siswa.index')
+                ->with('error', 'Siswa tidak dapat dihapus karena memiliki riwayat absensi. Ubah status menjadi nonaktif.');
+        }
+
         $siswa->delete();
 
         return to_route('siswa.index')
@@ -223,6 +227,7 @@ class SiswaController extends Controller
             'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
             'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
             'alamat' => ['nullable', 'string'],
+            'status' => [$siswa ? 'required' : 'nullable', Rule::in(['aktif', 'nonaktif'])],
         ]);
     }
 
@@ -232,9 +237,25 @@ class SiswaController extends Controller
         return [
             'kelas' => Kelas::query()
                 ->select('id', 'nama_kelas', 'periode_id')
+                ->whereHas('periode', fn($query) => $query->where('status_aktif', true))
                 ->orderBy('nama_kelas')
                 ->get(),
         ];
+    }
+
+    private function findActiveKelas(int $kelasId): Kelas
+    {
+        $kelas = Kelas::query()
+            ->whereHas('periode', fn($query) => $query->where('status_aktif', true))
+            ->find($kelasId);
+
+        if (! $kelas) {
+            throw ValidationException::withMessages([
+                'kelas_id' => 'Kelas harus berasal dari periode yang sedang aktif.',
+            ]);
+        }
+
+        return $kelas;
     }
 
     /**
@@ -243,7 +264,9 @@ class SiswaController extends Controller
     private function createSimpleXlsx(string $filePath, array $rows): void
     {
         $zip = new ZipArchive();
-        $zip->open($filePath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        if ($zip->open($filePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('File template XLSX tidak dapat dibuat.');
+        }
 
         $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">

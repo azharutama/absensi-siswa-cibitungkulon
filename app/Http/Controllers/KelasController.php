@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Periode;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class KelasController extends Controller
 {
@@ -67,17 +70,41 @@ class KelasController extends Controller
                 ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia sebagai wali kelas.']);
         }
 
-        $kelas = Kelas::create([
-            'nama_kelas' => $request->nama_kelas,
-            'periode_id' => $periodeAktif->id,
-            'status'     => 'aktif', // Mengisi kolom status bawaan migrasi kelas Anda
-        ]);
+        DB::transaction(function () use ($periodeAktif, $request): void {
+            $activePeriode = Periode::query()
+                ->whereKey($periodeAktif->id)
+                ->where('status_aktif', true)
+                ->lockForUpdate()
+                ->first();
 
-        if ($request->filled('guru_id')) {
-            $kelas->gurus()->syncWithoutDetaching([
-                $request->guru_id => ['is_wali_kelas' => true],
+            if (! $activePeriode) {
+                throw ValidationException::withMessages([
+                    'nama_kelas' => 'Periode aktif berubah. Muat ulang halaman sebelum membuat kelas.',
+                ]);
+            }
+
+            if ($request->filled('guru_id')) {
+                User::query()->whereKey($request->integer('guru_id'))->lockForUpdate()->firstOrFail();
+
+                if (! $this->availableWaliKelasQuery()->whereKey($request->integer('guru_id'))->exists()) {
+                    throw ValidationException::withMessages([
+                        'guru_id' => 'Guru yang dipilih sudah menjadi wali kelas aktif.',
+                    ]);
+                }
+            }
+
+            $kelas = Kelas::create([
+                'nama_kelas' => $request->string('nama_kelas')->trim()->toString(),
+                'periode_id' => $activePeriode->id,
+                'status' => 'aktif',
             ]);
-        }
+
+            if ($request->filled('guru_id')) {
+                $kelas->gurus()->syncWithoutDetaching([
+                    $request->integer('guru_id') => ['is_wali_kelas' => true],
+                ]);
+            }
+        });
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil ditambahkan.');
     }
@@ -128,19 +155,33 @@ class KelasController extends Controller
                 ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia sebagai wali kelas.']);
         }
 
-        $kelas->update([
-            'nama_kelas' => $request->nama_kelas,
-        ]);
+        DB::transaction(function () use ($currentWaliId, $kelas, $request): void {
+            $lockedKelas = Kelas::query()->whereKey($kelas->id)->lockForUpdate()->firstOrFail();
 
-        foreach ($kelas->gurus()->pluck('users.id') as $guruId) {
-            $kelas->gurus()->updateExistingPivot($guruId, ['is_wali_kelas' => false]);
-        }
+            if ($request->filled('guru_id')) {
+                User::query()->whereKey($request->integer('guru_id'))->lockForUpdate()->firstOrFail();
 
-        if ($request->filled('guru_id')) {
-            $kelas->gurus()->syncWithoutDetaching([
-                $request->guru_id => ['is_wali_kelas' => true],
+                if (! $this->waliKelasOptionsQuery($currentWaliId)->whereKey($request->integer('guru_id'))->exists()) {
+                    throw ValidationException::withMessages([
+                        'guru_id' => 'Guru yang dipilih sudah menjadi wali kelas aktif.',
+                    ]);
+                }
+            }
+
+            $lockedKelas->update([
+                'nama_kelas' => $request->string('nama_kelas')->trim()->toString(),
             ]);
-        }
+
+            foreach ($lockedKelas->gurus()->pluck('users.id') as $guruId) {
+                $lockedKelas->gurus()->updateExistingPivot($guruId, ['is_wali_kelas' => false]);
+            }
+
+            if ($request->filled('guru_id')) {
+                $lockedKelas->gurus()->syncWithoutDetaching([
+                    $request->integer('guru_id') => ['is_wali_kelas' => true],
+                ]);
+            }
+        });
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil diperbarui.');
     }
@@ -149,8 +190,11 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id);
 
-        if ($kelas->siswas()->exists()) {
-            return redirect()->route('kelas.index')->with('error', 'Kelas tidak bisa dihapus karena masih memiliki data siswa.');
+        if ($kelas->siswas()->exists() || Absensi::query()->where('kelas_id', $kelas->id)->exists()) {
+            return redirect()->route('kelas.index')->with(
+                'error',
+                'Kelas tidak bisa dihapus karena masih memiliki data siswa atau riwayat absensi.'
+            );
         }
 
         $kelas->delete();
@@ -164,7 +208,8 @@ class KelasController extends Controller
             ->select(['id', 'nama', 'nip'])
             ->where('role', 'guru')
             ->whereDoesntHave('kelas', function ($query) {
-                $query->where('kelas_user.is_wali_kelas', true);
+                $query->where('kelas_user.is_wali_kelas', true)
+                    ->whereHas('periode', fn($query) => $query->where('status_aktif', true));
             })
             ->orderBy('nama');
     }
@@ -176,7 +221,8 @@ class KelasController extends Controller
             ->where('role', 'guru')
             ->where(function ($query) use ($currentWaliId) {
                 $query->whereDoesntHave('kelas', function ($query) {
-                    $query->where('kelas_user.is_wali_kelas', true);
+                    $query->where('kelas_user.is_wali_kelas', true)
+                        ->whereHas('periode', fn($query) => $query->where('status_aktif', true));
                 });
 
                 if ($currentWaliId) {

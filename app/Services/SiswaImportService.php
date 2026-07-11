@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Kelas;
 use App\Models\Siswa;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -14,6 +15,12 @@ use ZipArchive;
 
 class SiswaImportService
 {
+    private const MAX_IMPORT_ROWS = 10000;
+
+    private const IMPORT_CHUNK_SIZE = 250;
+
+    private const MAX_XLSX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024;
+
     /**
      * @return array{created: int, updated: int, skipped: int, errors: array<int, string>}
      */
@@ -30,12 +37,22 @@ class SiswaImportService
             ];
         }
 
+        if (count($rows) - 1 > self::MAX_IMPORT_ROWS) {
+            throw new RuntimeException('File import melebihi batas 10.000 baris data.');
+        }
+
         $headers = $this->normalizeHeaders(array_shift($rows));
-        $kelasByName = Kelas::query()->get()->keyBy(fn(Kelas $kelas) => $this->normalizeKey($kelas->nama_kelas));
+        $this->ensureRequiredHeaders($headers);
+
+        $kelasByName = Kelas::query()
+            ->whereHas('periode', fn($query) => $query->where('status_aktif', true))
+            ->get()
+            ->groupBy(fn(Kelas $kelas) => $this->normalizeKey($kelas->nama_kelas));
         $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => []];
 
-        DB::transaction(function () use ($rows, $headers, $kelasByName, &$summary): void {
-            foreach ($rows as $index => $row) {
+        foreach (array_chunk($rows, self::IMPORT_CHUNK_SIZE, true) as $chunk) {
+            DB::transaction(function () use ($chunk, $headers, $kelasByName, &$summary): void {
+                foreach ($chunk as $index => $row) {
                 $line = $index + 2;
                 $data = $this->mapRow($headers, $row);
 
@@ -45,23 +62,30 @@ class SiswaImportService
                 }
 
                 $kelasName = $this->normalizeKey($data['kelas'] ?? '');
-                $kelas = $kelasByName->get($kelasName);
+                $kelasCandidates = $kelasByName->get($kelasName);
 
-                if (! $kelas) {
+                if (! $kelasCandidates || $kelasCandidates->isEmpty()) {
                     $summary['errors'][] = "Baris {$line}: kelas '{$data['kelas']}' tidak ditemukan.";
                     continue;
                 }
 
+                if ($kelasCandidates->count() > 1) {
+                    $summary['errors'][] = "Baris {$line}: kelas '{$data['kelas']}' ambigu pada periode aktif.";
+                    continue;
+                }
+
+                $kelas = $kelasCandidates->first();
+
                 $data['jenis_kelamin'] = $this->normalizeGender($data['jenis_kelamin'] ?? '');
                 $data['kelas_id'] = $kelas->id;
                 $data['periode_id'] = $kelas->periode_id;
-                $data['status'] = $data['status'] ?: 'aktif';
+                $data['status'] = $this->normalizeKey($data['status'] ?: 'aktif');
 
                 unset($data['kelas']);
 
                 $validator = Validator::make($data, [
-                    'nis' => ['nullable', 'string', 'max:50'],
-                    'nisn' => ['nullable', 'string', 'max:50'],
+                    'nis' => ['nullable', 'string', 'max:50', 'required_without:nisn'],
+                    'nisn' => ['nullable', 'string', 'max:50', 'required_without:nis'],
                     'nama_siswa' => ['required', 'string', 'max:255'],
                     'jenis_kelamin' => ['required', Rule::in(['laki-laki', 'perempuan'])],
                     'nama_ayah' => ['required', 'string', 'max:255'],
@@ -72,7 +96,7 @@ class SiswaImportService
                     'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
                     'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
                     'periode_id' => ['required', 'integer', 'exists:periodes,id'],
-                    'status' => ['required', 'string', 'max:50'],
+                    'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
                 ]);
 
                 if ($validator->fails()) {
@@ -80,12 +104,14 @@ class SiswaImportService
                     continue;
                 }
 
-                $existing = $this->findExistingSiswa($data);
+                $matches = $this->findMatchingStudents($data);
 
-                if ($conflict = $this->findUniqueConflict($data, $existing?->id)) {
-                    $summary['errors'][] = "Baris {$line}: {$conflict}";
+                if ($matches->count() > 1) {
+                    $summary['errors'][] = "Baris {$line}: NIS dan NISN mengarah ke siswa yang berbeda.";
                     continue;
                 }
+
+                $existing = $matches->first();
 
                 if ($existing) {
                     $existing->update($data);
@@ -94,8 +120,9 @@ class SiswaImportService
                     Siswa::create($data);
                     $summary['created']++;
                 }
-            }
-        });
+                }
+            });
+        }
 
         return $summary;
     }
@@ -146,16 +173,20 @@ class SiswaImportService
             throw new RuntimeException('File XLSX tidak dapat dibuka.');
         }
 
-        $sharedStrings = $this->readSharedStrings($zip);
-        $sheetPath = $this->firstWorksheetPath($zip);
-        $sheetXml = $zip->getFromName($sheetPath);
-        $zip->close();
+        try {
+            $this->assertSafeXlsxArchive($zip);
+            $sharedStrings = $this->readSharedStrings($zip);
+            $sheetPath = $this->firstWorksheetPath($zip);
+            $sheetXml = $zip->getFromName($sheetPath);
+        } finally {
+            $zip->close();
+        }
 
         if ($sheetXml === false) {
             throw new RuntimeException('Sheet pertama pada file XLSX tidak dapat dibaca.');
         }
 
-        $sheet = simplexml_load_string($sheetXml);
+        $sheet = simplexml_load_string($sheetXml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
 
         if (! $sheet instanceof SimpleXMLElement) {
             throw new RuntimeException('Format XML sheet pada file XLSX tidak valid.');
@@ -181,6 +212,29 @@ class SiswaImportService
         return $rows;
     }
 
+    private function assertSafeXlsxArchive(ZipArchive $zip): void
+    {
+        if ($zip->numFiles > 1000) {
+            throw new RuntimeException('File XLSX memiliki terlalu banyak berkas internal.');
+        }
+
+        $uncompressedBytes = 0;
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $stat = $zip->statIndex($index);
+
+            if (! is_array($stat)) {
+                throw new RuntimeException('Struktur internal file XLSX tidak dapat dibaca.');
+            }
+
+            $uncompressedBytes += (int) ($stat['size'] ?? 0);
+
+            if ($uncompressedBytes > self::MAX_XLSX_UNCOMPRESSED_BYTES) {
+                throw new RuntimeException('Isi file XLSX terlalu besar setelah diekstrak.');
+            }
+        }
+    }
+
     /**
      * @return array<int, string>
      */
@@ -192,7 +246,7 @@ class SiswaImportService
             return [];
         }
 
-        $sharedStringsXml = simplexml_load_string($xml);
+        $sharedStringsXml = simplexml_load_string($xml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
 
         if (! $sharedStringsXml instanceof SimpleXMLElement) {
             return [];
@@ -223,8 +277,8 @@ class SiswaImportService
             return 'xl/worksheets/sheet1.xml';
         }
 
-        $workbook = simplexml_load_string($workbookXml);
-        $relations = simplexml_load_string($relationsXml);
+        $workbook = simplexml_load_string($workbookXml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
+        $relations = simplexml_load_string($relationsXml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
 
         if (! $workbook instanceof SimpleXMLElement || ! $relations instanceof SimpleXMLElement) {
             return 'xl/worksheets/sheet1.xml';
@@ -307,6 +361,27 @@ class SiswaImportService
     private function normalizeHeaders(array $headers): array
     {
         return array_map(fn($header) => $this->normalizeKey((string) $header), $headers);
+    }
+
+    /** @param array<int, string> $headers */
+    private function ensureRequiredHeaders(array $headers): void
+    {
+        $requiredGroups = [
+            'NIS atau NISN' => ['nis', 'nisn'],
+            'nama siswa' => ['nama siswa', 'nama lengkap siswa', 'nama'],
+            'jenis kelamin' => ['jenis kelamin', 'jk'],
+            'kelas' => ['kelas'],
+            'nama ayah' => ['nama ayah'],
+            'nomor WhatsApp ayah' => ['no whatsapp ayah', 'wa ayah'],
+            'nama ibu' => ['nama ibu'],
+            'nomor WhatsApp ibu' => ['no whatsapp ibu', 'wa ibu'],
+        ];
+
+        foreach ($requiredGroups as $label => $aliases) {
+            if (array_intersect($aliases, $headers) === []) {
+                throw new RuntimeException("Kolom wajib '{$label}' tidak ditemukan pada header file.");
+            }
+        }
     }
 
     /**
@@ -397,7 +472,10 @@ class SiswaImportService
 
     private function normalizeKey(string $value): string
     {
-        return strtolower(trim(str_replace(['-', '_'], ' ', $value)));
+        $value = str_replace(['-', '_'], ' ', $value);
+        $value = (string) preg_replace('/\s+/u', ' ', trim($value));
+
+        return mb_strtolower($value);
     }
 
     private function normalizeGender(string $value): ?string
@@ -414,39 +492,15 @@ class SiswaImportService
     /**
      * @param array<string, mixed> $data
      */
-    private function findExistingSiswa(array $data): ?Siswa
+    /** @return Collection<int, Siswa> */
+    private function findMatchingStudents(array $data): Collection
     {
-        if (blank($data['nisn'] ?? null) && blank($data['nis'] ?? null)) {
-            return null;
-        }
-
         return Siswa::query()
             ->where(function ($query) use ($data): void {
                 $query->when($data['nisn'] ?? null, fn($query, $nisn) => $query->orWhere('nisn', $nisn))
                     ->when($data['nis'] ?? null, fn($query, $nis) => $query->orWhere('nis', $nis));
             })
-            ->first();
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private function findUniqueConflict(array $data, ?int $ignoreId): ?string
-    {
-        foreach (['nis' => 'NIS', 'nisn' => 'NISN'] as $field => $label) {
-            if (blank($data[$field] ?? null)) {
-                continue;
-            }
-
-            $exists = Siswa::where($field, $data[$field])
-                ->when($ignoreId, fn($query) => $query->whereKeyNot($ignoreId))
-                ->exists();
-
-            if ($exists) {
-                return "{$label} {$data[$field]} sudah digunakan siswa lain.";
-            }
-        }
-
-        return null;
+            ->limit(2)
+            ->get();
     }
 }

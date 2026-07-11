@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Kelas;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class GuruController extends Controller
@@ -70,21 +72,22 @@ class GuruController extends Controller
             'kelas.*'       => 'exists:kelas,id',
         ]);
 
-        $user = User::create([
-            'nip'           => $request->nip,
-            'nama'          => $request->nama,
-            'email'         => $request->email,
-            'no_telepon'    => $request->no_telepon,
-            'address'       => $request->alamat,
-            'role'          => $request->role,
-            'jenis_kelamin' => $request->jenis_kelamin,
-            'password'      => Hash::make($request->password),
-        ]);
+        DB::transaction(function () use ($request): void {
+            $user = User::create([
+                'nip' => $request->nip,
+                'nama' => $request->nama,
+                'email' => $request->email,
+                'no_telepon' => $request->no_telepon,
+                'address' => $request->alamat,
+                'role' => $request->role,
+                'jenis_kelamin' => $request->jenis_kelamin,
+                'password' => Hash::make($request->password),
+            ]);
 
-        // Mapping ke table pivot kelas_user kalau role-nya guru
-        if ($user->role === 'guru' && $request->filled('kelas')) {
-            $this->syncKelasDiampu($user, $request->input('kelas', []));
-        }
+            if ($user->role === 'guru' && $request->filled('kelas')) {
+                $this->syncKelasDiampu($user, $request->input('kelas', []));
+            }
+        });
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil ditambahkan.');
     }
@@ -117,7 +120,7 @@ class GuruController extends Controller
         $request->validate([
             'nip'           => 'nullable|string|unique:users,nip,' . $user->id,
             'nama'          => 'required|string|max:255',
-            'email'         => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
+            'email'         => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'no_telepon'    => 'required|string|unique:users,no_telepon,' . $user->id,
             'alamat'        => 'nullable|string|max:255',
             'role'          => 'required|string|in:operator,guru,kepala_sekolah',
@@ -143,15 +146,15 @@ class GuruController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        $user->update($data);
+        DB::transaction(function () use ($request, $user, $data): void {
+            $user->update($data);
 
-        // Update data table pivot kelas_user
-        if ($user->role === 'guru') {
-            $this->syncKelasDiampu($user, $request->input('kelas', []));
-        } else {
-            // Bersihkan relasi kelas kalau role berubah dari guru ke role lain
-            $user->kelas()->detach();
-        }
+            if ($user->role === 'guru') {
+                $this->syncKelasDiampu($user, $request->input('kelas', []));
+            } else {
+                $user->kelas()->detach();
+            }
+        });
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil diperbarui.');
     }
@@ -163,9 +166,21 @@ class GuruController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Detach relasi di tabel pivot dulu supaya tidak melanggar foreign key constraint
-        $user->kelas()->detach();
-        $user->delete();
+        if ((int) Auth::id() === (int) $user->id) {
+            return redirect()->route('guru.index')->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
+        }
+
+        if ($user->absensis()->exists() || $user->rekaps()->exists()) {
+            return redirect()->route('guru.index')->with(
+                'error',
+                'Pengguna tidak dapat dihapus karena memiliki riwayat absensi atau rekap.'
+            );
+        }
+
+        DB::transaction(function () use ($user): void {
+            $user->kelas()->detach();
+            $user->delete();
+        });
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil dihapus.');
     }

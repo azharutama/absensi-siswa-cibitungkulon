@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Rekap;
+use App\Models\Absensi;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +20,12 @@ class RekapFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'absensi_id' => Absensi::factory(),
+            'user_id' => User::factory()->operator(),
+            'nomor_bulan' => fake()->date('Y-m'),
+            'id_pengun' => null,
+            'status_pengiriman' => 'pending',
+            'waktu_kirim' => null,
         ];
     }
 }

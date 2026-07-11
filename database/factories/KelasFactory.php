@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Kelas;
+use App\Models\Periode;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +19,9 @@ class KelasFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'nama_kelas' => fake()->numberBetween(1, 6).'-'.fake()->randomElement(['A', 'B']),
+            'periode_id' => Periode::factory(),
+            'status' => 'aktif',
         ];
     }
 }

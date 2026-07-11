@@ -17,8 +17,19 @@ class PeriodeFactory extends Factory
      */
     public function definition(): array
     {
+        $start = fake()->dateTimeBetween('-1 year', '+6 months');
+        $end = (clone $start)->modify('+6 months');
+
         return [
-            //
+            'nama_periode' => sprintf(
+                'Semester %s %s/%s',
+                fake()->randomElement(['Ganjil', 'Genap']),
+                $start->format('Y'),
+                $end->format('Y')
+            ),
+            'tanggal_mulai' => $start->format('Y-m-d'),
+            'tanggal_selesai' => $end->format('Y-m-d'),
+            'status_aktif' => false,
         ];
     }
 }

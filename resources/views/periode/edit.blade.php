@@ -1,9 +1,48 @@
 <x-app-layout>
     <x-form-card :title="__('Edit Periode Tahun Ajaran')" :backUrl="route('periode.index')" maxWidth="max-w-5xl">
+        @php
+            $listMingguan = collect(old(
+                'libur_mingguan',
+                $periode->hariLiburs
+                    ->where('tipe', 'mingguan')
+                    ->map(fn ($item) => [
+                        'hari' => $item->hari,
+                        'keterangan' => $item->keterangan,
+                    ])
+                    ->values()
+                    ->all(),
+            ))
+                ->map(fn ($item) => [
+                    'hari' => is_array($item) ? ($item['hari'] ?? 'Minggu') : 'Minggu',
+                    'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
+                ])
+                ->values()
+                ->all();
+
+            $listNasional = collect(old(
+                'libur_nasional',
+                $periode->hariLiburs
+                    ->where('tipe', 'nasional')
+                    ->map(fn ($item) => [
+                        'tanggal' => $item->tanggal?->format('Y-m-d') ?? '',
+                        'nama_libur' => $item->keterangan,
+                    ])
+                    ->values()
+                    ->all(),
+            ))
+                ->map(fn ($item) => [
+                    'tanggal' => is_array($item) ? ($item['tanggal'] ?? '') : '',
+                    'nama_libur' => is_array($item)
+                        ? ($item['nama_libur'] ?? $item['keterangan'] ?? '')
+                        : '',
+                ])
+                ->values()
+                ->all();
+        @endphp
         
         <form method="POST" action="{{ route('periode.update', $periode->id) }}" class="space-y-8" x-data="{ 
-            listMingguan: @json($periode->hariLiburs->where('tipe', 'mingguan')->map(fn($item) => ['hari' => $item->hari, 'keterangan' => $item->keterangan])->values()),
-            listNasional: @json($periode->hariLiburs->where('tipe', 'nasional')->map(fn($item) => ['tanggal' => $item->tanggal, 'keterangan' => $item->keterangan])->values()),
+            listMingguan: @js($listMingguan),
+            listNasional: @js($listNasional),
             addMingguan() {
                 this.listMingguan.push({ hari: 'Minggu', keterangan: 'Libur Rutin Mingguan' });
             },
@@ -11,7 +50,7 @@
                 this.listMingguan.splice(index, 1);
             },
             addNasional() {
-                this.listNasional.push({ tanggal: '', keterangan: '' });
+                this.listNasional.push({ tanggal: '', nama_libur: '' });
             },
             removeNasional(index) {
                 this.listNasional.splice(index, 1);
@@ -32,13 +71,13 @@
 
                     <x-input-label for="tanggal_mulai" :value="__('Tanggal Mulai *')" class="md:text-right md:pe-4" />
                     <div class="md:col-span-2">
-                        <x-text-input id="tanggal_mulai" name="tanggal_mulai" type="date" class="w-full" :value="old('tanggal_mulai', $periode->tanggal_mulai)" required />
+                        <x-text-input id="tanggal_mulai" name="tanggal_mulai" type="date" class="w-full" :value="old('tanggal_mulai', $periode->tanggal_mulai?->format('Y-m-d'))" required />
                         <x-input-error class="mt-1" :messages="$errors->get('tanggal_mulai')" />
                     </div>
 
                     <x-input-label for="tanggal_selesai" :value="__('Tanggal Selesai *')" class="md:text-right md:pe-4" />
                     <div class="md:col-span-2">
-                        <x-text-input id="tanggal_selesai" name="tanggal_selesai" type="date" class="w-full" :value="old('tanggal_selesai', $periode->tanggal_selesai)" required />
+                        <x-text-input id="tanggal_selesai" name="tanggal_selesai" type="date" class="w-full" :value="old('tanggal_selesai', $periode->tanggal_selesai?->format('Y-m-d'))" required />
                         <x-input-error class="mt-1" :messages="$errors->get('tanggal_selesai')" />
                     </div>
 
@@ -132,7 +171,7 @@
                                                 <input type="date" :name="`libur_nasional[${index}][tanggal]`" x-model="item.tanggal" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500" required>
                                             </td>
                                             <td class="px-2 py-1">
-                                                <input type="text" :name="`libur_nasional[${index}][nama_libur]`" x-model="item.keterangan" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500" required>
+                                                <input type="text" :name="`libur_nasional[${index}][nama_libur]`" x-model="item.nama_libur" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500" required>
                                             </td>
                                             <td class="px-3 py-2 text-center">
                                                 <button type="button" @click="removeNasional(index)" class="text-red-600 hover:text-red-900 font-medium">Hapus</button>

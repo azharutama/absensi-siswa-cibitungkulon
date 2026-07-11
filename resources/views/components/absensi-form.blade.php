@@ -79,32 +79,32 @@
                                     <div class="flex justify-center items-center gap-4">
                                         
                                         <label class="cursor-pointer relative flex items-center justify-center">
-                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="hadir" x-model="statusSiswa" class="sr-only">
-                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition"
+                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="hadir" x-model="statusSiswa" aria-label="Hadir untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
+                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                   :class="statusSiswa == 'hadir' ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                 H
                                             </span>
                                         </label>
 
                                         <label class="cursor-pointer relative flex items-center justify-center">
-                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="izin" x-model="statusSiswa" class="sr-only">
-                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition"
+                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="izin" x-model="statusSiswa" aria-label="Izin untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
+                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                   :class="statusSiswa == 'izin' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                 I
                                             </span>
                                         </label>
 
                                         <label class="cursor-pointer relative flex items-center justify-center">
-                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="sakit" x-model="statusSiswa" class="sr-only">
-                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition"
+                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="sakit" x-model="statusSiswa" aria-label="Sakit untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
+                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                   :class="statusSiswa == 'sakit' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                 S
                                             </span>
                                         </label>
 
                                         <label class="cursor-pointer relative flex items-center justify-center">
-                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="alpa" x-model="statusSiswa" class="sr-only">
-                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition"
+                                            <input type="radio" name="absensi[{{ $siswa->id }}]" value="alpa" x-model="statusSiswa" aria-label="Alpa untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
+                                            <span class="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                   :class="statusSiswa == 'alpa' ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                 A
                                             </span>

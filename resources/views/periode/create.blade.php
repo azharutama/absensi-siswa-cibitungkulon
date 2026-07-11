@@ -1,9 +1,27 @@
 <x-app-layout>
     <x-form-card :title="__('Tambah Periode Tahun Ajaran')" :backUrl="route('periode.index')" maxWidth="max-w-5xl">
+        @php
+            $listMingguan = collect(old('libur_mingguan', []))
+                ->map(fn ($item) => [
+                    'hari' => is_array($item) ? ($item['hari'] ?? 'Minggu') : 'Minggu',
+                    'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
+                ])
+                ->values()
+                ->all();
+
+            $listNasional = collect(old('libur_nasional', []))
+                ->map(fn ($item) => [
+                    'tanggal' => is_array($item) ? ($item['tanggal'] ?? '') : '',
+                    'nama_libur' => is_array($item) ? ($item['nama_libur'] ?? '') : '',
+                    'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
+                ])
+                ->values()
+                ->all();
+        @endphp
         
         <form method="POST" action="{{ route('periode.store') }}" class="space-y-8" x-data="{ 
-            listMingguan: [],
-            listNasional: [],
+            listMingguan: @js($listMingguan),
+            listNasional: @js($listNasional),
             addMingguan() {
                 this.listMingguan.push({ hari: 'Minggu', keterangan: 'Libur Rutin Mingguan' });
             },

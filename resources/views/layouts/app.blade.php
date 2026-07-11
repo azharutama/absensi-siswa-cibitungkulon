@@ -31,6 +31,10 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-gray-50">
+        <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[10000] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-blue-700 focus:shadow-lg">
+            Lewati ke konten utama
+        </a>
+
         <div id="page-loading" class="fixed inset-x-0 top-0 z-[9999] hidden" aria-live="polite" aria-busy="true">
             <div class="h-1 overflow-hidden bg-blue-100">
                 <div class="page-loading-bar h-full w-1/2 bg-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.55)]"></div>
@@ -56,12 +60,19 @@
                             <span class="text-xs md:text-sm font-medium text-blue-600 uppercase bg-blue-50 px-2.5 py-1 rounded-md md:bg-transparent md:p-0">
                                 {{ config('navigation.role_labels.' . auth()->user()->role, auth()->user()->role) }}
                             </span>
-                            <div class="w-8 h-8 md:w-9 md:h-9 bg-gray-200 rounded-full shrink-0"></div>
+                            <a
+                                href="{{ route('profile.edit') }}"
+                                aria-label="Buka profil {{ auth()->user()->nama }}"
+                                title="Profil"
+                                class="flex w-8 h-8 md:w-9 md:h-9 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-700 shrink-0 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
+                                {{ mb_strtoupper(mb_substr(auth()->user()->nama, 0, 1)) }}
+                            </a>
                         </div>
                     </div>
                 </header>
 
-                <main class="flex-1 overflow-auto bg-gray-50">
+                <main id="main-content" class="flex-1 overflow-auto bg-gray-50" tabindex="-1">
                     <div class="px-4 py-6 md:px-8">
                         {{ $slot }}
                     </div>

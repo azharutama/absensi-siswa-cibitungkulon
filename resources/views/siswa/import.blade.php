@@ -41,7 +41,7 @@
                 <x-input-error class="mt-2" :messages="$errors->get('file')" />
 
                 <div class="mt-3 text-sm text-gray-600">
-                    <a href="{{ route('siswa.template-import') }}" class="font-semibold text-blue-600 hover:text-blue-800">
+                    <a href="{{ route('siswa.template-import') }}" data-no-loading class="font-semibold text-blue-600 hover:text-blue-800">
                         Download template import
                     </a>
                 </div>

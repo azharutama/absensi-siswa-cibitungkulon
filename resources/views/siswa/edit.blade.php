@@ -48,6 +48,15 @@
                         </select>
                         <x-input-error class="mt-2" :messages="$errors->get('jenis_kelamin')" />
                     </div>
+
+                    <div>
+                        <x-input-label for="status" :value="__('Status Siswa')" />
+                        <select id="status" name="status" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
+                            <option value="aktif" @selected(old('status', $siswa->status) === 'aktif')>Aktif</option>
+                            <option value="nonaktif" @selected(old('status', $siswa->status) === 'nonaktif')>Nonaktif</option>
+                        </select>
+                        <x-input-error class="mt-2" :messages="$errors->get('status')" />
+                    </div>
                 </div>
 
                 <div class="mt-4">

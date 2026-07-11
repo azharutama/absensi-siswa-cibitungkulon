@@ -37,7 +37,7 @@
                     </div>
                 </div>
 
-                @if(Auth::user()->role === 'operator' || Auth::user()->role === 'kepala sekolah')
+                @if (in_array(Auth::user()->role, ['operator', 'kepala_sekolah'], true))
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border-l-4 border-purple-500">
                     <div class="flex items-center justify-between">
                         <div>

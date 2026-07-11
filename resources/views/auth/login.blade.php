@@ -39,7 +39,7 @@
 
                     <!-- Email or Username -->
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                        <label for="login" class="block text-sm font-medium text-gray-700 mb-1">
                             Email atau Username
                         </label>
                         <div class="relative">
@@ -49,18 +49,18 @@
                                 </svg>
                             </span>
                             <input 
-                                id="email" 
-                                name="email" 
+                                id="login" 
+                                name="login" 
                                 type="text" 
                                 autocomplete="username"
                                 placeholder="Masukkan email atau username"
-                                value="{{ old('email') }}"
+                                value="{{ old('login') }}"
                                 required
                                 autofocus
                                 class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                             />
                         </div>
-                        @error('email')
+                        @error('login')
                             <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
                         @enderror
                     </div>
@@ -100,10 +100,12 @@
 
                     <!-- Remember Me -->
                     <div class="flex items-center">
-                        <input 
-                            id="remember" 
-                            name="remember" 
+                        <input
+                            id="remember"
+                            name="remember"
                             type="checkbox"
+                            value="1"
+                            @checked(old('remember'))
                             class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <label for="remember" class="ml-2 text-sm text-gray-600">

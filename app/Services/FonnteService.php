@@ -3,12 +3,13 @@
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
 class FonnteService
 {
     /**
-     * @throws ConnectionException
+     * @throws ConnectionException|RequestException
      */
     public function sendMessage(string $target, string $message): array
     {
@@ -23,7 +24,6 @@ class FonnteService
         }
 
         $response = Http::timeout((int) config('services.fonnte.timeout', 15))
-            ->retry(2, 500)
             ->withHeaders([
                 'Authorization' => $token,
             ])
@@ -36,7 +36,14 @@ class FonnteService
             ]);
 
         $data = $response->json();
-        $success = $response->successful() && (bool) data_get($data, 'status', true);
+
+        if ($response->status() === 429 || $response->serverError()) {
+            throw new RequestException($response);
+        }
+
+        $success = $response->successful()
+            && is_array($data)
+            && data_get($data, 'status') === true;
 
         return [
             'success' => $success,

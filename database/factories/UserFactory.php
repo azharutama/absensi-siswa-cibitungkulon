@@ -34,13 +34,24 @@ class UserFactory extends Factory
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function operator(): static
     {
         return $this->state(fn(array $attributes) => [
-            'email_verified_at' => null,
+            'role' => 'operator',
+        ]);
+    }
+
+    public function guru(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'role' => 'guru',
+        ]);
+    }
+
+    public function kepalaSekolah(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'role' => 'kepala_sekolah',
         ]);
     }
 }

@@ -43,6 +43,11 @@ class User extends Authenticatable
         return $this->hasMany(Rekap::class);
     }
 
+    public function absensis(): HasMany
+    {
+        return $this->hasMany(Absensi::class);
+    }
+
     public function getAlamatAttribute(): ?string
     {
         return $this->address;

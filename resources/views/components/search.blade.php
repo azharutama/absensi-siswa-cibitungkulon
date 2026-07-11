@@ -6,6 +6,7 @@
 
 <form method="GET" action="{{ $action }}" class="w-full sm:w-auto flex items-center gap-2">
     <div class="relative w-full sm:w-64">
+        <label for="search-input" class="sr-only">{{ $placeholder }}</label>
         <input type="text" 
                id="search-input" 
                name="search" 

@@ -13,7 +13,9 @@ class AppLayout extends Component
 
     public function render(): View
     {
+        $routeName = request()->route()?->getName();
         $pageTitle = $this->title
+            ?? ($routeName ? config("navigation.page_titles.{$routeName}") : null)
             ?? config('navigation.dashboard_titles.' . auth()->user()->role, 'Dashboard');
 
         return view('layouts.app', [
