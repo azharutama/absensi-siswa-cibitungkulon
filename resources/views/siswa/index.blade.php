@@ -43,8 +43,9 @@
                     
                     <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto justify-end">
                         <x-search :action="route('siswa.index')" 
-                                  placeholder="Cari NISN atau nama siswa..." 
-                                  :value="request('search')" />
+                                  placeholder="Cari NIS, NISN, atau nama siswa..." 
+                                  :value="request('search')"
+                                  :preserve="request()->only(['kelas_id', 'periode_id', 'status'])" />
 
                         <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 transition shrink-0">
                             Import Excel
@@ -56,15 +57,74 @@
                     </div>
                 </div>
 
+                @php
+                    $periodeLabels = $periodes->pluck('nama_periode', 'id');
+                @endphp
+
+                <form method="GET" action="{{ route('siswa.index') }}" class="grid grid-cols-1 gap-3 border-b border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+                    @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+
+                    <div>
+                        <label for="filter-kelas" class="mb-1 block text-xs font-semibold text-gray-600">Kelas</label>
+                        <select id="filter-kelas" name="kelas_id" class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Semua kelas</option>
+                            @foreach($kelas as $item)
+                                <option value="{{ $item->id }}" @selected((string) request('kelas_id') === (string) $item->id)>
+                                    {{ $item->nama_kelas }} — {{ $periodeLabels->get($item->periode_id, '-') }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="filter-periode" class="mb-1 block text-xs font-semibold text-gray-600">Periode</label>
+                        <select id="filter-periode" name="periode_id" class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Semua periode</option>
+                            @foreach($periodes as $item)
+                                <option value="{{ $item->id }}" @selected((string) request('periode_id') === (string) $item->id)>
+                                    {{ $item->nama_periode }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="filter-status" class="mb-1 block text-xs font-semibold text-gray-600">Status</label>
+                        <select id="filter-status" name="status" class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Semua status</option>
+                            <option value="aktif" @selected(request('status') === 'aktif')>Aktif</option>
+                            <option value="nonaktif" @selected(request('status') === 'nonaktif')>Nonaktif</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-end gap-2">
+                        <button type="submit" class="inline-flex flex-1 justify-center rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700">
+                            Terapkan Filter
+                        </button>
+                        <a href="{{ route('siswa.index') }}" class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                            Reset
+                        </a>
+                    </div>
+                </form>
+
                 @if($siswas->isNotEmpty())
-                    <x-table :headers="['No', 'NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Aksi']">
+                    <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Status', 'Aksi']">
                         @foreach ($siswas as $index => $siswa)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswas->firstItem() + $index }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b font-mono">{{ $siswa->nisn }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b font-mono">
+                                    {{ $siswa->nis ?: '-' }} / {{ $siswa->nisn ?: '-' }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $siswa->nama_siswa }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->kelas->nama_kelas ?? '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b capitalize">{{ $siswa->jenis_kelamin }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm border-b">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $siswa->status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">
+                                        {{ $siswa->status === 'aktif' ? 'Aktif' : 'Nonaktif' }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
                                     <a href="{{ route('siswa.edit', $siswa->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">Edit</a>
                                     

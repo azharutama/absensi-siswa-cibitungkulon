@@ -106,9 +106,11 @@
                 @endforelse
             </x-table>
 
-            <div class="border-t border-gray-100 bg-white px-6 py-4">
-                {{ $notifikasi->links() }}
-            </div>
+            @if($notifikasi->hasPages())
+                <div class="border-t border-gray-100 bg-white px-6 py-4">
+                    {{ $notifikasi->links() }}
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

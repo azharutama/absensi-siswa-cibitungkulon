@@ -15,6 +15,10 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
 
     public int $tries = 3;
 
+    public int $timeout = 30;
+
+    public bool $failOnTimeout = true;
+
     public function __construct(public int $notificationId) {}
 
     public function backoff(): array
@@ -60,18 +64,23 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
             return;
         }
 
+        $currentAttempt = max(1, $this->attempts());
         $claimed = WhatsappNotification::query()
             ->whereKey($notification->id)
-            ->where(function ($query): void {
+            ->where(function ($query) use ($currentAttempt): void {
                 $query->where('status', 'pending')
                     ->orWhere(function ($query): void {
                         $query->where('status', 'processing')
                             ->where('updated_at', '<=', now()->subMinutes(5));
+                    })
+                    ->orWhere(function ($query) use ($currentAttempt): void {
+                        $query->where('status', 'processing')
+                            ->where('attempts', '<', $currentAttempt);
                     });
             })
             ->update([
                 'status' => 'processing',
-                'attempts' => $this->attempts(),
+                'attempts' => $currentAttempt,
                 'last_error' => null,
                 'updated_at' => now(),
             ]);
@@ -102,6 +111,20 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
             'last_error' => $result['success'] ? null : $result['message'],
             'sent_at' => $result['success'] ? now() : null,
         ]);
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        WhatsappNotification::query()
+            ->whereKey($this->notificationId)
+            ->whereIn('status', ['pending', 'processing'])
+            ->update([
+                'status' => 'failed',
+                'last_error' => $exception
+                    ? 'Antrean pengiriman dihentikan: '.$exception->getMessage()
+                    : 'Antrean pengiriman dihentikan tanpa detail kesalahan.',
+                'updated_at' => now(),
+            ]);
     }
 
     private function stringValue(mixed $value): ?string

@@ -24,14 +24,7 @@
                 <h1 class="text-2xl font-bold text-gray-900 text-center mb-2">Masuk</h1>
                 <p class="text-center text-gray-600 text-sm mb-6">Silakan masuk ke akun Anda untuk melanjutkan.</p>
 
-                <!-- Session Status -->
-                @if ($errors->any())
-                    <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                        @foreach ($errors->all() as $error)
-                            <p class="text-red-600 text-sm">{{ $error }}</p>
-                        @endforeach
-                    </div>
-                @endif
+                <x-auth-session-status class="mb-4" :status="session('status')" />
 
                 <!-- Form -->
                 <form method="POST" action="{{ route('login') }}" class="space-y-4">
@@ -126,13 +119,8 @@
                 </form>
 
                 <!-- Footer -->
-                <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-600">
-                        Belum punya akun? 
-                        <a href="#" class="font-medium text-blue-600 hover:text-blue-700">
-                            Hubungi Operator
-                        </a>
-                    </p>
+                <div class="mt-6 text-center text-sm text-gray-600">
+                    Belum punya akun? <span class="font-medium text-blue-700">Hubungi operator sekolah.</span>
                 </div>
             </div>
         </div>

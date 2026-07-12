@@ -39,6 +39,7 @@
                     required
                 >
                 <x-input-error class="mt-2" :messages="$errors->get('file')" />
+                <p class="mt-2 text-xs text-gray-500">Maksimal 5 MB dan 10.000 baris per file.</p>
 
                 <div class="mt-3 text-sm text-gray-600">
                     <a href="{{ route('siswa.template-import') }}" data-no-loading class="font-semibold text-blue-600 hover:text-blue-800">
@@ -48,7 +49,7 @@
             </div>
 
             <div class="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                Data dengan NISN atau NIS yang sudah ada akan diperbarui. Data tanpa NISN/NIS akan dibuat sebagai siswa baru.
+                Setiap baris wajib memiliki NIS atau NISN. Data yang cocok dengan NIS/NISN yang sudah ada akan diperbarui; data lainnya akan dibuat sebagai siswa baru.
             </div>
 
             <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">

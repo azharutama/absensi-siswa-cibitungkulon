@@ -9,10 +9,11 @@ use App\Http\Controllers\PeriodeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RekapController;
 use App\Http\Controllers\SiswaController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('auth.login');
+Route::get('/', function (Request $request) {
+    return redirect()->route($request->user() ? 'dashboard' : 'login');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -55,4 +56,4 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

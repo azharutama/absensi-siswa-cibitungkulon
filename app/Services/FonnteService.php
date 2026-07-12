@@ -37,7 +37,7 @@ class FonnteService
 
         $data = $response->json();
 
-        if ($response->status() === 429 || $response->serverError()) {
+        if (in_array($response->status(), [408, 425, 429], true) || $response->serverError()) {
             throw new RequestException($response);
         }
 

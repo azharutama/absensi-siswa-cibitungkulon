@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('absensis', function (Blueprint $table) {
             $table->id();
             $table->foreignId('siswa_id')->constrained('siswas');
+            $table->foreignId('kelas_id')->constrained('kelas');
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('periode_id')->constrained('periodes');
             $table->date('tanggal');
@@ -23,10 +24,11 @@ return new class extends Migration
 
             $table->index('tanggal');
             $table->index('status');
-            $table->index(['siswa_id', 'tanggal']);
+            $table->unique(['siswa_id', 'tanggal']);
             $table->index(['tanggal', 'siswa_id']);
             $table->index(['periode_id', 'tanggal']);
             $table->index(['status', 'tanggal']);
+            $table->index(['kelas_id', 'tanggal', 'status']);
         });
     }
 

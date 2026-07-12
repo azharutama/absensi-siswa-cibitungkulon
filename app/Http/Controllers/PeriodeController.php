@@ -6,20 +6,26 @@ use App\Models\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PeriodeController extends Controller
 {
     public function index(Request $request)
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
+        $search = trim($filters['search'] ?? '');
+
         $query = Periode::query()
             ->select(['id', 'nama_periode', 'tanggal_mulai', 'tanggal_selesai', 'status_aktif', 'created_at']);
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('nama_periode', 'like', '%' . $request->search . '%');
+        if ($search !== '') {
+            $query->where('nama_periode', 'like', "%{$search}%");
         }
 
         $periodes = $query
-            ->latest()
+            ->latest('id')
             ->paginate(15)
             ->withQueryString();
 
@@ -38,6 +44,7 @@ class PeriodeController extends Controller
         DB::transaction(function () use ($validated): void {
             // Urutan lock yang konsisten mencegah dua aktivasi berjalan bersamaan.
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
+            $this->ensurePeriodDoesNotOverlap($validated);
 
             if ((bool) $validated['status_aktif']) {
                 Periode::query()
@@ -62,6 +69,7 @@ class PeriodeController extends Controller
     {
         // Muat periode beserta relasi hari liburnya agar otomatis ter-fetch di form edit
         $periode = Periode::with('hariLiburs')->findOrFail($id);
+
         return view('periode.edit', compact('periode'));
     }
 
@@ -73,6 +81,8 @@ class PeriodeController extends Controller
         DB::transaction(function () use ($id, $validated): void {
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
             $lockedPeriode = Periode::query()->findOrFail($id);
+            $this->ensurePeriodDoesNotOverlap($validated, $lockedPeriode->id);
+            $this->ensureAttendanceFitsPeriod($lockedPeriode, $validated);
 
             if ((bool) $validated['status_aktif']) {
                 Periode::query()
@@ -112,7 +122,7 @@ class PeriodeController extends Controller
             );
         }
 
-        DB::transaction(fn() => $periode->delete());
+        DB::transaction(fn () => $periode->delete());
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
     }
@@ -154,6 +164,42 @@ class PeriodeController extends Controller
     }
 
     /** @param array<string, mixed> $validated */
+    private function ensurePeriodDoesNotOverlap(array $validated, ?int $ignoredPeriodId = null): void
+    {
+        $overlapExists = Periode::query()
+            ->when($ignoredPeriodId, fn ($query) => $query->whereKeyNot($ignoredPeriodId))
+            ->whereDate('tanggal_mulai', '<=', $validated['tanggal_selesai'])
+            ->whereDate('tanggal_selesai', '>=', $validated['tanggal_mulai'])
+            ->exists();
+
+        if ($overlapExists) {
+            throw ValidationException::withMessages([
+                'tanggal_mulai' => 'Rentang tanggal periode tidak boleh tumpang tindih dengan periode lain.',
+            ]);
+        }
+    }
+
+    /** @param array<string, mixed> $validated */
+    private function ensureAttendanceFitsPeriod(Periode $periode, array $validated): void
+    {
+        $attendanceRange = $periode->absensis()
+            ->selectRaw('MIN(tanggal) AS earliest_date, MAX(tanggal) AS latest_date')
+            ->first();
+        $earliestDate = $attendanceRange?->getAttribute('earliest_date');
+        $latestDate = $attendanceRange?->getAttribute('latest_date');
+
+        if (
+            ($earliestDate && $earliestDate < $validated['tanggal_mulai'])
+            || ($latestDate && $latestDate > $validated['tanggal_selesai'])
+        ) {
+            throw ValidationException::withMessages([
+                'tanggal_mulai' => "Periode masih memiliki riwayat absensi dari {$earliestDate} sampai {$latestDate}.",
+                'tanggal_selesai' => 'Rentang baru harus tetap mencakup seluruh riwayat absensi tersebut.',
+            ]);
+        }
+    }
+
+    /** @param array<string, mixed> $validated */
     private function storeHariLiburs(Periode $periode, array $validated): void
     {
         foreach ($validated['libur_mingguan'] ?? [] as $libur) {
@@ -168,7 +214,7 @@ class PeriodeController extends Controller
             $keterangan = $libur['nama_libur'];
 
             if (filled($libur['keterangan'] ?? null)) {
-                $keterangan .= ' - ' . $libur['keterangan'];
+                $keterangan .= ' - '.$libur['keterangan'];
             }
 
             $periode->hariLiburs()->create([

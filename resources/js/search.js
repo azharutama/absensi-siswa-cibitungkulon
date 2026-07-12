@@ -1,21 +1,21 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const searchInput = document.getElementById("search-input");
-    const btnReset = document.getElementById("btn-reset");
+function initializeSearchForm(form) {
+    const searchInput = form.querySelector("[data-search-input]");
+    const resetButton = form.querySelector("[data-search-reset]");
 
-    function toggleResetButton() {
-        if (searchInput && btnReset) {
-            // .value mengambil apa yang diketik pengguna
-            if (searchInput.value.trim().length > 0) {
-                btnReset.classList.remove("hidden");
-            } else {
-                btnReset.classList.add("hidden");
-            }
-        }
+    if (!(searchInput instanceof HTMLInputElement) || !(resetButton instanceof HTMLElement)) {
+        return;
     }
 
-    if (searchInput) {
-        searchInput.addEventListener("input", toggleResetButton);
+    const toggleResetButton = () => {
+        resetButton.classList.toggle("hidden", searchInput.value.trim().length === 0);
+    };
 
-        toggleResetButton();
+    searchInput.addEventListener("input", toggleResetButton);
+    toggleResetButton();
+}
+
+document.querySelectorAll("[data-search-form]").forEach((form) => {
+    if (form instanceof HTMLFormElement) {
+        initializeSearchForm(form);
     }
 });

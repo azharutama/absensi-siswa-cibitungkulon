@@ -13,7 +13,13 @@ function openDeleteModal(actionUrl) {
     const { modal, form, cancelButton } = modalElements();
 
     if (modal && form) {
-        const action = new URL(actionUrl, window.location.href);
+        let action;
+
+        try {
+            action = new URL(actionUrl, window.location.href);
+        } catch {
+            return;
+        }
 
         if (action.origin !== window.location.origin) {
             return;

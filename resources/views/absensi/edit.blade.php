@@ -32,6 +32,10 @@
                 :tanggal="$tanggal" 
                 buttonText="Perbarui Data Absensi" 
             />
+        @elseif($kelasId && count($siswas) === 0 && !$holidayMessage)
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                Kelas ini belum memiliki siswa aktif yang dapat diperbarui absensinya.
+            </div>
         @endif
     </div>
 </x-app-layout>

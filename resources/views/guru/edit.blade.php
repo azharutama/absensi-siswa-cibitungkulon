@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-form-card :title="__('Edit Data Pengguna / Guru')" :backUrl="route('guru.index')">
         
-        <form method="POST" action="{{ route('guru.update', $guru->id) }}" class="space-y-6">
+        <form method="POST" action="{{ route('guru.update', $guru->id) }}" data-guru-form class="space-y-6">
             @csrf
             @method('PUT') <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -40,7 +40,7 @@
 
                 <div>
                     <x-input-label for="role" :value="__('Hak Akses (Role)')" />
-                    <select id="role" name="role" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required onchange="toggleKelasSection()">
+                    <select id="role" name="role" data-role-select class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
                         <option value="" disabled>-- Pilih Role Akses --</option>
                         <option value="operator" {{ old('role', $guru->role) === 'operator' ? 'selected' : '' }}>Operator</option>
                         <option value="guru" {{ old('role', $guru->role) === 'guru' ? 'selected' : '' }}>Guru</option>
@@ -56,7 +56,7 @@
                 <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
             </div>
 
-            <div id="kelas-section" class="hidden bg-gray-50 p-4 rounded-md border border-gray-200">
+            <div id="kelas-section" data-kelas-section aria-hidden="true" class="hidden bg-gray-50 p-4 rounded-md border border-gray-200">
                 <h3 class="text-sm font-medium text-gray-700 mb-2 font-semibold">Pilih Kelas Yang Diampu (Opsional):</h3>
                 @if($kelas->isNotEmpty())
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -102,6 +102,4 @@
         </form>
 
     </x-form-card>
-
-    @vite(['resources/js/form-guru.js'])
 </x-app-layout>

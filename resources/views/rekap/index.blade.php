@@ -49,7 +49,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
                     </div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Alfa</p>
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Alpa</p>
                     <p class="text-3xl font-bold text-red-500 mt-1">{{ $stats['total_alpa'] }}</p>
                 </div>
             </div>
@@ -97,7 +97,7 @@
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 gap-4 border-b border-gray-100 mb-4">
                     <h3 class="font-bold text-gray-800 text-lg">Data Kehadiran Siswa</h3>
-                    <button type="button" onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                    <button type="button" data-print-page class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm print:hidden">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>
@@ -120,7 +120,7 @@
                                 <th class="px-2 py-2 border-r border-gray-200 bg-green-50/30 text-green-700 w-20">Hadir</th>
                                 <th class="px-2 py-2 border-r border-gray-200 bg-amber-50/30 text-amber-600 w-20">Sakit</th>
                                 <th class="px-2 py-2 border-r border-gray-200 bg-indigo-50/30 text-indigo-600 w-20">Izin</th>
-                                <th class="px-2 py-2 bg-red-50/30 text-red-600 w-20">Alfa</th>
+                                <th class="px-2 py-2 bg-red-50/30 text-red-600 w-20">Alpa</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 bg-white text-gray-700">

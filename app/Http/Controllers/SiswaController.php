@@ -48,10 +48,10 @@ class SiswaController extends Controller
                         ->orWhere('nisn', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['kelas_id'] ?? null, fn($query, $kelasId) => $query->where('kelas_id', $kelasId))
-            ->when($filters['periode_id'] ?? null, fn($query, $periodeId) => $query->where('periode_id', $periodeId))
-            ->when($filters['status'] ?? null, fn($query, $status) => $query->where('status', $status))
-            ->latest()
+            ->when($filters['kelas_id'] ?? null, fn ($query, $kelasId) => $query->where('kelas_id', $kelasId))
+            ->when($filters['periode_id'] ?? null, fn ($query, $periodeId) => $query->where('periode_id', $periodeId))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->latest('id')
             ->paginate(15)
             ->withQueryString();
 
@@ -84,7 +84,7 @@ class SiswaController extends Controller
             'file' => ['required', 'file', 'mimes:xlsx,csv', 'max:5120'],
         ]);
 
-        if (! Kelas::query()->whereHas('periode', fn($query) => $query->where('status_aktif', true))->exists()) {
+        if (! Kelas::query()->whereHas('periode', fn ($query) => $query->where('status_aktif', true))->exists()) {
             return back()
                 ->with('error', 'Import siswa memerlukan kelas pada periode yang sedang aktif.');
         }
@@ -206,12 +206,14 @@ class SiswaController extends Controller
     {
         return $request->validate([
             'nis' => [
+                'required_without:nisn',
                 'nullable',
                 'string',
                 'max:50',
                 Rule::unique('siswas', 'nis')->ignore($siswa),
             ],
             'nisn' => [
+                'required_without:nis',
                 'nullable',
                 'string',
                 'max:50',
@@ -237,7 +239,7 @@ class SiswaController extends Controller
         return [
             'kelas' => Kelas::query()
                 ->select('id', 'nama_kelas', 'periode_id')
-                ->whereHas('periode', fn($query) => $query->where('status_aktif', true))
+                ->whereHas('periode', fn ($query) => $query->where('status_aktif', true))
                 ->orderBy('nama_kelas')
                 ->get(),
         ];
@@ -246,7 +248,7 @@ class SiswaController extends Controller
     private function findActiveKelas(int $kelasId): Kelas
     {
         $kelas = Kelas::query()
-            ->whereHas('periode', fn($query) => $query->where('status_aktif', true))
+            ->whereHas('periode', fn ($query) => $query->where('status_aktif', true))
             ->find($kelasId);
 
         if (! $kelas) {
@@ -259,11 +261,11 @@ class SiswaController extends Controller
     }
 
     /**
-     * @param array<int, array<int, string>> $rows
+     * @param  array<int, array<int, string>>  $rows
      */
     private function createSimpleXlsx(string $filePath, array $rows): void
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($filePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new RuntimeException('File template XLSX tidak dapat dibuat.');
         }
@@ -298,7 +300,7 @@ class SiswaController extends Controller
     }
 
     /**
-     * @param array<int, array<int, string>> $rows
+     * @param  array<int, array<int, string>>  $rows
      */
     private function buildWorksheetXml(array $rows): string
     {
@@ -308,7 +310,7 @@ class SiswaController extends Controller
             $cellXml = '';
 
             foreach ($row as $columnIndex => $value) {
-                $cell = $this->excelColumnName($columnIndex + 1) . ($rowIndex + 1);
+                $cell = $this->excelColumnName($columnIndex + 1).($rowIndex + 1);
                 $escapedValue = htmlspecialchars($value, ENT_XML1);
                 $cellXml .= "<c r=\"{$cell}\" t=\"inlineStr\"><is><t>{$escapedValue}</t></is></c>";
             }
@@ -319,7 +321,7 @@ class SiswaController extends Controller
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-    <sheetData>' . $xmlRows . '</sheetData>
+    <sheetData>'.$xmlRows.'</sheetData>
 </worksheet>';
     }
 
@@ -329,7 +331,7 @@ class SiswaController extends Controller
 
         while ($number > 0) {
             $number--;
-            $name = chr(65 + ($number % 26)) . $name;
+            $name = chr(65 + ($number % 26)).$name;
             $number = intdiv($number, 26);
         }
 

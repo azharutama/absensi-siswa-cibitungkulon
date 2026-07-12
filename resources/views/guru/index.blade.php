@@ -8,6 +8,12 @@
                 </div>
             @endif
 
+            @if (session('error'))
+                <div class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                 
                 <div class="flex flex-col md:flex-row justify-between items-center p-6 gap-4 border-b border-gray-200 bg-gray-50/50">
@@ -54,9 +60,15 @@
                                         Edit
                                     </a>
                                     
-                                    <button type="button" data-open-delete-modal data-delete-action="{{ route('guru.destroy', $guru->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
-                                        Hapus
-                                    </button>
+                                    @if((int) auth()->id() !== (int) $guru->id)
+                                        <button type="button" data-open-delete-modal data-delete-action="{{ route('guru.destroy', $guru->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
+                                            Hapus
+                                        </button>
+                                    @else
+                                        <span class="inline-flex rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                                            Akun aktif
+                                        </span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

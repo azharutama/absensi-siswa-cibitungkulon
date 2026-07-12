@@ -1,5 +1,7 @@
 import Alpine from "alpinejs";
 import "./confirm-modal.js";
+import "./form-guru.js";
+import "./search.js";
 
 window.Alpine = Alpine;
 
@@ -13,6 +15,7 @@ function showPageLoading() {
 
         if (loading) {
             loading.classList.remove("hidden");
+            loading.setAttribute("aria-hidden", "false");
         }
     }, 120);
 }
@@ -24,6 +27,7 @@ function hidePageLoading() {
 
     if (loading) {
         loading.classList.add("hidden");
+        loading.setAttribute("aria-hidden", "true");
     }
 }
 
@@ -51,11 +55,39 @@ function isNavigableInternalLink(link) {
         return false;
     }
 
-    const url = new URL(link.href);
+    let url;
+
+    try {
+        url = new URL(link.href);
+    } catch {
+        return false;
+    }
 
     return url.origin === window.location.origin
-        && !(url.pathname === window.location.pathname && url.hash);
+        && !(
+            url.pathname === window.location.pathname
+            && url.search === window.location.search
+            && url.hash
+        );
 }
+
+document.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest("[data-print-page]")) {
+        window.print();
+    }
+});
+
+document.addEventListener("submit", (event) => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement) || !form.dataset.confirmMessage) {
+        return;
+    }
+
+    if (!window.confirm(form.dataset.confirmMessage)) {
+        event.preventDefault();
+    }
+});
 
 document.addEventListener("submit", (event) => {
     if (event.defaultPrevented) {

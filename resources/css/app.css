@@ -7,3 +7,27 @@
         display: none !important;
     }
 }
+
+@keyframes page-loading-slide {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    50% {
+        transform: translateX(15%);
+    }
+
+    100% {
+        transform: translateX(110%);
+    }
+}
+
+.page-loading-bar {
+    animation: page-loading-slide 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-loading-bar {
+        animation: none;
+    }
+}

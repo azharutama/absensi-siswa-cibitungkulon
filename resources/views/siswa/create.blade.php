@@ -16,9 +16,16 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
+                        <x-input-label for="nis" :value="__('NIS')" />
+                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis')" autofocus />
+                        <x-input-error class="mt-2" :messages="$errors->get('nis')" />
+                    </div>
+
+                    <div>
                         <x-input-label for="nisn" :value="__('NISN')" />
-                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn')" required autofocus />
+                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn')" />
                         <x-input-error class="mt-2" :messages="$errors->get('nisn')" />
+                        <p class="mt-2 text-xs text-gray-500">Isi minimal salah satu: NIS atau NISN.</p>
                     </div>
 
                     <div>

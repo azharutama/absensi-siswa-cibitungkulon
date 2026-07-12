@@ -13,7 +13,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // <-- Pastikan ini sudah di-import
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -34,7 +33,7 @@ class AbsensiController extends Controller
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+            'tanggal' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
         ]);
 
         $kelas = Kelas::query()
@@ -55,9 +54,13 @@ class AbsensiController extends Controller
             $selectedKelas = Kelas::query()
                 ->accessibleBy($request->user())
                 ->select(['id', 'periode_id'])
+                ->with('periode:id,tanggal_mulai,tanggal_selesai')
                 ->findOrFail($kelasId);
 
-            $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
+            $holidayMessage = $this->attendanceDateError($selectedKelas, $tanggal);
+            $holiday = $holidayMessage === null
+                ? $this->findHariLibur($selectedKelas->periode_id, $tanggal)
+                : null;
 
             if ($holiday) {
                 $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
@@ -79,7 +82,7 @@ class AbsensiController extends Controller
                 ->toArray();
 
             // 2. Tentukan status kunci: jika array tidak kosong, otomatis LOCK form isi baru
-            if (!empty($absensiSiswa)) {
+            if (! empty($absensiSiswa)) {
                 $isLocked = true;
             }
 
@@ -104,18 +107,24 @@ class AbsensiController extends Controller
     {
         $data = $request->validate([
             'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-            'tanggal' => ['required', 'date_format:Y-m-d'],
+            'tanggal' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'absensi' => ['required', 'array'],
             'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
         ]);
 
         $kelasId = (int) $data['kelas_id'];
         $tanggal = $data['tanggal'];
-        $userId = Auth::id();
+        $userId = $request->user()->getKey();
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
             ->select(['id', 'periode_id'])
+            ->with('periode:id,tanggal_mulai,tanggal_selesai')
             ->findOrFail($kelasId);
+
+        if ($dateError = $this->attendanceDateError($kelas, $tanggal)) {
+            return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('error', $dateError);
+        }
 
         $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
         if ($holiday) {
@@ -194,7 +203,7 @@ class AbsensiController extends Controller
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+            'tanggal' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
         ]);
 
         $kelas = Kelas::query()
@@ -215,9 +224,13 @@ class AbsensiController extends Controller
             $selectedKelas = Kelas::query()
                 ->accessibleBy($request->user())
                 ->select(['id', 'periode_id'])
+                ->with('periode:id,tanggal_mulai,tanggal_selesai')
                 ->findOrFail($kelasId);
 
-            $holiday = $this->findHariLibur($selectedKelas->periode_id, $tanggal);
+            $holidayMessage = $this->attendanceDateError($selectedKelas, $tanggal);
+            $holiday = $holidayMessage === null
+                ? $this->findHariLibur($selectedKelas->periode_id, $tanggal)
+                : null;
 
             if ($holiday) {
                 $holidayMessage = $this->formatHariLiburMessage($holiday, $tanggal);
@@ -252,18 +265,24 @@ class AbsensiController extends Controller
     {
         $data = $request->validate([
             'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-            'tanggal' => ['required', 'date_format:Y-m-d'],
+            'tanggal' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'absensi' => ['required', 'array'],
             'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
         ]);
 
         $kelasId = (int) $data['kelas_id'];
         $tanggal = $data['tanggal'];
-        $userId = Auth::id();
+        $userId = $request->user()->getKey();
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
             ->select(['id', 'periode_id'])
+            ->with('periode:id,tanggal_mulai,tanggal_selesai')
             ->findOrFail($kelasId);
+
+        if ($dateError = $this->attendanceDateError($kelas, $tanggal)) {
+            return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+                ->with('error', $dateError);
+        }
 
         $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
         if ($holiday) {
@@ -372,6 +391,24 @@ class AbsensiController extends Controller
         }
     }
 
+    private function attendanceDateError(Kelas $kelas, string $tanggal): ?string
+    {
+        $periode = $kelas->periode;
+
+        if (! $periode) {
+            return 'Kelas ini tidak memiliki periode akademik yang valid.';
+        }
+
+        $tanggalMulai = $periode->tanggal_mulai->toDateString();
+        $tanggalSelesai = $periode->tanggal_selesai->toDateString();
+
+        if ($tanggal < $tanggalMulai || $tanggal > $tanggalSelesai) {
+            return "Tanggal absensi harus berada dalam periode {$tanggalMulai} sampai {$tanggalSelesai}.";
+        }
+
+        return null;
+    }
+
     private function findHariLibur(?int $periodeId, string $tanggal): ?HariLibur
     {
         $namaHari = $this->namaHariIndonesia(Carbon::parse($tanggal)->dayOfWeek);
@@ -410,7 +447,7 @@ class AbsensiController extends Controller
 
     private function dispatchAlpaWhatsappNotification(Absensi $absensi): void
     {
-        $absensi->loadMissing('siswa.kelas');
+        $absensi->loadMissing(['siswa', 'kelas']);
 
         if (! $absensi->siswa) {
             return;
@@ -449,7 +486,7 @@ class AbsensiController extends Controller
     }
 
     /**
-     * @param array<int, int> $siswaIds
+     * @param  array<int, int>  $siswaIds
      */
     private function dispatchAlpaNotificationsFor(array $siswaIds, string $tanggal): void
     {
@@ -458,12 +495,12 @@ class AbsensiController extends Controller
         }
 
         Absensi::query()
-            ->with('siswa.kelas')
+            ->with(['siswa', 'kelas'])
             ->where('tanggal', $tanggal)
             ->whereIn('siswa_id', array_unique($siswaIds))
             ->where('status', 'alpa')
             ->get()
-            ->each(fn(Absensi $absensi) => $this->dispatchAlpaWhatsappNotification($absensi));
+            ->each(fn (Absensi $absensi) => $this->dispatchAlpaWhatsappNotification($absensi));
     }
 
     private function resolveParentContact(Siswa $siswa): array
@@ -492,11 +529,11 @@ class AbsensiController extends Controller
         $number = (string) preg_replace('/\D+/', '', $phone);
 
         if (str_starts_with($number, '0')) {
-            return '62' . substr($number, 1);
+            return '62'.substr($number, 1);
         }
 
         if (str_starts_with($number, '8')) {
-            return '62' . $number;
+            return '62'.$number;
         }
 
         return $number ?: null;
@@ -507,10 +544,10 @@ class AbsensiController extends Controller
         $siswa = $absensi->siswa;
         $tanggal = Carbon::parse($absensi->tanggal)->format('d-m-Y');
         $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
-        $kelas = $siswa->kelas?->nama_kelas ? " kelas {$siswa->kelas->nama_kelas}" : '';
+        $kelas = $absensi->kelas?->nama_kelas ? " kelas {$absensi->kelas->nama_kelas}" : '';
 
         return "Assalamu'alaikum {$sapaan},\n\n"
-            . "Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
-            . "Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.";
+            ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
+            .'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
     }
 }

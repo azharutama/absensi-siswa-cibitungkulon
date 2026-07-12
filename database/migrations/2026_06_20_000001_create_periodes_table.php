@@ -13,13 +13,16 @@ return new class extends Migration
     {
         Schema::create('periodes', function (Blueprint $table) {
             $table->id();
-            $table->string('nama_periode');
+            $table->string('nama_periode')->unique();
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');
             $table->boolean('status_aktif');
+            $table->unsignedTinyInteger('active_guard')
+                ->nullable()
+                ->storedAs('IF(status_aktif = 1, 1, NULL)');
             $table->timestamps();
 
-            $table->index('nama_periode');
+            $table->unique('active_guard', 'periodes_single_active_unique');
             $table->index('status_aktif');
             $table->index('tanggal_mulai');
             $table->index(['status_aktif', 'tanggal_mulai']);

@@ -32,7 +32,7 @@
         method="POST" 
         action="{{ $action }}" 
         @if(!$isLocked)
-            onsubmit="return confirm('Apakah Anda yakin semua data kehadiran sudah benar dan ingin melakukan {{ strtoupper($method) === 'PUT' ? 'perubahan/perbarui' : 'penyimpanan' }} data absensi ini?')"
+            data-confirm-message="Apakah Anda yakin semua data kehadiran sudah benar dan ingin melakukan {{ strtoupper($method) === 'PUT' ? 'perubahan/perbarui' : 'penyimpanan' }} data absensi ini?"
         @endif
     >
         @csrf

@@ -10,24 +10,6 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
-        <style>
-            @keyframes page-loading-slide {
-                0% {
-                    transform: translateX(-100%);
-                }
-                50% {
-                    transform: translateX(15%);
-                }
-                100% {
-                    transform: translateX(110%);
-                }
-            }
-
-            .page-loading-bar {
-                animation: page-loading-slide 1.1s ease-in-out infinite;
-            }
-        </style>
-
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-gray-50">
@@ -35,7 +17,7 @@
             Lewati ke konten utama
         </a>
 
-        <div id="page-loading" class="fixed inset-x-0 top-0 z-[9999] hidden" aria-live="polite" aria-busy="true">
+        <div id="page-loading" class="fixed inset-x-0 top-0 z-[9999] hidden print:hidden" role="status" aria-live="polite" aria-hidden="true">
             <div class="h-1 overflow-hidden bg-blue-100">
                 <div class="page-loading-bar h-full w-1/2 bg-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.55)]"></div>
             </div>
@@ -44,12 +26,12 @@
             </div>
         </div>
 
-        <div class="flex h-screen overflow-hidden">
+        <div class="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
             @include('layouts.sidebar')
 
             <div class="flex-1 flex flex-col overflow-hidden min-w-0">
                 
-                <header class="bg-white border-b border-gray-200 shrink-0">
+                <header class="bg-white border-b border-gray-200 shrink-0 print:hidden">
                     <div class="ps-16 pe-6 md:px-8 py-4 flex items-center justify-between">
                         <h1 class="text-lg md:text-xl font-bold text-gray-900 truncate">
                             {{ $pageTitle }}
@@ -72,8 +54,8 @@
                     </div>
                 </header>
 
-                <main id="main-content" class="flex-1 overflow-auto bg-gray-50" tabindex="-1">
-                    <div class="px-4 py-6 md:px-8">
+                <main id="main-content" class="flex-1 overflow-auto bg-gray-50 print:overflow-visible print:bg-white" tabindex="-1">
+                    <div class="px-4 py-6 md:px-8 print:p-0">
                         {{ $slot }}
                     </div>
                 </main>

@@ -29,6 +29,7 @@ return new class extends Migration
 
             $table->unique(['absensi_id', 'provider']);
             $table->index(['status', 'created_at']);
+            $table->index(['status', 'updated_at', 'id']);
             $table->index(['siswa_id', 'created_at']);
             $table->index(['provider', 'status']);
             $table->index('provider_message_id');

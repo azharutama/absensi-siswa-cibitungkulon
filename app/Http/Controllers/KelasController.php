@@ -15,17 +15,22 @@ class KelasController extends Controller
 {
     public function index(Request $request)
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
+        $search = trim($filters['search'] ?? '');
+
         $query = Kelas::query()
             ->select(['id', 'nama_kelas', 'periode_id'])
             ->with([
                 'periode:id,nama_periode,status_aktif',
-                'gurus' => fn($query) => $query
+                'gurus' => fn ($query) => $query
                     ->select(['users.id', 'users.nama', 'users.nip'])
                     ->wherePivot('is_wali_kelas', true),
             ]);
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('nama_kelas', 'like', '%' . $request->search . '%');
+        if ($search !== '') {
+            $query->where('nama_kelas', 'like', "%{$search}%");
         }
 
         $kelas = $query
@@ -48,7 +53,7 @@ class KelasController extends Controller
     {
         $periodeAktif = $this->activePeriodeQuery()->first();
 
-        if (!$periodeAktif) {
+        if (! $periodeAktif) {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Gagal membuat kelas. Pastikan ada satu Periode Akademik yang berstatus aktif.');
@@ -59,9 +64,9 @@ class KelasController extends Controller
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('kelas', 'nama_kelas')->where(fn($query) => $query->where('periode_id', $periodeAktif->id)),
+                Rule::unique('kelas', 'nama_kelas')->where(fn ($query) => $query->where('periode_id', $periodeAktif->id)),
             ],
-            'guru_id'    => 'nullable|exists:users,id',
+            'guru_id' => 'nullable|exists:users,id',
         ]);
 
         if ($request->filled('guru_id') && ! $this->availableWaliKelasQuery()->where('id', $request->guru_id)->exists()) {
@@ -136,10 +141,10 @@ class KelasController extends Controller
                 'string',
                 'max:50',
                 Rule::unique('kelas', 'nama_kelas')
-                    ->where(fn($query) => $query->where('periode_id', $kelas->periode_id))
+                    ->where(fn ($query) => $query->where('periode_id', $kelas->periode_id))
                     ->ignore($kelas->id),
             ],
-            'guru_id'    => 'nullable|exists:users,id',
+            'guru_id' => 'nullable|exists:users,id',
         ]);
 
         $currentWaliId = $kelas->gurus()
@@ -209,7 +214,7 @@ class KelasController extends Controller
             ->where('role', 'guru')
             ->whereDoesntHave('kelas', function ($query) {
                 $query->where('kelas_user.is_wali_kelas', true)
-                    ->whereHas('periode', fn($query) => $query->where('status_aktif', true));
+                    ->whereHas('periode', fn ($query) => $query->where('status_aktif', true));
             })
             ->orderBy('nama');
     }
@@ -222,7 +227,7 @@ class KelasController extends Controller
             ->where(function ($query) use ($currentWaliId) {
                 $query->whereDoesntHave('kelas', function ($query) {
                     $query->where('kelas_user.is_wali_kelas', true)
-                        ->whereHas('periode', fn($query) => $query->where('status_aktif', true));
+                        ->whereHas('periode', fn ($query) => $query->where('status_aktif', true));
                 });
 
                 if ($currentWaliId) {

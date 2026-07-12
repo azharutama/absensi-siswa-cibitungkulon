@@ -121,7 +121,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <p class="text-[10px] text-gray-400 mt-2 italic">* Minimal tambahkan 1 hari libur mingguan</p>
+                        <p class="text-[10px] text-gray-400 mt-2 italic">Tambahkan hanya jika periode memiliki hari libur mingguan.</p>
                     </div>
 
                     <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -167,7 +167,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <p class="text-[10px] text-gray-400 mt-2 italic">* Minimal tambahkan 1 hari libur nasional</p>
+                        <p class="text-[10px] text-gray-400 mt-2 italic">Tambahkan hanya jika periode memiliki hari libur nasional.</p>
                     </div>
 
                 </div>

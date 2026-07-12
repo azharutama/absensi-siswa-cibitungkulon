@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('nis')->unique()->nullable();
             $table->string('nisn')->unique()->nullable();
-            $table->string('nama_siswa')->nullable();
+            $table->string('nama_siswa');
             $table->enum('jenis_kelamin', ['laki-laki', 'perempuan']);
+            $table->text('alamat')->nullable();
             $table->string('nama_ayah');
             $table->string('no_whatsapp_ayah');
             $table->string('nama_ibu');

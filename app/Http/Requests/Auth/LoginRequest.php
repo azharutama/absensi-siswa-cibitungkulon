@@ -42,7 +42,7 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $login = trim((string) $this->string('login'));
+        $login = $this->normalizedLogin();
         $loginField = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
         if (! Auth::attempt([
@@ -87,6 +87,11 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('login')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->normalizedLogin()).'|'.$this->ip());
+    }
+
+    private function normalizedLogin(): string
+    {
+        return trim((string) $this->input('login'));
     }
 }

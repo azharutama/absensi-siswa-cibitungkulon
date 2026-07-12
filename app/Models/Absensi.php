@@ -47,9 +47,9 @@ class Absensi extends Model
     {
         return $this->hasMany(Rekap::class);
     }
-    public function siswa()
+    public function siswa(): BelongsTo
     {
-        return $this->belongsTo(Siswa::class, 'siswa_id');
+        return $this->belongsTo(Siswa::class);
     }
 
     public function kelas(): BelongsTo

@@ -39,7 +39,9 @@ class WhatsappNotification extends Model
     {
         $retentionDays = max(30, (int) config('services.fonnte.retention_days', 365));
 
-        return static::query()->where('created_at', '<=', now()->subDays($retentionDays));
+        return static::query()
+            ->whereIn('status', ['sent', 'failed', 'cancelled'])
+            ->where('created_at', '<=', now()->subDays($retentionDays));
     }
 
     public function absensi(): BelongsTo

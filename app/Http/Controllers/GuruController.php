@@ -5,28 +5,31 @@ namespace App\Http\Controllers;
 use App\Models\Kelas;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class GuruController extends Controller
 {
-
-
     /**
      * Ambil data user beserta filter pencarian jika ada
      */
     public function index(Request $request)
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
+        $search = trim($filters['search'] ?? '');
+
         $query = User::query()
             ->select(['id', 'nip', 'nama', 'no_telepon', 'role']);
 
         // Cari berdasarkan nama, wa, atau nip
-        if ($request->has('search') && $request->search != '') {
-            $query->where(function ($q) use ($request) {
-                $q->where('nama', 'like', '%' . $request->search . '%')
-                    ->orWhere('no_telepon', 'like', '%' . $request->search . '%')
-                    ->orWhere('nip', 'like', '%' . $request->search . '%');
+        if ($search !== '') {
+            $query->where(function ($query) use ($search): void {
+                $query->where('nama', 'like', "%{$search}%")
+                    ->orWhere('no_telepon', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%");
             });
         }
 
@@ -58,18 +61,18 @@ class GuruController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nip'           => 'required|string|unique:users,nip',
-            'nama'          => 'required|string|max:255',
-            'email'         => 'required|string|email|max:255|unique:users,email',
-            'no_telepon'    => 'required|string|unique:users,no_telepon',
-            'alamat'        => 'nullable|string|max:255',
-            'role'          => 'required|string|in:operator,guru,kepala_sekolah',
+            'nip' => 'required|string|unique:users,nip',
+            'nama' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'no_telepon' => 'required|string|unique:users,no_telepon',
+            'alamat' => 'nullable|string|max:255',
+            'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
-            'password'      => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
 
             // Relasi kelas boleh dilengkapi setelah data guru dan kelas tersedia.
-            'kelas'         => 'nullable|array',
-            'kelas.*'       => 'exists:kelas,id',
+            'kelas' => 'nullable|array',
+            'kelas.*' => 'exists:kelas,id',
         ]);
 
         DB::transaction(function () use ($request): void {
@@ -118,26 +121,26 @@ class GuruController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'nip'           => 'nullable|string|unique:users,nip,' . $user->id,
-            'nama'          => 'required|string|max:255',
-            'email'         => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'no_telepon'    => 'required|string|unique:users,no_telepon,' . $user->id,
-            'alamat'        => 'nullable|string|max:255',
-            'role'          => 'required|string|in:operator,guru,kepala_sekolah',
+            'nip' => 'nullable|string|unique:users,nip,'.$user->id,
+            'nama' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
+            'no_telepon' => 'required|string|unique:users,no_telepon,'.$user->id,
+            'alamat' => 'nullable|string|max:255',
+            'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
-            'password'      => 'nullable|string|min:8|confirmed',
+            'password' => 'nullable|string|min:8|confirmed',
 
-            'kelas'         => 'nullable|array',
-            'kelas.*'       => 'exists:kelas,id',
+            'kelas' => 'nullable|array',
+            'kelas.*' => 'exists:kelas,id',
         ]);
 
         $data = [
-            'nip'           => $request->nip,
-            'nama'          => $request->nama,
-            'email'         => $request->email,
-            'no_telepon'    => $request->no_telepon,
-            'address'       => $request->alamat,
-            'role'          => $request->role,
+            'nip' => $request->nip,
+            'nama' => $request->nama,
+            'email' => $request->email,
+            'no_telepon' => $request->no_telepon,
+            'address' => $request->alamat,
+            'role' => $request->role,
             'jenis_kelamin' => $request->jenis_kelamin,
         ];
 
@@ -147,12 +150,35 @@ class GuruController extends Controller
         }
 
         DB::transaction(function () use ($request, $user, $data): void {
-            $user->update($data);
+            $operatorIds = User::query()
+                ->where('role', 'operator')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->pluck('id');
+            $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if ($user->role === 'guru') {
-                $this->syncKelasDiampu($user, $request->input('kelas', []));
+            if (
+                $lockedUser->role === 'operator'
+                && $data['role'] !== 'operator'
+                && (int) $request->user()->getKey() === (int) $lockedUser->getKey()
+            ) {
+                throw ValidationException::withMessages([
+                    'role' => 'Operator yang sedang digunakan tidak dapat mengubah role akunnya sendiri.',
+                ]);
+            }
+
+            if ($lockedUser->role === 'operator' && $data['role'] !== 'operator' && $operatorIds->count() <= 1) {
+                throw ValidationException::withMessages([
+                    'role' => 'Minimal satu akun operator harus tetap tersedia.',
+                ]);
+            }
+
+            $lockedUser->update($data);
+
+            if ($lockedUser->role === 'guru') {
+                $this->syncKelasDiampu($lockedUser, $request->input('kelas', []));
             } else {
-                $user->kelas()->detach();
+                $lockedUser->kelas()->detach();
             }
         });
 
@@ -162,25 +188,40 @@ class GuruController extends Controller
     /**
      * Hapus data user dari database
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $user = User::findOrFail($id);
-
-        if ((int) Auth::id() === (int) $user->id) {
+        if ((int) $request->user()->getKey() === (int) $id) {
             return redirect()->route('guru.index')->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
         }
 
-        if ($user->absensis()->exists() || $user->rekaps()->exists()) {
-            return redirect()->route('guru.index')->with(
-                'error',
-                'Pengguna tidak dapat dihapus karena memiliki riwayat absensi atau rekap.'
-            );
-        }
+        $error = DB::transaction(function () use ($id): ?string {
+            $operatorIds = User::query()
+                ->where('role', 'operator')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->pluck('id');
+            $user = User::query()->whereKey($id)->lockForUpdate()->firstOrFail();
 
-        DB::transaction(function () use ($user): void {
+            if ($user->role === 'operator' && $operatorIds->count() <= 1) {
+                return 'Operator terakhir tidak dapat dihapus.';
+            }
+
+            if ($user->absensis()->exists() || $user->rekaps()->exists()) {
+                return 'Pengguna tidak dapat dihapus karena memiliki riwayat absensi atau rekap.';
+            }
+
             $user->kelas()->detach();
             $user->delete();
+
+            return null;
         });
+
+        if ($error !== null) {
+            return redirect()->route('guru.index')->with(
+                'error',
+                $error
+            );
+        }
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil dihapus.');
     }

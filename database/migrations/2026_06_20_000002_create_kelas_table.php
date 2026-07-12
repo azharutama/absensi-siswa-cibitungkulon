@@ -15,13 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('nama_kelas');
 
-            $table->foreignId('periode_id')->nullable()->constrained('periodes');
+            $table->foreignId('periode_id')->constrained('periodes');
             $table->string('status');
             $table->timestamps();
 
             $table->index('nama_kelas');
             $table->index('status');
             $table->index(['periode_id', 'status']);
+            $table->unique(['periode_id', 'nama_kelas']);
         });
     }
 

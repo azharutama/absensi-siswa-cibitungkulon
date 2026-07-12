@@ -6,7 +6,7 @@
 <div
     x-data="{ isOpen: false }"
     @keydown.escape.window="if (isOpen) { isOpen = false; $nextTick(() => $refs.sidebarToggle.focus()) }"
-    class="relative"
+    class="relative print:hidden"
 >
     <button 
         x-ref="sidebarToggle"

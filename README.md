@@ -19,7 +19,8 @@ copy .env.example .env
 php artisan key:generate
 ```
 
-Atur koneksi MySQL dan kredensial Fonnte di `.env`, kemudian jalankan:
+Atur koneksi MySQL, `SEED_DEFAULT_PASSWORD`, dan kredensial Fonnte di `.env`,
+kemudian jalankan:
 
 ```bash
 php artisan migrate --seed
@@ -76,9 +77,16 @@ FONNTE_TIMEOUT=15
 FONNTE_RETENTION_DAYS=365
 ```
 
-Pastikan worker antrean selalu aktif agar notifikasi alpa dapat diproses. Jalankan
-Laravel scheduler setiap menit agar riwayat notifikasi yang melewati masa retensi
-dihapus otomatis.
+Pastikan worker antrean selalu aktif agar notifikasi alpa dapat diproses. Untuk
+pengembangan lokal, scheduler dapat dijalankan pada terminal terpisah:
+
+```bash
+php artisan schedule:work
+```
+
+Di server produksi, jalankan `php artisan schedule:run` setiap menit melalui cron
+atau Task Scheduler. Scheduler menghapus riwayat notifikasi yang sudah melewati
+masa retensi.
 
 ## Pemeriksaan sebelum deploy
 
