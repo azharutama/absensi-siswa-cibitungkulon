@@ -19,8 +19,7 @@ copy .env.example .env
 php artisan key:generate
 ```
 
-Atur koneksi MySQL, `SEED_DEFAULT_PASSWORD`, dan kredensial Fonnte di `.env`,
-kemudian jalankan:
+Atur koneksi MySQL dan kredensial Fonnte di `.env`, kemudian jalankan:
 
 ```bash
 php artisan migrate --seed
@@ -44,6 +43,10 @@ php artisan queue:work --tries=3
 
 Akun tidak didaftarkan secara publik. Operator membuat dan mengelola akun
 melalui menu Data Guru.
+
+Seeder membuat 1 operator (`operator`), 5 guru (`guru1` sampai `guru5`), dan
+1 kepala sekolah (`kepala_sekolah`). Seluruh akun awal memakai password
+`password`; segera ganti setelah login pertama.
 
 ## Pengujian yang aman
 

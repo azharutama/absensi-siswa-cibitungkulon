@@ -13,48 +13,78 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        if (! app()->environment(['local', 'testing'])) {
-            $this->command?->warn('Seeder akun demo dilewati di luar environment local/testing.');
-
-            return;
-        }
-
-        $password = (string) config('app.seed_default_password');
-
-        if ($password === '') {
-            $this->command?->warn('SEED_DEFAULT_PASSWORD belum diisi; akun demo tidak dibuat.');
-
-            return;
-        }
+        $password = Hash::make('password');
 
         $users = [
             [
                 'nama' => 'Operator SD',
-                'email' => 'operator@gmail.com',
-                'no_telepon' => '081234567890',
+                'username' => 'operator',
+                'nip' => 'OPERATOR001',
+                'email' => 'operator@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000001',
                 'role' => 'operator',
                 'jenis_kelamin' => 'laki-laki',
             ],
             [
-                'nama' => 'Guru SD',
-                'email' => 'guru@gmail.com',
-                'no_telepon' => '081234567891',
+                'nama' => 'Guru 1',
+                'username' => 'guru1',
+                'nip' => 'GURU001',
+                'email' => 'guru1@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000002',
+                'role' => 'guru',
+                'jenis_kelamin' => 'laki-laki',
+            ],
+            [
+                'nama' => 'Guru 2',
+                'username' => 'guru2',
+                'nip' => 'GURU002',
+                'email' => 'guru2@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000003',
                 'role' => 'guru',
                 'jenis_kelamin' => 'perempuan',
             ],
             [
+                'nama' => 'Guru 3',
+                'username' => 'guru3',
+                'nip' => 'GURU003',
+                'email' => 'guru3@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000004',
+                'role' => 'guru',
+                'jenis_kelamin' => 'laki-laki',
+            ],
+            [
+                'nama' => 'Guru 4',
+                'username' => 'guru4',
+                'nip' => 'GURU004',
+                'email' => 'guru4@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000005',
+                'role' => 'guru',
+                'jenis_kelamin' => 'perempuan',
+            ],
+            [
+                'nama' => 'Guru 5',
+                'username' => 'guru5',
+                'nip' => 'GURU005',
+                'email' => 'guru5@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000006',
+                'role' => 'guru',
+                'jenis_kelamin' => 'laki-laki',
+            ],
+            [
                 'nama' => 'Kepala Sekolah',
-                'email' => 'kepsek@gmail.com',
-                'no_telepon' => '081234567892',
+                'username' => 'kepala_sekolah',
+                'nip' => 'KEPSEK001',
+                'email' => 'kepala.sekolah@sdncibitungkulon02.sch.id',
+                'no_telepon' => '081200000007',
                 'role' => 'kepala_sekolah',
                 'jenis_kelamin' => 'laki-laki',
             ],
         ];
 
         foreach ($users as $attributes) {
-            User::updateOrCreate(
-                ['email' => $attributes['email']],
-                [...$attributes, 'password' => Hash::make($password)]
+            User::query()->updateOrCreate(
+                ['username' => $attributes['username']],
+                [...$attributes, 'password' => $password],
             );
         }
     }
