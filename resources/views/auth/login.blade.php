@@ -60,16 +60,9 @@
 
                     <!-- Password -->
                     <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label for="password" class="block text-sm font-medium text-gray-700">
-                                Kata Sandi
-                            </label>
-                            @if (Route::has('password.request'))
-                                <a href="{{ route('password.request') }}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                                    Lupa sandi?
-                                </a>
-                            @endif
-                        </div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                            Kata Sandi
+                        </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
