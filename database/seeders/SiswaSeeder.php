@@ -2,16 +2,91 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Kelas;
+use App\Models\Periode;
+use App\Models\Siswa;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class SiswaSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    public const TOTAL_SISWA = 400;
+
+    public const FIRST_NIS = '20260001';
+
+    public const LAST_NIS = '20260400';
+
     public function run(): void
     {
-        //
+        $activePeriod = Periode::query()
+            ->where('status_aktif', true)
+            ->first();
+
+        if (! $activePeriod) {
+            throw new RuntimeException('Seeder siswa memerlukan satu periode aktif.');
+        }
+
+        $classes = Kelas::query()
+            ->where('periode_id', $activePeriod->id)
+            ->whereIn('nama_kelas', KelasSeeder::CLASS_NAMES)
+            ->orderBy('nama_kelas')
+            ->get();
+
+        if ($classes->count() !== count(KelasSeeder::CLASS_NAMES)) {
+            throw new RuntimeException('Seeder siswa memerlukan 12 kelas pada periode aktif.');
+        }
+
+        $faker = fake('id_ID');
+        $faker->seed(20260712);
+        $now = now();
+        $rows = [];
+
+        for ($number = 1; $number <= self::TOTAL_SISWA; $number++) {
+            $isFemale = $number % 2 === 0;
+            $class = $classes[($number - 1) % $classes->count()];
+            $hasGuardian = $number % 10 === 0;
+
+            $rows[] = [
+                'nis' => sprintf('2026%04d', $number),
+                'nisn' => sprintf('0099%06d', $number),
+                'nama_siswa' => $faker->name($isFemale ? 'female' : 'male'),
+                'jenis_kelamin' => $isFemale ? 'perempuan' : 'laki-laki',
+                'alamat' => $faker->address(),
+                'nama_ayah' => $faker->name('male'),
+                'no_whatsapp_ayah' => sprintf('62812%08d', $number),
+                'nama_ibu' => $faker->name('female'),
+                'no_whatsapp_ibu' => sprintf('62813%08d', $number),
+                'nama_wali' => $hasGuardian ? $faker->name() : null,
+                'no_whatsapp_wali' => $hasGuardian ? sprintf('62815%08d', $number) : null,
+                'kelas_id' => $class->id,
+                'periode_id' => $activePeriod->id,
+                'status' => 'aktif',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            Siswa::query()->upsert(
+                $chunk,
+                ['nis'],
+                [
+                    'nisn',
+                    'nama_siswa',
+                    'jenis_kelamin',
+                    'alamat',
+                    'nama_ayah',
+                    'no_whatsapp_ayah',
+                    'nama_ibu',
+                    'no_whatsapp_ibu',
+                    'nama_wali',
+                    'no_whatsapp_wali',
+                    'kelas_id',
+                    'periode_id',
+                    'status',
+                    'updated_at',
+                ],
+            );
+        }
     }
 }

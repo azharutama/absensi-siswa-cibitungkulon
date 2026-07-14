@@ -2,16 +2,13 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class RekapSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        //
+        // Halaman Rekap menghitung data langsung dari absensis.
+        $this->call(AbsensiSeeder::class);
     }
 }
