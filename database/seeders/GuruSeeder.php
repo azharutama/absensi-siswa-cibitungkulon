@@ -10,9 +10,17 @@ class GuruSeeder extends Seeder
 {
     public const TOTAL_GURU = 40;
 
+    public const DEFAULT_PASSWORD = 'password';
+
+    public const PRIMARY_TEACHER_EMAIL = 'azhar@gmail.com';
+
+    public const PRIMARY_TEACHER_NAME = 'Muhammad Azhar Utama';
+
     public function run(): void
     {
-        $password = Hash::make('password');
+        $password = Hash::make(self::DEFAULT_PASSWORD);
+        $faker = fake('id_ID');
+        $faker->seed(20260714);
 
         $this->saveUser([
             'nama' => 'Operator SD',
@@ -26,14 +34,20 @@ class GuruSeeder extends Seeder
         ]);
 
         for ($number = 1; $number <= self::TOTAL_GURU; $number++) {
+            $isFemale = $number % 2 === 0;
+
             $this->saveUser([
-                'nama' => "Guru {$number}",
+                'nama' => $number === 1
+                    ? self::PRIMARY_TEACHER_NAME
+                    : $faker->unique()->name($isFemale ? 'female' : 'male'),
                 'username' => "guru{$number}",
                 'nip' => sprintf('GURU%03d', $number),
-                'email' => "guru{$number}@gmail.com",
+                'email' => $number === 1
+                    ? self::PRIMARY_TEACHER_EMAIL
+                    : "guru{$number}@gmail.com",
                 'no_telepon' => sprintf('08121%07d', $number),
                 'role' => 'guru',
-                'jenis_kelamin' => $number % 2 === 0 ? 'perempuan' : 'laki-laki',
+                'jenis_kelamin' => $isFemale ? 'perempuan' : 'laki-laki',
                 'password' => $password,
             ]);
         }

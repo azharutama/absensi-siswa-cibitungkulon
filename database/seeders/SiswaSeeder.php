@@ -12,6 +12,8 @@ class SiswaSeeder extends Seeder
 {
     public const TOTAL_SISWA = 400;
 
+    public const PARENT_WHATSAPP = '081398431964';
+
     public const FIRST_NIS = '20260001';
 
     public const LAST_NIS = '20260400';
@@ -53,11 +55,11 @@ class SiswaSeeder extends Seeder
                 'jenis_kelamin' => $isFemale ? 'perempuan' : 'laki-laki',
                 'alamat' => $faker->address(),
                 'nama_ayah' => $faker->name('male'),
-                'no_whatsapp_ayah' => sprintf('62812%08d', $number),
+                'no_whatsapp_ayah' => self::PARENT_WHATSAPP,
                 'nama_ibu' => $faker->name('female'),
-                'no_whatsapp_ibu' => sprintf('62813%08d', $number),
+                'no_whatsapp_ibu' => self::PARENT_WHATSAPP,
                 'nama_wali' => $hasGuardian ? $faker->name() : null,
-                'no_whatsapp_wali' => $hasGuardian ? sprintf('62815%08d', $number) : null,
+                'no_whatsapp_wali' => $hasGuardian ? self::PARENT_WHATSAPP : null,
                 'kelas_id' => $class->id,
                 'periode_id' => $activePeriod->id,
                 'status' => 'aktif',

@@ -24,8 +24,9 @@ class DatabaseSeeder extends Seeder
                 PeriodeSeeder::class,
                 KelasSeeder::class,
                 SiswaSeeder::class,
-                RekapSeeder::class,
             ]);
+
+            // Absensi dan rekap sengaja dibiarkan kosong agar diisi oleh guru.
         }, attempts: 3);
     }
 }
