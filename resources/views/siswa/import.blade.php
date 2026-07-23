@@ -9,18 +9,17 @@
         <div class="mb-6 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
             <p class="font-semibold mb-2">Format kolom yang didukung:</p>
             <p class="leading-6">
-                nis, nisn, nama_siswa, jenis_kelamin, kelas, nama_ayah, no_whatsapp_ayah,
+                nis, nisn, nama_siswa, jenis_kelamin, nama_ayah, no_whatsapp_ayah,
                 nama_ibu, no_whatsapp_ibu, nama_wali, no_whatsapp_wali, status.
             </p>
             <p class="mt-2">
-                Kolom <span class="font-semibold">kelas</span> harus sama dengan nama kelas di master data, misalnya 1-A.
-                Jenis kelamin dapat diisi laki-laki/perempuan, L/P, atau LK/PR.
+                Pilih kelas tujuan pada form di bawah. Jenis kelamin dapat diisi laki-laki/perempuan, L/P, atau LK/PR.
             </p>
         </div>
 
         @if($kelas->isEmpty())
             <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-md text-sm text-red-700">
-                Belum ada kelas yang bisa dicocokkan dengan file import.
+                Belum ada kelas aktif untuk import.
                 <a href="{{ route('kelas.create') }}" class="font-semibold underline">Tambah Kelas</a>
             </div>
         @endif
@@ -29,6 +28,22 @@
             @csrf
 
             <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <x-input-label for="kelas_id" :value="__('Kelas Tujuan')" />
+                <select
+                    id="kelas_id"
+                    name="kelas_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                >
+                    <option value="">Pilih kelas</option>
+                    @foreach ($kelas as $item)
+                        <option value="{{ $item->id }}" @selected(old('kelas_id') == $item->id)>
+                            {{ $item->nama_kelas }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-input-error class="mt-2" :messages="$errors->get('kelas_id')" />
+
                 <x-input-label for="file" :value="__('File Excel / CSV')" />
                 <input
                     id="file"

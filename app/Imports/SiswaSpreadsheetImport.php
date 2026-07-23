@@ -8,8 +8,9 @@ use Maatwebsite\Excel\Concerns\RemembersChunkOffset;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class SiswaSpreadsheetImport implements ToCollection, WithChunkReading, WithHeadingRow
+class SiswaSpreadsheetImport implements ToCollection, WithChunkReading, WithHeadingRow, WithMultipleSheets
 {
     use RemembersChunkOffset;
 
@@ -24,5 +25,11 @@ class SiswaSpreadsheetImport implements ToCollection, WithChunkReading, WithHead
     public function chunkSize(): int
     {
         return SiswaImportService::CHUNK_SIZE;
+    }
+
+    /** @return array<int, self> */
+    public function sheets(): array
+    {
+        return [0 => $this];
     }
 }

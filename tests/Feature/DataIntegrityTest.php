@@ -48,7 +48,7 @@ class DataIntegrityTest extends TestCase
         $notification = WhatsappNotification::query()->firstOrFail();
 
         $this->assertDatabaseHas('absensis', ['siswa_id' => $siswa->id, 'status' => 'alpa']);
-        $this->assertSame('621234567890', $notification->parent_phone);
+        $this->assertSame('6281234567890', $notification->parent_phone);
         $this->assertSame('pending', $notification->status);
         Queue::assertPushed(SendAlpaWhatsappNotificationJob::class, fn ($job) => $job->notificationId === $notification->id);
     }
@@ -59,12 +59,15 @@ class DataIntegrityTest extends TestCase
         $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '4-A']);
         $operator = User::factory()->operator()->create();
         $csv = implode("\n", [
-            'nis,nisn,nama_siswa,jenis_kelamin,kelas,nama_ayah,no_whatsapp_ayah,nama_ibu,no_whatsapp_ibu,status',
-            '101,0012345678,Siswa Impor,L,4-A,Ayah Siswa,081234567890,Ibu Siswa,081234567891,aktif',
+            'nis,nisn,nama_siswa,jenis_kelamin,nama_ayah,no_whatsapp_ayah,nama_ibu,no_whatsapp_ibu,status',
+            '101,0012345678,Siswa Impor,L,Ayah Siswa,081234567890,Ibu Siswa,081234567891,aktif',
         ]);
 
         $this->actingAs($operator)
-            ->post(route('siswa.import'), ['file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv)])
+            ->post(route('siswa.import'), [
+                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
+                'kelas_id' => $kelas->id,
+            ])
             ->assertRedirect(route('siswa.index'));
 
         $this->assertDatabaseHas('siswas', [

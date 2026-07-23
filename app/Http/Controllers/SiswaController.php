@@ -80,17 +80,13 @@ class SiswaController extends Controller
 
     public function import(Request $request, SiswaImportService $importService): RedirectResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,csv', 'max:5120'],
+            'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
         ]);
 
-        if (! Kelas::query()->whereHas('periode', fn ($query) => $query->where('status_aktif', true))->exists()) {
-            return back()
-                ->with('error', 'Import siswa memerlukan kelas pada periode yang sedang aktif.');
-        }
-
         try {
-            $summary = $importService->import($request->file('file'));
+            $summary = $importService->import($data['file'], $this->findActiveKelas((int) $data['kelas_id']));
         } catch (RuntimeException $exception) {
             return back()
                 ->with('error', $exception->getMessage());
@@ -110,7 +106,6 @@ class SiswaController extends Controller
             'nisn',
             'nama_siswa',
             'jenis_kelamin',
-            'kelas',
             'nama_ayah',
             'no_whatsapp_ayah',
             'nama_ibu',
@@ -127,7 +122,6 @@ class SiswaController extends Controller
                 '1234567890',
                 'Contoh Nama Siswa',
                 'laki-laki',
-                '1-A',
                 'Contoh Ayah',
                 '081234567890',
                 'Contoh Ibu',
