@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Http;
 
 class FonnteService
 {
+    private const RETRYABLE_STATUSES = [408, 425, 429];
+
     /**
      * @throws ConnectionException|RequestException
      */
@@ -23,12 +25,11 @@ class FonnteService
             ];
         }
 
-        $response = Http::timeout((int) config('services.fonnte.timeout', 15))
-            ->withHeaders([
-                'Authorization' => $token,
-            ])
+        $response = Http::baseUrl(rtrim((string) config('services.fonnte.base_url'), '/'))
+            ->timeout((int) config('services.fonnte.timeout', 15))
+            ->withHeaders(['Authorization' => $token])
             ->asForm()
-            ->post(rtrim(config('services.fonnte.base_url'), '/') . '/send', [
+            ->post('/send', [
                 'target' => $target,
                 'message' => $message,
                 'countryCode' => config('services.fonnte.country_code', '62'),
@@ -37,7 +38,7 @@ class FonnteService
 
         $data = $response->json();
 
-        if (in_array($response->status(), [408, 425, 429], true) || $response->serverError()) {
+        if (in_array($response->status(), self::RETRYABLE_STATUSES, true) || $response->serverError()) {
             throw new RequestException($response);
         }
 

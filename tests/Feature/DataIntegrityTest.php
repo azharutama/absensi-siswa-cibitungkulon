@@ -2,17 +2,79 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendAlpaWhatsappNotificationJob;
 use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Periode;
 use App\Models\Siswa;
 use App\Models\User;
+use App\Models\WhatsappNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class DataIntegrityTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_alpa_attendance_creates_and_queues_whatsapp_notification(): void
+    {
+        Queue::fake();
+        $periode = Periode::factory()->create([
+            'tanggal_mulai' => today()->subDay()->toDateString(),
+            'tanggal_selesai' => today()->toDateString(),
+        ]);
+        $kelas = Kelas::factory()->for($periode)->create();
+        $guru = User::factory()->guru()->create();
+        $kelas->gurus()->attach($guru, ['is_wali_kelas' => true]);
+        $siswa = Siswa::factory()->create([
+            'kelas_id' => $kelas->id,
+            'periode_id' => $periode->id,
+            'nama_ayah' => 'Bapak Siswa',
+            'no_whatsapp_ayah' => '081234567890',
+            'nama_wali' => null,
+            'no_whatsapp_wali' => null,
+        ]);
+
+        $this->actingAs($guru)
+            ->post(route('absensi.store'), [
+                'kelas_id' => $kelas->id,
+                'tanggal' => today()->toDateString(),
+                'absensi' => [$siswa->id => 'alpa'],
+            ])
+            ->assertRedirect(route('absensi.create', ['kelas_id' => $kelas->id, 'tanggal' => today()->toDateString()]));
+
+        $notification = WhatsappNotification::query()->firstOrFail();
+
+        $this->assertDatabaseHas('absensis', ['siswa_id' => $siswa->id, 'status' => 'alpa']);
+        $this->assertSame('621234567890', $notification->parent_phone);
+        $this->assertSame('pending', $notification->status);
+        Queue::assertPushed(SendAlpaWhatsappNotificationJob::class, fn ($job) => $job->notificationId === $notification->id);
+    }
+
+    public function test_student_csv_import_uses_the_active_class(): void
+    {
+        $periode = Periode::factory()->create(['status_aktif' => true]);
+        $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '4-A']);
+        $operator = User::factory()->operator()->create();
+        $csv = implode("\n", [
+            'nis,nisn,nama_siswa,jenis_kelamin,kelas,nama_ayah,no_whatsapp_ayah,nama_ibu,no_whatsapp_ibu,status',
+            '101,0012345678,Siswa Impor,L,4-A,Ayah Siswa,081234567890,Ibu Siswa,081234567891,aktif',
+        ]);
+
+        $this->actingAs($operator)
+            ->post(route('siswa.import'), ['file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv)])
+            ->assertRedirect(route('siswa.index'));
+
+        $this->assertDatabaseHas('siswas', [
+            'nis' => '101',
+            'nisn' => '0012345678',
+            'nama_siswa' => 'Siswa Impor',
+            'kelas_id' => $kelas->id,
+            'periode_id' => $periode->id,
+        ]);
+    }
 
     public function test_attendance_date_must_be_inside_the_class_period(): void
     {

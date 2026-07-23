@@ -2,520 +2,273 @@
 
 namespace App\Services;
 
+use App\Imports\SiswaSpreadsheetImport;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
-use SimpleXMLElement;
-use ZipArchive;
+use Throwable;
 
 class SiswaImportService
 {
+    public const CHUNK_SIZE = 250;
+
     private const MAX_IMPORT_ROWS = 10000;
-
-    private const IMPORT_CHUNK_SIZE = 250;
-
-    private const MAX_IMPORT_COLUMNS = 100;
 
     private const MAX_ERROR_DETAILS = 100;
 
-    private const MAX_XLSX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024;
+    private const HEADER_ALIASES = [
+        'nis' => 'nis',
+        'nisn' => 'nisn',
+        'nama siswa' => 'nama_siswa',
+        'nama lengkap siswa' => 'nama_siswa',
+        'nama' => 'nama_siswa',
+        'jenis kelamin' => 'jenis_kelamin',
+        'jk' => 'jenis_kelamin',
+        'kelas' => 'kelas',
+        'nama ayah' => 'nama_ayah',
+        'no whatsapp ayah' => 'no_whatsapp_ayah',
+        'wa ayah' => 'no_whatsapp_ayah',
+        'nama ibu' => 'nama_ibu',
+        'no whatsapp ibu' => 'no_whatsapp_ibu',
+        'wa ibu' => 'no_whatsapp_ibu',
+        'nama wali' => 'nama_wali',
+        'no whatsapp wali' => 'no_whatsapp_wali',
+        'wa wali' => 'no_whatsapp_wali',
+        'status' => 'status',
+    ];
+
+    /** @var Collection<string, Collection<int, Kelas>> */
+    private Collection $kelasByName;
+
+    /** @var array{created: int, updated: int, skipped: int, error_count: int, errors: array<int, string>} */
+    private array $summary;
+
+    private int $processedRows = 0;
+
+    private bool $headersValidated = false;
 
     /**
      * @return array{created: int, updated: int, skipped: int, error_count: int, errors: array<int, string>}
      */
     public function import(UploadedFile $file): array
     {
-        $rows = $this->readRows($file);
+        $this->reset();
 
-        if (count($rows) < 2) {
-            return [
-                'created' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'error_count' => 1,
-                'errors' => ['File import tidak memiliki baris data siswa.'],
-            ];
+        try {
+            Excel::import(new SiswaSpreadsheetImport($this), $file);
+        } catch (RuntimeException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            throw new RuntimeException('File import tidak dapat dibaca.', previous: $exception);
         }
 
-        if (count($rows) - 1 > self::MAX_IMPORT_ROWS) {
-            throw new RuntimeException('File import melebihi batas 10.000 baris data.');
+        if ($this->processedRows === 0) {
+            $this->addError('File import tidak memiliki baris data siswa.');
         }
 
-        $headers = $this->normalizeHeaders(array_shift($rows));
-        $this->ensureRequiredHeaders($headers);
+        if ($this->summary['error_count'] > self::MAX_ERROR_DETAILS) {
+            $omitted = $this->summary['error_count'] - self::MAX_ERROR_DETAILS;
+            $this->summary['errors'][] = "{$omitted} kesalahan lain tidak ditampilkan.";
+        }
 
-        $kelasByName = Kelas::query()
-            ->whereHas('periode', fn($query) => $query->where('status_aktif', true))
-            ->get()
-            ->groupBy(fn(Kelas $kelas) => $this->normalizeKey($kelas->nama_kelas));
-        $summary = [
-            'created' => 0,
-            'updated' => 0,
-            'skipped' => 0,
-            'error_count' => 0,
-            'errors' => [],
-        ];
+        return $this->summary;
+    }
+
+    /**
+     * @param  Collection<int, Collection<string, mixed>>  $rows
+     */
+    public function processRows(Collection $rows, int $firstLine): void
+    {
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $headers = array_map($this->normalizeKey(...), array_keys($rows->first()->all()));
+
+        if (! $this->headersValidated) {
+            $this->ensureRequiredHeaders($headers);
+            $this->headersValidated = true;
+        }
+
         $hasNisColumn = in_array('nis', $headers, true);
         $hasNisnColumn = in_array('nisn', $headers, true);
+        $preparedRows = [];
 
-        foreach (array_chunk($rows, self::IMPORT_CHUNK_SIZE, true) as $chunk) {
-            DB::transaction(function () use (
-                $chunk,
-                $headers,
-                $kelasByName,
-                $hasNisColumn,
-                $hasNisnColumn,
-                &$summary
-            ): void {
-                $preparedRows = [];
+        foreach ($rows as $index => $row) {
+            $this->processedRows++;
 
-                foreach ($chunk as $index => $row) {
-                    $line = $index + 2;
-                    $data = $this->mapRow($headers, $row);
-
-                    if ($this->isEmptyRow($data)) {
-                        $summary['skipped']++;
-
-                        continue;
-                    }
-
-                    $kelasName = $this->normalizeKey($data['kelas'] ?? '');
-                    $kelasCandidates = $kelasByName->get($kelasName);
-
-                    if (! $kelasCandidates || $kelasCandidates->isEmpty()) {
-                        $this->addError($summary, "Baris {$line}: kelas '{$data['kelas']}' tidak ditemukan.");
-
-                        continue;
-                    }
-
-                    if ($kelasCandidates->count() > 1) {
-                        $this->addError($summary, "Baris {$line}: kelas '{$data['kelas']}' ambigu pada periode aktif.");
-
-                        continue;
-                    }
-
-                    if ($this->usesScientificNotation($data['nis']) || $this->usesScientificNotation($data['nisn'])) {
-                        $this->addError(
-                            $summary,
-                            "Baris {$line}: NIS/NISN terdeteksi sebagai notasi ilmiah. Format kolom sebagai Text di Excel."
-                        );
-
-                        continue;
-                    }
-
-                    $kelas = $kelasCandidates->first();
-
-                    $data['jenis_kelamin'] = $this->normalizeGender($data['jenis_kelamin'] ?? '');
-                    $data['kelas_id'] = $kelas->id;
-                    $data['periode_id'] = $kelas->periode_id;
-                    $data['status'] = $this->normalizeKey($data['status'] ?: 'aktif');
-
-                    unset($data['kelas']);
-
-                    $validator = Validator::make($data, [
-                        'nis' => ['nullable', 'string', 'max:50', 'required_without:nisn'],
-                        'nisn' => ['nullable', 'string', 'max:50', 'required_without:nis'],
-                        'nama_siswa' => ['required', 'string', 'max:255'],
-                        'jenis_kelamin' => ['required', Rule::in(['laki-laki', 'perempuan'])],
-                        'nama_ayah' => ['required', 'string', 'max:255'],
-                        'no_whatsapp_ayah' => ['required', 'string', 'max:20'],
-                        'nama_ibu' => ['required', 'string', 'max:255'],
-                        'no_whatsapp_ibu' => ['required', 'string', 'max:20'],
-                        'nama_wali' => ['nullable', 'string', 'max:255'],
-                        'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
-                        'kelas_id' => ['required', 'integer'],
-                        'periode_id' => ['required', 'integer'],
-                        'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
-                    ]);
-
-                    if ($validator->fails()) {
-                        $this->addError($summary, "Baris {$line}: ".$validator->errors()->first());
-
-                        continue;
-                    }
-
-                    $preparedRows[] = ['line' => $line, 'data' => $data];
-                }
-
-                if ($preparedRows === []) {
-                    return;
-                }
-
-                $nisValues = [];
-                $nisnValues = [];
-
-                foreach ($preparedRows as $preparedRow) {
-                    if (filled($preparedRow['data']['nis'])) {
-                        $nisValues[] = $preparedRow['data']['nis'];
-                    }
-
-                    if (filled($preparedRow['data']['nisn'])) {
-                        $nisnValues[] = $preparedRow['data']['nisn'];
-                    }
-                }
-
-                $existingStudents = Siswa::query()
-                    ->where(function ($query) use ($nisValues, $nisnValues): void {
-                        $query->whereIn('nis', array_values(array_unique($nisValues)))
-                            ->orWhereIn('nisn', array_values(array_unique($nisnValues)));
-                    })
-                    ->get();
-                $studentsByNis = [];
-                $studentsByNisn = [];
-
-                foreach ($existingStudents as $student) {
-                    if (filled($student->nis)) {
-                        $studentsByNis[$this->identifierKey($student->nis)] = $student;
-                    }
-
-                    if (filled($student->nisn)) {
-                        $studentsByNisn[$this->identifierKey($student->nisn)] = $student;
-                    }
-                }
-
-                foreach ($preparedRows as $preparedRow) {
-                    $line = $preparedRow['line'];
-                    $data = $preparedRow['data'];
-                    $nisKey = $this->identifierKey($data['nis']);
-                    $nisnKey = $this->identifierKey($data['nisn']);
-                    $studentByNis = $nisKey !== null ? ($studentsByNis[$nisKey] ?? null) : null;
-                    $studentByNisn = $nisnKey !== null ? ($studentsByNisn[$nisnKey] ?? null) : null;
-
-                    if ($studentByNis && $studentByNisn && ! $studentByNis->is($studentByNisn)) {
-                        $this->addError(
-                            $summary,
-                            "Baris {$line}: NIS dan NISN mengarah ke siswa yang berbeda."
-                        );
-
-                        continue;
-                    }
-
-                    $student = $studentByNis ?? $studentByNisn;
-                    $oldNisKey = $student ? $this->identifierKey($student->nis) : null;
-                    $oldNisnKey = $student ? $this->identifierKey($student->nisn) : null;
-                    $persistedData = $data;
-
-                    if ($student && ! $hasNisColumn) {
-                        unset($persistedData['nis']);
-                    }
-
-                    if ($student && ! $hasNisnColumn) {
-                        unset($persistedData['nisn']);
-                    }
-
-                    try {
-                        if ($student) {
-                            $student->update($persistedData);
-                            $summary['updated']++;
-                        } else {
-                            $student = Siswa::create($persistedData);
-                            $summary['created']++;
-                        }
-                    } catch (QueryException $exception) {
-                        if (! $this->isDuplicateKeyException($exception)) {
-                            throw $exception;
-                        }
-
-                        $this->addError(
-                            $summary,
-                            "Baris {$line}: NIS atau NISN baru saja digunakan oleh data lain."
-                        );
-
-                        continue;
-                    }
-
-                    if ($oldNisKey !== null && isset($studentsByNis[$oldNisKey])
-                        && $studentsByNis[$oldNisKey]->is($student)) {
-                        unset($studentsByNis[$oldNisKey]);
-                    }
-
-                    if ($oldNisnKey !== null && isset($studentsByNisn[$oldNisnKey])
-                        && $studentsByNisn[$oldNisnKey]->is($student)) {
-                        unset($studentsByNisn[$oldNisnKey]);
-                    }
-
-                    $savedNisKey = $this->identifierKey($student->nis);
-                    $savedNisnKey = $this->identifierKey($student->nisn);
-
-                    if ($savedNisKey !== null) {
-                        $studentsByNis[$savedNisKey] = $student;
-                    }
-
-                    if ($savedNisnKey !== null) {
-                        $studentsByNisn[$savedNisnKey] = $student;
-                    }
-                }
-            });
-        }
-
-        if ($summary['error_count'] > self::MAX_ERROR_DETAILS) {
-            $omittedErrors = $summary['error_count'] - self::MAX_ERROR_DETAILS;
-            $summary['errors'][] = "{$omittedErrors} kesalahan lain tidak ditampilkan.";
-        }
-
-        return $summary;
-    }
-
-    /**
-     * @return array<int, array<int, string|null>>
-     */
-    private function readRows(UploadedFile $file): array
-    {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        return match ($extension) {
-            'csv' => $this->readCsvRows($file),
-            'xlsx' => $this->readXlsxRows($file),
-            default => throw new RuntimeException('Format file tidak didukung. Gunakan .xlsx atau .csv.'),
-        };
-    }
-
-    /**
-     * @return array<int, array<int, string|null>>
-     */
-    private function readCsvRows(UploadedFile $file): array
-    {
-        $rows = [];
-        $handle = fopen($file->getRealPath(), 'r');
-
-        if (! $handle) {
-            throw new RuntimeException('File CSV tidak dapat dibaca.');
-        }
-
-        try {
-            while (($row = fgetcsv($handle, 0, ',')) !== false) {
-                $rows[] = array_map(fn($value) => $this->cleanValue($value), $row);
-
-                if (count($rows) > self::MAX_IMPORT_ROWS + 1) {
-                    throw new RuntimeException('File import melebihi batas 10.000 baris data.');
-                }
-            }
-        } finally {
-            fclose($handle);
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @return array<int, array<int, string|null>>
-     */
-    private function readXlsxRows(UploadedFile $file): array
-    {
-        $zip = new ZipArchive();
-
-        if ($zip->open($file->getRealPath()) !== true) {
-            throw new RuntimeException('File XLSX tidak dapat dibuka.');
-        }
-
-        try {
-            $this->assertSafeXlsxArchive($zip);
-            $sharedStrings = $this->readSharedStrings($zip);
-            $sheetPath = $this->firstWorksheetPath($zip);
-            $sheetXml = $zip->getFromName($sheetPath);
-        } finally {
-            $zip->close();
-        }
-
-        if ($sheetXml === false) {
-            throw new RuntimeException('Sheet pertama pada file XLSX tidak dapat dibaca.');
-        }
-
-        $sheet = simplexml_load_string($sheetXml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
-
-        if (! $sheet instanceof SimpleXMLElement) {
-            throw new RuntimeException('Format XML sheet pada file XLSX tidak valid.');
-        }
-
-        $rows = [];
-
-        foreach ($sheet->xpath('//*[local-name()="sheetData"]/*[local-name()="row"]') ?: [] as $row) {
-            $values = [];
-
-            foreach ($row->xpath('./*[local-name()="c"]') ?: [] as $cell) {
-                $reference = (string) $cell['r'];
-                $columnIndex = $this->columnIndex($reference);
-
-                if ($columnIndex < 0 || $columnIndex >= self::MAX_IMPORT_COLUMNS) {
-                    throw new RuntimeException('File import memiliki terlalu banyak kolom.');
-                }
-
-                $values[$columnIndex] = $this->cellValue($cell, $sharedStrings);
+            if ($this->processedRows > self::MAX_IMPORT_ROWS) {
+                throw new RuntimeException('File import melebihi batas 10.000 baris data.');
             }
 
-            if ($values !== []) {
-                ksort($values);
-                $rows[] = $this->fillMissingColumns($values);
+            $line = $firstLine + $index;
+            $data = $this->mapRow($row->all());
 
-                if (count($rows) > self::MAX_IMPORT_ROWS + 1) {
-                    throw new RuntimeException('File import melebihi batas 10.000 baris data.');
-                }
-            }
-        }
+            if ($this->isEmptyRow($data)) {
+                $this->summary['skipped']++;
 
-        return $rows;
-    }
-
-    private function assertSafeXlsxArchive(ZipArchive $zip): void
-    {
-        if ($zip->numFiles > 1000) {
-            throw new RuntimeException('File XLSX memiliki terlalu banyak berkas internal.');
-        }
-
-        $uncompressedBytes = 0;
-
-        for ($index = 0; $index < $zip->numFiles; $index++) {
-            $stat = $zip->statIndex($index);
-
-            if (! is_array($stat)) {
-                throw new RuntimeException('Struktur internal file XLSX tidak dapat dibaca.');
-            }
-
-            $uncompressedBytes += (int) ($stat['size'] ?? 0);
-
-            if ($uncompressedBytes > self::MAX_XLSX_UNCOMPRESSED_BYTES) {
-                throw new RuntimeException('Isi file XLSX terlalu besar setelah diekstrak.');
-            }
-        }
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function readSharedStrings(ZipArchive $zip): array
-    {
-        $xml = $zip->getFromName('xl/sharedStrings.xml');
-
-        if ($xml === false) {
-            return [];
-        }
-
-        $sharedStringsXml = simplexml_load_string($xml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
-
-        if (! $sharedStringsXml instanceof SimpleXMLElement) {
-            return [];
-        }
-
-        $strings = [];
-
-        foreach ($sharedStringsXml->xpath('//*[local-name()="si"]') ?: [] as $item) {
-            $textNodes = $item->xpath('.//*[local-name()="t"]') ?: [];
-
-            if ($textNodes) {
-                $strings[] = implode('', array_map(fn($node) => (string) $node, $textNodes));
                 continue;
             }
 
-            $strings[] = '';
+            $kelas = $this->kelasByName->get($this->normalizeKey($data['kelas'] ?? ''));
+
+            if (! $kelas || $kelas->isEmpty()) {
+                $this->addError("Baris {$line}: kelas '{$data['kelas']}' tidak ditemukan.");
+
+                continue;
+            }
+
+            if ($kelas->count() > 1) {
+                $this->addError("Baris {$line}: kelas '{$data['kelas']}' ambigu pada periode aktif.");
+
+                continue;
+            }
+
+            if ($this->usesScientificNotation($data['nis']) || $this->usesScientificNotation($data['nisn'])) {
+                $this->addError("Baris {$line}: NIS/NISN terdeteksi sebagai notasi ilmiah. Format kolom sebagai Text di Excel.");
+
+                continue;
+            }
+
+            $data['jenis_kelamin'] = $this->normalizeGender($data['jenis_kelamin'] ?? '');
+            $data['kelas_id'] = $kelas->first()->id;
+            $data['periode_id'] = $kelas->first()->periode_id;
+            $data['status'] = $this->normalizeKey($data['status'] ?: 'aktif');
+            unset($data['kelas']);
+
+            $validator = Validator::make($data, $this->rules());
+
+            if ($validator->fails()) {
+                $this->addError("Baris {$line}: ".$validator->errors()->first());
+
+                continue;
+            }
+
+            $preparedRows[] = compact('line', 'data');
         }
 
-        return $strings;
+        if ($preparedRows !== []) {
+            DB::transaction(fn () => $this->persist($preparedRows, $hasNisColumn, $hasNisnColumn));
+        }
     }
 
-    private function firstWorksheetPath(ZipArchive $zip): string
+    private function reset(): void
     {
-        $workbookXml = $zip->getFromName('xl/workbook.xml');
-        $relationsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+        $this->kelasByName = Kelas::query()
+            ->whereHas('periode', fn ($query) => $query->where('status_aktif', true))
+            ->get()
+            ->groupBy(fn (Kelas $kelas) => $this->normalizeKey($kelas->nama_kelas));
+        $this->summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'error_count' => 0, 'errors' => []];
+        $this->processedRows = 0;
+        $this->headersValidated = false;
+    }
 
-        if ($workbookXml === false || $relationsXml === false) {
-            return 'xl/worksheets/sheet1.xml';
-        }
+    /**
+     * @param  array<int, array{line: int, data: array<string, string|int|null>}>  $rows
+     */
+    private function persist(array $rows, bool $hasNisColumn, bool $hasNisnColumn): void
+    {
+        $nisValues = array_values(array_unique(array_filter(array_column(array_column($rows, 'data'), 'nis'), fn ($value) => filled($value))));
+        $nisnValues = array_values(array_unique(array_filter(array_column(array_column($rows, 'data'), 'nisn'), fn ($value) => filled($value))));
+        $existing = Siswa::query()
+            ->where(function ($query) use ($nisValues, $nisnValues): void {
+                $query->when($nisValues !== [], fn ($query) => $query->whereIn('nis', $nisValues))
+                    ->when($nisnValues !== [], fn ($query) => $query->orWhereIn('nisn', $nisnValues));
+            })
+            ->get();
+        $studentsByNis = $existing->filter(fn (Siswa $siswa) => filled($siswa->nis))
+            ->keyBy(fn (Siswa $siswa) => $this->identifierKey($siswa->nis));
+        $studentsByNisn = $existing->filter(fn (Siswa $siswa) => filled($siswa->nisn))
+            ->keyBy(fn (Siswa $siswa) => $this->identifierKey($siswa->nisn));
 
-        $workbook = simplexml_load_string($workbookXml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
-        $relations = simplexml_load_string($relationsXml, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
+        foreach ($rows as ['line' => $line, 'data' => $data]) {
+            $nisKey = $this->identifierKey($data['nis']);
+            $nisnKey = $this->identifierKey($data['nisn']);
+            $studentByNis = $nisKey ? $studentsByNis->get($nisKey) : null;
+            $studentByNisn = $nisnKey ? $studentsByNisn->get($nisnKey) : null;
 
-        if (! $workbook instanceof SimpleXMLElement || ! $relations instanceof SimpleXMLElement) {
-            return 'xl/worksheets/sheet1.xml';
-        }
+            if ($studentByNis && $studentByNisn && ! $studentByNis->is($studentByNisn)) {
+                $this->addError("Baris {$line}: NIS dan NISN mengarah ke siswa yang berbeda.");
 
-        $sheets = $workbook->xpath('//*[local-name()="sheet"]');
+                continue;
+            }
 
-        if (! $sheets || ! isset($sheets[0])) {
-            return 'xl/worksheets/sheet1.xml';
-        }
+            $student = $studentByNis ?? $studentByNisn;
+            $oldNisKey = $student ? $this->identifierKey($student->nis) : null;
+            $oldNisnKey = $student ? $this->identifierKey($student->nisn) : null;
+            $persistedData = $data;
 
-        $relationId = (string) $sheets[0]->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')->id;
+            if ($student && ! $hasNisColumn) {
+                unset($persistedData['nis']);
+            }
 
-        foreach ($relations->xpath('//*[local-name()="Relationship"]') ?: [] as $relationship) {
-            if ((string) $relationship['Id'] === $relationId) {
-                $target = (string) $relationship['Target'];
+            if ($student && ! $hasNisnColumn) {
+                unset($persistedData['nisn']);
+            }
 
-                return str_starts_with($target, 'xl/') ? $target : 'xl/' . ltrim($target, '/');
+            try {
+                $student ? $student->update($persistedData) : $student = Siswa::create($persistedData);
+            } catch (QueryException $exception) {
+                if (! $this->isDuplicateKey($exception)) {
+                    throw $exception;
+                }
+
+                $this->addError("Baris {$line}: NIS atau NISN baru saja digunakan oleh data lain.");
+
+                continue;
+            }
+
+            $this->summary[$student->wasRecentlyCreated ? 'created' : 'updated']++;
+
+            if ($oldNisKey && $studentsByNis->get($oldNisKey)?->is($student)) {
+                $studentsByNis->forget($oldNisKey);
+            }
+
+            if ($oldNisnKey && $studentsByNisn->get($oldNisnKey)?->is($student)) {
+                $studentsByNisn->forget($oldNisnKey);
+            }
+
+            if (filled($student->nis)) {
+                $studentsByNis->put($this->identifierKey($student->nis), $student);
+            }
+
+            if (filled($student->nisn)) {
+                $studentsByNisn->put($this->identifierKey($student->nisn), $student);
             }
         }
-
-        return 'xl/worksheets/sheet1.xml';
     }
 
-    private function cellValue(SimpleXMLElement $cell, array $sharedStrings): ?string
+    /** @return array<string, array<int, mixed>> */
+    private function rules(): array
     {
-        $type = (string) $cell['t'];
-        $valueNodes = $cell->xpath('./*[local-name()="v"]') ?: [];
-        $value = isset($valueNodes[0]) ? (string) $valueNodes[0] : null;
-
-        if ($type === 'inlineStr') {
-            $textNodes = $cell->xpath('.//*[local-name()="t"]') ?: [];
-
-            return $this->cleanValue(implode('', array_map(fn($node) => (string) $node, $textNodes)));
-        }
-
-        if ($value === null) {
-            return null;
-        }
-
-        if ($type === 's') {
-            return $this->cleanValue($sharedStrings[(int) $value] ?? '');
-        }
-
-        return $this->cleanValue($value);
-    }
-
-    private function columnIndex(string $reference): int
-    {
-        $letters = preg_replace('/[^A-Z]/', '', strtoupper($reference));
-        $index = 0;
-
-        foreach (str_split($letters) as $letter) {
-            $index = ($index * 26) + (ord($letter) - 64);
-        }
-
-        return $index - 1;
-    }
-
-    /**
-     * @param array<int, string|null> $values
-     * @return array<int, string|null>
-     */
-    private function fillMissingColumns(array $values): array
-    {
-        $max = max(array_keys($values));
-        $row = [];
-
-        for ($i = 0; $i <= $max; $i++) {
-            $row[] = $values[$i] ?? null;
-        }
-
-        return $row;
-    }
-
-    /**
-     * @param array<int, string|null> $headers
-     * @return array<int, string>
-     */
-    private function normalizeHeaders(array $headers): array
-    {
-        return array_map(fn($header) => $this->normalizeKey((string) $header), $headers);
+        return [
+            'nis' => ['nullable', 'string', 'max:50', 'required_without:nisn'],
+            'nisn' => ['nullable', 'string', 'max:50', 'required_without:nis'],
+            'nama_siswa' => ['required', 'string', 'max:255'],
+            'jenis_kelamin' => ['required', Rule::in(['laki-laki', 'perempuan'])],
+            'nama_ayah' => ['required', 'string', 'max:255'],
+            'no_whatsapp_ayah' => ['required', 'string', 'max:20'],
+            'nama_ibu' => ['required', 'string', 'max:255'],
+            'no_whatsapp_ibu' => ['required', 'string', 'max:20'],
+            'nama_wali' => ['nullable', 'string', 'max:255'],
+            'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
+            'kelas_id' => ['required', 'integer'],
+            'periode_id' => ['required', 'integer'],
+            'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
+        ];
     }
 
     /** @param array<int, string> $headers */
     private function ensureRequiredHeaders(array $headers): void
     {
-        $requiredGroups = [
+        foreach ([
             'NIS atau NISN' => ['nis', 'nisn'],
             'nama siswa' => ['nama siswa', 'nama lengkap siswa', 'nama'],
             'jenis kelamin' => ['jenis kelamin', 'jk'],
@@ -524,9 +277,7 @@ class SiswaImportService
             'nomor WhatsApp ayah' => ['no whatsapp ayah', 'wa ayah'],
             'nama ibu' => ['nama ibu'],
             'nomor WhatsApp ibu' => ['no whatsapp ibu', 'wa ibu'],
-        ];
-
-        foreach ($requiredGroups as $label => $aliases) {
+        ] as $label => $aliases) {
             if (array_intersect($aliases, $headers) === []) {
                 throw new RuntimeException("Kolom wajib '{$label}' tidak ditemukan pada header file.");
             }
@@ -534,86 +285,35 @@ class SiswaImportService
     }
 
     /**
-     * @param array<int, string> $headers
-     * @param array<int, string|null> $row
+     * @param  array<string, mixed>  $row
      * @return array<string, string|null>
      */
-    private function mapRow(array $headers, array $row): array
+    private function mapRow(array $row): array
     {
-        $aliases = [
-            'nis' => 'nis',
-            'nisn' => 'nisn',
-            'nama siswa' => 'nama_siswa',
-            'nama lengkap siswa' => 'nama_siswa',
-            'nama' => 'nama_siswa',
-            'jenis kelamin' => 'jenis_kelamin',
-            'jenis kelamin' => 'jenis_kelamin',
-            'jk' => 'jenis_kelamin',
-            'kelas' => 'kelas',
-            'nama ayah' => 'nama_ayah',
-            'nama ayah' => 'nama_ayah',
-            'no whatsapp ayah' => 'no_whatsapp_ayah',
-            'no whatsapp ayah' => 'no_whatsapp_ayah',
-            'wa ayah' => 'no_whatsapp_ayah',
-            'nama ibu' => 'nama_ibu',
-            'nama ibu' => 'nama_ibu',
-            'no whatsapp ibu' => 'no_whatsapp_ibu',
-            'no whatsapp ibu' => 'no_whatsapp_ibu',
-            'wa ibu' => 'no_whatsapp_ibu',
-            'nama wali' => 'nama_wali',
-            'nama wali' => 'nama_wali',
-            'no whatsapp wali' => 'no_whatsapp_wali',
-            'no whatsapp wali' => 'no_whatsapp_wali',
-            'wa wali' => 'no_whatsapp_wali',
-            'status' => 'status',
-        ];
+        $data = array_fill_keys([
+            'nis', 'nisn', 'nama_siswa', 'jenis_kelamin', 'kelas', 'nama_ayah',
+            'no_whatsapp_ayah', 'nama_ibu', 'no_whatsapp_ibu', 'nama_wali', 'no_whatsapp_wali',
+        ], null) + ['status' => 'aktif'];
 
-        $data = [
-            'nis' => null,
-            'nisn' => null,
-            'nama_siswa' => null,
-            'jenis_kelamin' => null,
-            'kelas' => null,
-            'nama_ayah' => null,
-            'no_whatsapp_ayah' => null,
-            'nama_ibu' => null,
-            'no_whatsapp_ibu' => null,
-            'nama_wali' => null,
-            'no_whatsapp_wali' => null,
-            'status' => 'aktif',
-        ];
-
-        foreach ($headers as $index => $header) {
-            $field = $aliases[$header] ?? null;
+        foreach ($row as $header => $value) {
+            $field = self::HEADER_ALIASES[$this->normalizeKey((string) $header)] ?? null;
 
             if ($field) {
-                $data[$field] = $this->cleanValue($row[$index] ?? null);
+                $data[$field] = $this->cleanValue($value);
             }
         }
 
         return $data;
     }
 
-    /**
-     * @param array<string, string|null> $data
-     */
+    /** @param array<string, string|null> $data */
     private function isEmptyRow(array $data): bool
     {
-        foreach ($data as $value) {
-            if (filled($value) && $value !== 'aktif') {
-                return false;
-            }
-        }
-
-        return true;
+        return ! collect($data)->contains(fn (?string $value) => filled($value) && $value !== 'aktif');
     }
 
     private function cleanValue(mixed $value): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
@@ -621,18 +321,13 @@ class SiswaImportService
 
     private function normalizeKey(string $value): string
     {
-        $value = str_replace(['-', '_'], ' ', $value);
-        $value = (string) preg_replace('/\s+/u', ' ', trim($value));
-
-        return mb_strtolower($value);
+        return mb_strtolower((string) preg_replace('/\s+/u', ' ', trim(str_replace(['-', '_'], ' ', $value))));
     }
 
     private function normalizeGender(string $value): ?string
     {
-        $value = $this->normalizeKey($value);
-
-        return match ($value) {
-            'l', 'lk', 'laki laki', 'laki', 'laki-laki' => 'laki-laki',
+        return match ($value = $this->normalizeKey($value)) {
+            'l', 'lk', 'laki laki', 'laki' => 'laki-laki',
             'p', 'pr', 'perempuan' => 'perempuan',
             default => $value ?: null,
         };
@@ -640,8 +335,7 @@ class SiswaImportService
 
     private function usesScientificNotation(?string $value): bool
     {
-        return $value !== null
-            && preg_match('/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+$/', $value) === 1;
+        return $value !== null && preg_match('/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+$/', $value) === 1;
     }
 
     private function identifierKey(?string $value): ?string
@@ -649,18 +343,17 @@ class SiswaImportService
         return $value === null ? null : mb_strtolower($value);
     }
 
-    /** @param array{error_count: int, errors: array<int, string>} $summary */
-    private function addError(array &$summary, string $message): void
+    private function addError(string $message): void
     {
-        $summary['error_count']++;
+        $this->summary['error_count']++;
 
-        if (count($summary['errors']) < self::MAX_ERROR_DETAILS) {
-            $summary['errors'][] = $message;
+        if (count($this->summary['errors']) < self::MAX_ERROR_DETAILS) {
+            $this->summary['errors'][] = $message;
         }
     }
 
-    private function isDuplicateKeyException(QueryException $exception): bool
+    private function isDuplicateKey(QueryException $exception): bool
     {
-        return (int) ($exception->errorInfo[1] ?? 0) === 1062;
+        return in_array($exception->errorInfo[0] ?? null, ['23000', '23505'], true);
     }
 }
