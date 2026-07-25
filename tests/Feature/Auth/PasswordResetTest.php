@@ -44,6 +44,15 @@ class PasswordResetTest extends TestCase
         $this->assertDatabaseHas('password_reset_tokens', ['email' => $user->email]);
     }
 
+    public function test_reset_link_request_fails_when_whatsapp_number_is_not_registered(): void
+    {
+        $this->post('/forgot-password', ['no_telepon' => '081200000099'])
+            ->assertSessionHasErrors([
+                'no_telepon' => 'Tautan pengaturan ulang kata sandi gagal dikirim karena nomor WhatsApp tidak terdaftar.',
+            ])
+            ->assertSessionMissing('status');
+    }
+
     public function test_password_can_be_reset_with_a_valid_token(): void
     {
         $user = User::factory()->create();

@@ -37,7 +37,8 @@ class PasswordResetLinkController extends Controller
         $successMessage = 'Jika nomor WhatsApp terdaftar, tautan pengaturan ulang kata sandi akan dikirimkan.';
 
         if (! $user) {
-            return back()->with('status', $successMessage);
+            return back()->withInput($request->only('no_telepon'))
+                ->withErrors(['no_telepon' => 'Tautan pengaturan ulang kata sandi gagal dikirim karena nomor WhatsApp tidak terdaftar.']);
         }
 
         $rateLimitKey = 'password-reset-whatsapp:'.hash('sha256', Str::lower($phoneNumber));
