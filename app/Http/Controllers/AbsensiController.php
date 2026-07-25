@@ -515,7 +515,7 @@ class AbsensiController extends Controller
             ->whereIn('siswa_id', array_unique($siswaIds))
             ->where('status', 'alpa')
             ->get()
-            ->each(fn (Absensi $absensi) => $this->queueAlpaWhatsappNotification($absensi));
+            ->each(fn(Absensi $absensi) => $this->queueAlpaWhatsappNotification($absensi));
     }
 
     private function resolveParentContact(Siswa $siswa): array
@@ -544,11 +544,11 @@ class AbsensiController extends Controller
         $number = (string) preg_replace('/\D+/', '', $phone);
 
         if (str_starts_with($number, '0')) {
-            return '62'.substr($number, 1);
+            return '62' . substr($number, 1);
         }
 
         if (str_starts_with($number, '8')) {
-            return '62'.$number;
+            return '62' . $number;
         }
 
         return $number ?: null;
@@ -562,8 +562,7 @@ class AbsensiController extends Controller
         $kelas = $absensi->kelas?->nama_kelas ? " kelas {$absensi->kelas->nama_kelas}" : '';
 
         return "Assalamu'alaikum {$sapaan},\n\n"
-            ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
-            .'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
+            . "Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
+            . 'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
     }
-
 }
