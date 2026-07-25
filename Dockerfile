@@ -33,4 +33,4 @@ RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions 
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
+CMD ["sh", "-c", "php artisan queue:work --sleep=3 --tries=3 --timeout=90 & exec php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
