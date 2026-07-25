@@ -24,7 +24,7 @@ COPY . .
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 RUN npm install
-RUN npm run build
+RUN rm -f public/hot && npm run build
 
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views && \
     php artisan config:clear && \
