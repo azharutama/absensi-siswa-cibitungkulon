@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\SendAlpaWhatsappNotificationJob;
 use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Periode;
@@ -11,16 +10,27 @@ use App\Models\User;
 use App\Models\WhatsappNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class DataIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_alpa_attendance_creates_and_queues_whatsapp_notification(): void
+    public function test_alpa_attendance_sends_whatsapp_notification_immediately(): void
     {
-        Queue::fake();
+        config()->set('services.fonnte.token', 'test-token');
+        Http::fake([
+            '*' => Http::response([
+                'status' => true,
+                'message' => 'OK',
+                'data' => [
+                    'id' => 'msg-1',
+                    'requestid' => 'req-1',
+                ],
+            ], 200),
+        ]);
+
         $periode = Periode::factory()->create([
             'tanggal_mulai' => today()->subDay()->toDateString(),
             'tanggal_selesai' => today()->toDateString(),
@@ -49,8 +59,10 @@ class DataIntegrityTest extends TestCase
 
         $this->assertDatabaseHas('absensis', ['siswa_id' => $siswa->id, 'status' => 'alpa']);
         $this->assertSame('6281234567890', $notification->parent_phone);
-        $this->assertSame('pending', $notification->status);
-        Queue::assertPushed(SendAlpaWhatsappNotificationJob::class, fn ($job) => $job->notificationId === $notification->id);
+        $this->assertSame('sent', $notification->status);
+        $this->assertSame('msg-1', $notification->provider_message_id);
+        $this->assertSame('req-1', $notification->provider_request_id);
+        Http::assertSentCount(1);
     }
 
     public function test_student_csv_import_uses_the_active_class(): void

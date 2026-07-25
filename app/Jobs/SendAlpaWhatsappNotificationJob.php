@@ -4,54 +4,28 @@ namespace App\Jobs;
 
 use App\Models\WhatsappNotification;
 use App\Services\FonnteService;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Throwable;
 
 class SendAlpaWhatsappNotificationJob implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
-
-    public int $timeout = 30;
-
-    public bool $failOnTimeout = true;
-
-    public function __construct(public int $notificationId) {}
-
-    public function backoff(): array
+    public function __construct(public int $notificationId)
     {
-        return [30, 120, 300];
     }
 
-    public function middleware(): array
-    {
-        return [
-            (new WithoutOverlapping("whatsapp-notification-{$this->notificationId}"))
-                ->releaseAfter(30)
-                ->expireAfter(300),
-        ];
-    }
-
-    /**
-     * Execute the job.
-     */
     public function handle(FonnteService $fonnteService): void
     {
-        $notification = WhatsappNotification::with('absensi')->find($this->notificationId);
+        $notification = WhatsappNotification::query()
+            ->with(['absensi.siswa', 'absensi.kelas'])
+            ->find($this->notificationId);
 
-        if (! $notification || ! in_array($notification->status, ['pending', 'processing'], true)) {
-            return;
-        }
-
-        if ($notification->absensi?->status !== 'alpa') {
-            $notification->update([
-                'status' => 'cancelled',
-                'last_error' => 'Status absensi sudah bukan alpa.',
-            ]);
-
+        if (! $notification || $notification->status === 'sent') {
             return;
         }
 
@@ -59,47 +33,27 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
             $notification->update([
                 'status' => 'failed',
                 'last_error' => 'Nomor WhatsApp orang tua/wali tidak tersedia.',
+                'sent_at' => null,
             ]);
 
             return;
         }
 
-        $currentAttempt = max(1, $this->attempts());
-        $claimed = WhatsappNotification::query()
-            ->whereKey($notification->id)
-            ->where(function ($query) use ($currentAttempt): void {
-                $query->where('status', 'pending')
-                    ->orWhere(function ($query): void {
-                        $query->where('status', 'processing')
-                            ->where('updated_at', '<=', now()->subMinutes(5));
-                    })
-                    ->orWhere(function ($query) use ($currentAttempt): void {
-                        $query->where('status', 'processing')
-                            ->where('attempts', '<', $currentAttempt);
-                    });
-            })
-            ->update([
-                'status' => 'processing',
-                'attempts' => $currentAttempt,
-                'last_error' => null,
-                'updated_at' => now(),
-            ]);
-
-        if ($claimed === 0) {
-            return;
-        }
-
-        $notification->refresh();
+        $notification->update([
+            'status' => 'processing',
+            'attempts' => $notification->attempts + 1,
+            'last_error' => null,
+        ]);
 
         try {
-            $result = $fonnteService->sendMessage($notification->parent_phone, $notification->message);
+            $result = $fonnteService->sendMessage((string) $notification->parent_phone, (string) $notification->message);
         } catch (Throwable $exception) {
             $notification->update([
-                'status' => $this->attempts() >= $this->tries ? 'failed' : 'pending',
+                'status' => 'failed',
                 'last_error' => $exception->getMessage(),
             ]);
 
-            throw $exception;
+            return;
         }
 
         $data = $result['data'] ?? [];
@@ -111,20 +65,6 @@ class SendAlpaWhatsappNotificationJob implements ShouldQueue
             'last_error' => $result['success'] ? null : $result['message'],
             'sent_at' => $result['success'] ? now() : null,
         ]);
-    }
-
-    public function failed(?Throwable $exception): void
-    {
-        WhatsappNotification::query()
-            ->whereKey($this->notificationId)
-            ->whereIn('status', ['pending', 'processing'])
-            ->update([
-                'status' => 'failed',
-                'last_error' => $exception
-                    ? 'Antrean pengiriman dihentikan: '.$exception->getMessage()
-                    : 'Antrean pengiriman dihentikan tanpa detail kesalahan.',
-                'updated_at' => now(),
-            ]);
     }
 
     private function stringValue(mixed $value): ?string
