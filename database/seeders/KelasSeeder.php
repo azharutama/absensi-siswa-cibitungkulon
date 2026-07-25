@@ -27,12 +27,12 @@ class KelasSeeder extends Seeder
 
         $teachers = User::query()
             ->where('role', 'guru')
-            ->whereIn('username', array_map(
-                fn (int $number): string => "guru{$number}",
+            ->whereIn('nip', array_map(
+                fn (int $number): string => sprintf('GURU%03d', $number),
                 range(1, GuruSeeder::TOTAL_GURU),
             ))
             ->get()
-            ->keyBy('username');
+            ->keyBy('nip');
 
         if (! $activePeriod || $teachers->count() !== GuruSeeder::TOTAL_GURU) {
             throw new RuntimeException('Seeder kelas memerlukan satu periode aktif dan 40 akun guru.');
@@ -56,7 +56,7 @@ class KelasSeeder extends Seeder
                 $teacherNumber <= GuruSeeder::TOTAL_GURU;
                 $teacherNumber += count(self::CLASS_NAMES)
             ) {
-                $teacher = $teachers->get("guru{$teacherNumber}");
+                $teacher = $teachers->get(sprintf('GURU%03d', $teacherNumber));
 
                 if (! $teacher) {
                     throw new RuntimeException('Guru untuk kelas demo tidak ditemukan.');

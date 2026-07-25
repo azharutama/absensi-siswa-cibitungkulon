@@ -17,7 +17,7 @@ class GuruSeederTest extends TestCase
         $this->seed(GuruSeeder::class);
 
         $primaryTeacher = User::query()
-            ->where('username', 'guru1')
+            ->where('nip', 'GURU001')
             ->firstOrFail();
 
         $this->assertSame(GuruSeeder::PRIMARY_TEACHER_NAME, $primaryTeacher->nama);

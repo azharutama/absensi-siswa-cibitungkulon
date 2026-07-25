@@ -43,7 +43,7 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         $login = $this->normalizedLogin();
-        $loginField = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $loginField = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'nip';
 
         if (! Auth::attempt([
             $loginField => $login,

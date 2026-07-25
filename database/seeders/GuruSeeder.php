@@ -24,7 +24,6 @@ class GuruSeeder extends Seeder
 
         $this->saveUser([
             'nama' => 'Operator SD',
-            'username' => 'operator',
             'nip' => 'OPERATOR001',
             'email' => 'operator@gmail.com',
             'no_telepon' => '081200000001',
@@ -40,7 +39,6 @@ class GuruSeeder extends Seeder
                 'nama' => $number === 1
                     ? self::PRIMARY_TEACHER_NAME
                     : $faker->unique()->name($isFemale ? 'female' : 'male'),
-                'username' => "guru{$number}",
                 'nip' => sprintf('GURU%03d', $number),
                 'email' => $number === 1
                     ? self::PRIMARY_TEACHER_EMAIL
@@ -54,7 +52,6 @@ class GuruSeeder extends Seeder
 
         $this->saveUser([
             'nama' => 'Kepala Sekolah',
-            'username' => 'kepala_sekolah',
             'nip' => 'KEPSEK001',
             'email' => 'kepala.sekolah@gmail.com',
             'no_telepon' => '081299999999',
@@ -68,7 +65,7 @@ class GuruSeeder extends Seeder
     private function saveUser(array $attributes): void
     {
         User::query()->updateOrCreate(
-            ['username' => $attributes['username']],
+            ['nip' => $attributes['nip']],
             $attributes,
         );
     }

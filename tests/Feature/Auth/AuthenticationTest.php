@@ -42,17 +42,29 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
-    public function test_users_can_authenticate_using_username(): void
+    public function test_users_can_authenticate_using_nip(): void
     {
-        $user = User::factory()->create(['username' => 'guru.test']);
+        $user = User::factory()->create(['nip' => 'GURU001']);
 
         $response = $this->post('/login', [
-            'login' => 'guru.test',
+            'login' => 'GURU001',
             'password' => 'password',
         ]);
 
         $this->assertAuthenticatedAs($user);
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_users_can_not_authenticate_using_an_old_username(): void
+    {
+        User::factory()->create(['nip' => 'GURU001']);
+
+        $this->post('/login', [
+            'login' => 'guru.test',
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
     }
 
     public function test_remember_me_persists_a_remember_token(): void
