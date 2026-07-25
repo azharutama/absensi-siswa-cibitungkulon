@@ -16,7 +16,7 @@
 
         <div class="w-full sm:w-48">
             <label for="absensi-tanggal" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal</label>
-            <input id="absensi-tanggal" type="date" name="tanggal" value="{{ $tanggal ?? date('Y-m-d') }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
+            <input id="absensi-tanggal" type="date" name="tanggal" value="{{ $tanggal ?? date('Y-m-d') }}" max="{{ today()->toDateString() }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
         </div>
 
         <button type="submit" class="inline-flex w-full justify-center rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto">
