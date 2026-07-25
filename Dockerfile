@@ -26,9 +26,10 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-di
 RUN npm install
 RUN npm run build
 
-RUN php artisan config:clear && \
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views && \
+    php artisan config:clear && \
     php artisan route:clear && \
-    php artisan view:clear
+    php artisan view:clear || true
 
 EXPOSE 10000
 
