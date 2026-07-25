@@ -67,6 +67,27 @@ Base test memiliki fail-fast guard yang membatalkan eksekusi sebelum
 `migrate:fresh` jika environment bukan `testing` atau nama database tidak
 berakhiran `_test`.
 
+## Email reset kata sandi
+
+Pengguna dapat memilih **Lupa kata sandi?** di halaman masuk untuk menerima
+tautan reset yang berlaku selama 60 menit. Aplikasi menggunakan Resend untuk
+pengiriman email. Buat API key di Resend, verifikasikan domain pengirim, lalu
+atur `.env` produksi berikut:
+
+```env
+APP_URL=https://domain-sekolah.example
+MAIL_MAILER=resend
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx
+MAIL_FROM_ADDRESS=noreply@domain-sekolah.example
+MAIL_FROM_NAME="SDN Cibitung Kulon 02"
+```
+
+Saat pengujian awal, `onboarding@resend.dev` dapat dipakai sebagai pengirim
+untuk alamat email pemilik akun Resend. Untuk mengirim ke pengguna lain,
+gunakan alamat dari domain yang telah diverifikasi di Resend.
+
+Setelah mengubah konfigurasi di server, jalankan `php artisan config:clear`.
+
 ## Notifikasi WhatsApp
 
 Konfigurasi Fonnte tersedia melalui variabel berikut:

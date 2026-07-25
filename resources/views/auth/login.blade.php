@@ -111,6 +111,12 @@
                     </button>
                 </form>
 
+                <div class="mt-4 text-center">
+                    <a href="{{ route('password.request') }}" class="text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline">
+                        Lupa kata sandi?
+                    </a>
+                </div>
+
                 <!-- Footer -->
                 <div class="mt-6 text-center text-sm text-gray-600">
                     Belum punya akun? <span class="font-medium text-blue-700">Hubungi operator sekolah.</span>
