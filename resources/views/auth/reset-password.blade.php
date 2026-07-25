@@ -1,22 +1,17 @@
 <x-guest-layout>
     <div class="mb-4 text-sm text-gray-600">
-        Buat kata sandi baru untuk akun Anda.
+        Buat kata sandi baru untuk akun Anda. Tautan ini dikirim melalui WhatsApp.
     </div>
 
     <form method="POST" action="{{ route('password.store') }}">
         @csrf
 
         <input type="hidden" name="token" value="{{ $request->route('token') }}">
+        <input type="hidden" name="email" value="{{ old('email', $request->email) }}">
+
+        <x-input-error :messages="$errors->get('email')" class="mb-4" />
 
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
-
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
-
-        <div class="mt-4">
             <x-input-label for="password" :value="__('Kata Sandi Baru')" />
 
             <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />

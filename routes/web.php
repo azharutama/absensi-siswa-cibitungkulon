@@ -46,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:operator,guru,kepala_sekolah')->group(function () {
 
         Route::get('/rekap-absensi', [RekapController::class, 'index'])->name('rekap.index');
+        Route::get('/rekap-absensi/export', [RekapController::class, 'export'])->name('rekap.export');
     });
 
     Route::middleware('role:operator,guru')->group(function () {

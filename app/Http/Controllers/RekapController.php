@@ -2,15 +2,55 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\RekapAbsensiExport;
 use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class RekapController extends Controller
 {
     public function index(Request $request): View
+    {
+        return view('rekap.index', $this->rekapData($request));
+    }
+
+    /**
+     * Download the filtered attendance recap as an Excel workbook.
+     */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $data = $this->rekapData($request);
+
+        abort_unless($data['kelasId'], 422, 'Pilih kelas terlebih dahulu sebelum mengunduh rekap.');
+
+        $filename = sprintf(
+            'rekap-absensi-%s-%s-sampai-%s.xlsx',
+            Str::slug($data['namaKelas']),
+            $data['tanggalMulai'],
+            $data['tanggalBerakhir'],
+        );
+
+        return Excel::download(
+            new RekapAbsensiExport(
+                $data['rekapSiswa'],
+                $data['namaKelas'],
+                $data['tanggalMulai'],
+                $data['tanggalBerakhir'],
+            ),
+            $filename,
+        );
+    }
+
+    /**
+     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, persentase: float|int}>, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null}
+     */
+    private function rekapData(Request $request): array
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
@@ -29,11 +69,12 @@ class RekapController extends Controller
         $tanggalBerakhir = $filters['tanggal_berakhir'] ?? today()->toDateString();
 
         $rekapSiswa = [];
+        $namaKelas = null;
         $stats = [
             'rata_hadir' => 0,
             'total_sakit' => 0,
             'total_izin' => 0,
-            'total_alpa' => 0
+            'total_alpa' => 0,
         ];
 
         if ($kelasId) {
@@ -86,7 +127,7 @@ class RekapController extends Controller
                     'sakit' => $sakit,
                     'izin' => $izin,
                     'alpa' => $alpa,
-                    'persentase' => $persentase
+                    'persentase' => $persentase,
                 ];
 
                 // Akumulasi untuk Widget Card Atas
@@ -102,6 +143,6 @@ class RekapController extends Controller
             }
         }
 
-        return view('rekap.index', compact('kelas', 'rekapSiswa', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats'));
+        return compact('kelas', 'rekapSiswa', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas');
     }
 }

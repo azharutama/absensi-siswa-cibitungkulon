@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\FonnteService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Throwable;
 
 class PasswordResetLinkController extends Controller
 {
@@ -19,22 +24,63 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Send a password reset link to the supplied email address.
+     * Send a password reset link to the registered WhatsApp number.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, FonnteService $fonnteService): RedirectResponse
     {
-        $request->validate([
-            'email' => ['required', 'string', 'email'],
+        $validated = $request->validate([
+            'no_telepon' => ['required', 'string', 'max:25'],
         ]);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $phoneNumber = trim($validated['no_telepon']);
+        $user = User::query()->where('no_telepon', $phoneNumber)->first();
+        $successMessage = 'Jika nomor WhatsApp terdaftar, tautan pengaturan ulang kata sandi akan dikirimkan.';
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return back()->with('status', 'Tautan pengaturan ulang kata sandi telah dikirim ke email Anda.');
+        if (! $user) {
+            return back()->with('status', $successMessage);
         }
 
-        return back()
-            ->withInput($request->only('email'))
-            ->withErrors(['email' => 'Kami tidak dapat mengirim tautan pengaturan ulang kata sandi ke alamat email tersebut.']);
+        $rateLimitKey = 'password-reset-whatsapp:'.hash('sha256', Str::lower($phoneNumber));
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            return back()->with('status', $successMessage);
+        }
+
+        $token = Password::createToken($user);
+        $resetUrl = url(route('password.reset', [
+            'token' => $token,
+            'email' => $user->email,
+        ], false));
+
+        RateLimiter::hit($rateLimitKey, 60);
+
+        try {
+            $result = $fonnteService->sendMessage(
+                $user->no_telepon,
+                $this->resetMessage($user, $resetUrl),
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withInput($request->only('no_telepon'))
+                ->withErrors(['no_telepon' => 'Tautan pengaturan ulang kata sandi belum dapat dikirim melalui WhatsApp.']);
+        }
+
+        if (! $result['success']) {
+            return back()->withInput($request->only('no_telepon'))
+                ->withErrors(['no_telepon' => 'Tautan pengaturan ulang kata sandi belum dapat dikirim melalui WhatsApp.']);
+        }
+
+        return back()->with('status', $successMessage);
+    }
+
+    /**
+     * Build the WhatsApp password reset message.
+     */
+    private function resetMessage(User $user, string $resetUrl): string
+    {
+        return "Halo {$user->nama},\n\n"
+            ."Gunakan tautan berikut untuk mengatur ulang kata sandi akun Anda:\n{$resetUrl}\n\n"
+            .'Tautan ini berlaku selama 60 menit. Jika Anda tidak meminta pengaturan ulang kata sandi, abaikan pesan ini.';
     }
 }

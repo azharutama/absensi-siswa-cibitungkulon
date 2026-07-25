@@ -97,12 +97,12 @@
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 gap-4 border-b border-gray-100 mb-4">
                     <h3 class="font-bold text-gray-800 text-lg">Data Kehadiran Siswa</h3>
-                    <button type="button" data-print-page class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm print:hidden">
+                    <a href="{{ route('rekap.export', ['kelas_id' => $kelasId, 'tanggal_mulai' => $tanggalMulai, 'tanggal_berakhir' => $tanggalBerakhir]) }}" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>
-                        Cetak
-                    </button>
+                        Unduh Excel
+                    </a>
                 </div>
 
                 {{-- Tabel rekap kehadiran siswa --}}
