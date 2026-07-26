@@ -12,8 +12,8 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        if (! app()->environment(['local', 'testing'])) {
-            $this->command?->warn('Seeder data demo hanya boleh dijalankan pada environment local/testing.');
+        if (! app()->environment(['local', 'testing', 'development', 'production'])) {
+            $this->command?->warn('Seeder data demo hanya boleh dijalankan pada environment local/testing/development/production.');
 
             return;
         }
