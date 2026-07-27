@@ -7,6 +7,13 @@
 
         <title>{{ config('app.name', 'Sistem Absensi') }} - SDN Cibitung Kulon 02</title>
 
+        <!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -26,5 +33,13 @@
                 {{ $slot }}
             </div>
         </div>
+
+         <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js');
+                });
+            }
+        </script>
     </body>
 </html>
