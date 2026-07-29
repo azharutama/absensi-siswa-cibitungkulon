@@ -62,9 +62,9 @@
                     <x-input-label for="kelas_id" :value="__('Kelas')" />
                     <select id="kelas_id" name="kelas_id" class="mt-1 block w-full bg-gray-50 border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
                         <option value="" selected disabled>Pilih Kelas</option>
-                        @foreach($kelas as $k)
-                            <option value="{{ $k->id }}" {{ $kelasId == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
-                        @endforeach
+@foreach($kelas as $k)
+                                <option value="{{ $k->id }}" {{ $kelasId == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                            @endforeach
                     </select>
                 </div>
 

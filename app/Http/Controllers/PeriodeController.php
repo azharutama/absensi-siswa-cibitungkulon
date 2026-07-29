@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Absensi;
 use App\Models\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +19,13 @@ class PeriodeController extends Controller
         $search = trim($filters['search'] ?? '');
 
         $query = Periode::query()
-            ->select(['id', 'nama_periode', 'tanggal_mulai', 'tanggal_selesai', 'status_aktif', 'created_at']);
+            ->select(['id', 'tahun_ajaran', 'semester', 'tipe_periode', 'nama_periode', 'tanggal_mulai', 'tanggal_selesai', 'status_aktif', 'created_at']);
 
         if ($search !== '') {
-            $query->where('nama_periode', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search): void {
+                $q->where('tahun_ajaran', 'like', "%{$search}%")
+                    ->orWhere('nama_periode', 'like', "%{$search}%");
+            });
         }
 
         $periodes = $query
@@ -42,35 +46,75 @@ class PeriodeController extends Controller
         $validated = $this->validatePeriode($request);
 
         DB::transaction(function () use ($validated): void {
-            // Urutan lock yang konsisten mencegah dua aktivasi berjalan bersamaan.
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
-            $this->ensurePeriodDoesNotOverlap($validated);
 
-            if ((bool) $validated['status_aktif']) {
+            $tahunAjaran = trim($validated['tahun_ajaran']);
+
+            if ((bool) ($validated['status_aktif'] ?? false)) {
                 Periode::query()
                     ->where('status_aktif', true)
                     ->update(['status_aktif' => false]);
             }
 
-            $periode = Periode::create([
-                'nama_periode' => $validated['nama_periode'],
-                'tanggal_mulai' => $validated['tanggal_mulai'],
-                'tanggal_selesai' => $validated['tanggal_selesai'],
-                'status_aktif' => (bool) $validated['status_aktif'],
+            $this->ensureSemesterDatesDoNotOverlap($tahunAjaran, $validated);
+
+            $semester1Start = $validated['semester_1_tanggal_mulai'];
+            $semester1End = $validated['semester_1_tanggal_selesai'];
+            $semester2Start = $validated['semester_2_tanggal_mulai'];
+            $semester2End = $validated['semester_2_tanggal_selesai'];
+
+            Periode::create([
+                'tahun_ajaran' => $tahunAjaran,
+                'semester' => 1,
+                'tipe_periode' => 'semester',
+                'nama_periode' => "Semester Ganjil {$tahunAjaran}",
+                'tanggal_mulai' => $semester1Start,
+                'tanggal_selesai' => $semester1End,
+                'status_aktif' => false,
             ]);
 
-            $this->storeHariLiburs($periode, $validated);
+            Periode::create([
+                'tahun_ajaran' => $tahunAjaran,
+                'semester' => 2,
+                'tipe_periode' => 'semester',
+                'nama_periode' => "Semester Genap {$tahunAjaran}",
+                'tanggal_mulai' => $semester2Start,
+                'tanggal_selesai' => $semester2End,
+                'status_aktif' => false,
+            ]);
+
+            $periode1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
+            $periode2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
+
+            if ($periode1) {
+                $this->storeHariLiburs($periode1, $validated);
+            }
+            if ($periode2) {
+                $this->storeHariLiburs($periode2, $validated);
+            }
         });
 
-        return redirect()->route('periode.index')->with('success', 'Periode akademik dan hari libur berhasil disimpan.');
+        return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil disimpan.');
     }
 
     public function edit($id)
     {
-        // Muat periode beserta relasi hari liburnya agar otomatis ter-fetch di form edit
         $periode = Periode::with('hariLiburs')->findOrFail($id);
 
-        return view('periode.edit', compact('periode'));
+        $tahunAjaran = $periode->tahun_ajaran;
+        $semester1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
+        $semester2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
+
+        $periodeData = [
+            'tahun_ajaran' => $tahunAjaran,
+            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->toDateString(),
+            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString(),
+            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString(),
+            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString(),
+            'status_aktif' => $periode->status_aktif,
+        ];
+
+        return view('periode.edit', compact('periode', 'periodeData'));
     }
 
     public function update(Request $request, $id)
@@ -81,48 +125,77 @@ class PeriodeController extends Controller
         DB::transaction(function () use ($id, $validated): void {
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
             $lockedPeriode = Periode::query()->findOrFail($id);
-            $this->ensurePeriodDoesNotOverlap($validated, $lockedPeriode->id);
-            $this->ensureAttendanceFitsPeriod($lockedPeriode, $validated);
+            $tahunAjaran = trim($validated['tahun_ajaran']);
 
-            if ((bool) $validated['status_aktif']) {
+            $this->ensureSemesterDatesDoNotOverlap($tahunAjaran, $validated, $lockedPeriode->id);
+
+            if ((bool) ($validated['status_aktif'] ?? false)) {
                 Periode::query()
                     ->whereKeyNot($lockedPeriode->id)
                     ->where('status_aktif', true)
                     ->update(['status_aktif' => false]);
             }
 
-            $lockedPeriode->update([
-                'nama_periode' => $validated['nama_periode'],
-                'tanggal_mulai' => $validated['tanggal_mulai'],
-                'tanggal_selesai' => $validated['tanggal_selesai'],
-                'status_aktif' => (bool) $validated['status_aktif'],
-            ]);
+            $semester1 = Periode::query()
+                ->where('tahun_ajaran', $tahunAjaran)
+                ->where('semester', 1)
+                ->lockForUpdate()
+                ->first();
+            $semester2 = Periode::query()
+                ->where('tahun_ajaran', $tahunAjaran)
+                ->where('semester', 2)
+                ->lockForUpdate()
+                ->first();
 
-            $lockedPeriode->hariLiburs()->delete();
-            $this->storeHariLiburs($lockedPeriode, $validated);
+            if ($semester1) {
+                $semester1->update([
+                    'tanggal_mulai' => $validated['semester_1_tanggal_mulai'],
+                    'tanggal_selesai' => $validated['semester_1_tanggal_selesai'],
+                    'status_aktif' => (bool) ($validated['status_aktif'] ?? $semester1->status_aktif),
+                ]);
+                $semester1->hariLiburs()->delete();
+                $this->storeHariLiburs($semester1, $validated);
+            }
+
+            if ($semester2) {
+                $semester2->update([
+                    'tanggal_mulai' => $validated['semester_2_tanggal_mulai'],
+                    'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
+                    'status_aktif' => false,
+                ]);
+                $semester2->hariLiburs()->delete();
+                $this->storeHariLiburs($semester2, $validated);
+            }
         });
 
-        return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil diperbarui.');
+        return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil diperbarui.');
     }
 
     public function destroy($id)
     {
-        $periode = Periode::query()
-            ->withCount(['kelas', 'siswas', 'absensis'])
-            ->findOrFail($id);
+        $periode = Periode::findOrFail($id);
+        $tahunAjaran = $periode->tahun_ajaran;
 
         if ($periode->status_aktif) {
             return redirect()->route('periode.index')->with('error', 'Periode aktif tidak dapat dihapus.');
         }
 
-        if ($periode->kelas_count > 0 || $periode->siswas_count > 0 || $periode->absensis_count > 0) {
+        $totalAbsensi = Absensi::query()
+            ->whereIn('periode_id', function ($query) use ($tahunAjaran): void {
+                $query->select('id')->from('periodes')->where('tahun_ajaran', $tahunAjaran);
+            })
+            ->count();
+
+        if ($totalAbsensi > 0) {
             return redirect()->route('periode.index')->with(
                 'error',
-                'Periode tidak dapat dihapus karena masih memiliki kelas, siswa, atau riwayat absensi.'
+                'Periode tidak dapat dihapus karena masih memiliki riwayat absensi. Arsipkan saja.'
             );
         }
 
-        DB::transaction(fn () => $periode->delete());
+        DB::transaction(function () use ($tahunAjaran): void {
+            Periode::query()->where('tahun_ajaran', $tahunAjaran)->delete();
+        });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
     }
@@ -131,15 +204,19 @@ class PeriodeController extends Controller
     private function validatePeriode(Request $request, ?Periode $periode = null): array
     {
         return $request->validate([
-            'nama_periode' => [
+            'tahun_ajaran' => [
                 'required',
                 'string',
-                'max:100',
-                Rule::unique('periodes', 'nama_periode')->ignore($periode),
+                'max:20',
+                Rule::unique('periodes', 'tahun_ajaran')
+                    ->where(fn ($query) => $query->whereNull('semester'))
+                    ->ignore($periode),
             ],
-            'tanggal_mulai' => ['required', 'date'],
-            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
-            'status_aktif' => ['required', 'boolean'],
+            'semester_1_tanggal_mulai' => ['required', 'date'],
+            'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
+            'semester_2_tanggal_mulai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_selesai'],
+            'semester_2_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_2_tanggal_mulai'],
+            'status_aktif' => ['nullable', 'boolean'],
             'libur_mingguan' => ['nullable', 'array'],
             'libur_mingguan.*' => ['array'],
             'libur_mingguan.*.hari' => [
@@ -154,47 +231,66 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal' => [
                 'required',
                 'date',
-                'after_or_equal:tanggal_mulai',
-                'before_or_equal:tanggal_selesai',
+                'after_or_equal:semester_1_tanggal_mulai',
+                'before_or_equal:semester_2_tanggal_selesai',
                 'distinct',
             ],
             'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
             'libur_nasional.*.keterangan' => ['nullable', 'string', 'max:255'],
+        ], [
+            'tahun_ajaran.required' => 'Tahun ajaran wajib diisi.',
+            'tahun_ajaran.max' => 'Tahun ajaran maksimal 20 karakter.',
+            'tahun_ajaran.unique' => 'Tahun ajaran ini sudah terdaftar.',
+            'semester_1_tanggal_mulai.required' => 'Tanggal mulai Semester 1 wajib diisi.',
+            'semester_1_tanggal_mulai.date' => 'Tanggal mulai Semester 1 harus berupa tanggal yang valid.',
+            'semester_1_tanggal_selesai.required' => 'Tanggal selesai Semester 1 wajib diisi.',
+            'semester_1_tanggal_selesai.date' => 'Tanggal selesai Semester 1 harus berupa tanggal yang valid.',
+            'semester_1_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 1 harus setelah atau sama dengan tanggal mulai Semester 1.',
+            'semester_2_tanggal_mulai.required' => 'Tanggal mulai Semester 2 wajib diisi.',
+            'semester_2_tanggal_mulai.date' => 'Tanggal mulai Semester 2 harus berupa tanggal yang valid.',
+            'semester_2_tanggal_mulai.after_or_equal' => 'Tanggal mulai Semester 2 harus setelah atau sama dengan tanggal selesai Semester 1.',
+            'semester_2_tanggal_selesai.required' => 'Tanggal selesai Semester 2 wajib diisi.',
+            'semester_2_tanggal_selesai.date' => 'Tanggal selesai Semester 2 harus berupa tanggal yang valid.',
+            'semester_2_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 2 harus setelah atau sama dengan tanggal mulai Semester 2.',
+            'libur_mingguan.*.hari.required' => 'Hari libur mingguan wajib dipilih.',
+            'libur_mingguan.*.hari.in' => 'Hari yang dipilih tidak valid.',
+            'libur_mingguan.*.keterangan.required' => 'Keterangan hari libur mingguan wajib diisi.',
+            'libur_mingguan.*.keterangan.max' => 'Keterangan hari libur mingguan maksimal 255 karakter.',
+            'libur_nasional.*.tanggal.required' => 'Tanggal libur nasional wajib diisi.',
+            'libur_nasional.*.tanggal.date' => 'Tanggal libur nasional harus berupa tanggal yang valid.',
+            'libur_nasional.*.nama_libur.required' => 'Nama hari libur nasional wajib diisi.',
+            'libur_nasional.*.nama_libur.max' => 'Nama hari libur nasional maksimal 255 karakter.',
+            'libur_nasional.*.tanggal.after_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
+            'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
         ]);
     }
 
     /** @param array<string, mixed> $validated */
-    private function ensurePeriodDoesNotOverlap(array $validated, ?int $ignoredPeriodId = null): void
+    private function ensureSemesterDatesDoNotOverlap(string $tahunAjaran, array $validated, ?int $ignoredPeriodId = null): void
     {
-        $overlapExists = Periode::query()
-            ->when($ignoredPeriodId, fn ($query) => $query->whereKeyNot($ignoredPeriodId))
-            ->whereDate('tanggal_mulai', '<=', $validated['tanggal_selesai'])
-            ->whereDate('tanggal_selesai', '>=', $validated['tanggal_mulai'])
+        $s1Start = $validated['semester_1_tanggal_mulai'];
+        $s1End = $validated['semester_1_tanggal_selesai'];
+        $s2Start = $validated['semester_2_tanggal_mulai'];
+        $s2End = $validated['semester_2_tanggal_selesai'];
+
+        $existing = Periode::query()
+            ->when($ignoredPeriodId, fn ($q) => $q->whereKeyNot($ignoredPeriodId))
+            ->where('tahun_ajaran', $tahunAjaran)
+            ->where(function ($q) use ($s1Start, $s1End, $s2Start, $s2End): void {
+                $q->whereBetween('tanggal_mulai', [$s1Start, $s1End])
+                    ->orWhereBetween('tanggal_selesai', [$s1Start, $s1End])
+                    ->orWhereBetween('tanggal_mulai', [$s2Start, $s2End])
+                    ->orWhereBetween('tanggal_selesai', [$s2Start, $s2End])
+                    ->orWhere(function ($sub) use ($s1Start, $s1End): void {
+                        $sub->where('tanggal_mulai', '<=', $s1Start)
+                            ->where('tanggal_selesai', '>=', $s1End);
+                    });
+            })
             ->exists();
 
-        if ($overlapExists) {
+        if ($existing) {
             throw ValidationException::withMessages([
-                'tanggal_mulai' => 'Rentang tanggal periode tidak boleh tumpang tindih dengan periode lain.',
-            ]);
-        }
-    }
-
-    /** @param array<string, mixed> $validated */
-    private function ensureAttendanceFitsPeriod(Periode $periode, array $validated): void
-    {
-        $attendanceRange = $periode->absensis()
-            ->selectRaw('MIN(tanggal) AS earliest_date, MAX(tanggal) AS latest_date')
-            ->first();
-        $earliestDate = $attendanceRange?->getAttribute('earliest_date');
-        $latestDate = $attendanceRange?->getAttribute('latest_date');
-
-        if (
-            ($earliestDate && $earliestDate < $validated['tanggal_mulai'])
-            || ($latestDate && $latestDate > $validated['tanggal_selesai'])
-        ) {
-            throw ValidationException::withMessages([
-                'tanggal_mulai' => "Periode masih memiliki riwayat absensi dari {$earliestDate} sampai {$latestDate}.",
-                'tanggal_selesai' => 'Rentang baru harus tetap mencakup seluruh riwayat absensi tersebut.',
+                'tahun_ajaran' => 'Rentang tanggal semester bertabrakan dengan periode yang sudah ada untuk tahun ajaran yang sama.',
             ]);
         }
     }

@@ -32,7 +32,7 @@
                 </div>
 
                 @if($kelas->isNotEmpty())
-                    <x-table :headers="['No', 'Nama Kelas', 'Periode', 'Wali Kelas', 'Aksi']">
+                    <x-table :headers="['No', 'Nama Kelas', 'Wali Kelas', 'Aksi']">
                         @foreach ($kelas as $index => $k)
                             @php
                                 $waliKelas = $k->gurus->first();
@@ -43,9 +43,6 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">
                                     {{ $k->nama_kelas }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
-                                    {{ $k->periode->nama_periode ?? '-' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
                                     {{ $waliKelas?->nama ?? 'Belum ditentukan' }}

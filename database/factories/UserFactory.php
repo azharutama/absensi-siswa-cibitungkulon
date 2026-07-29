@@ -36,21 +36,21 @@ class UserFactory extends Factory
 
     public function operator(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'role' => 'operator',
         ]);
     }
 
     public function guru(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'role' => 'guru',
         ]);
     }
 
     public function kepalaSekolah(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'role' => 'kepala_sekolah',
         ]);
     }

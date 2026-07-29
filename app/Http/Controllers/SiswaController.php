@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kelas;
-use App\Models\Periode;
+use App\Models\RiwayatKelasSiswa;
 use App\Models\Siswa;
 use App\Services\SiswaImportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -22,7 +23,6 @@ class SiswaController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'periode_id' => ['nullable', 'integer', 'exists:periodes,id'],
             'status' => ['nullable', Rule::in(['aktif', 'nonaktif'])],
         ]);
 
@@ -34,12 +34,10 @@ class SiswaController extends Controller
                 'nama_siswa',
                 'jenis_kelamin',
                 'kelas_id',
-                'periode_id',
                 'status',
             ])
             ->with([
                 'kelas:id,nama_kelas',
-                'periode:id,nama_periode',
             ])
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
@@ -49,23 +47,17 @@ class SiswaController extends Controller
                 });
             })
             ->when($filters['kelas_id'] ?? null, fn ($query, $kelasId) => $query->where('kelas_id', $kelasId))
-            ->when($filters['periode_id'] ?? null, fn ($query, $periodeId) => $query->where('periode_id', $periodeId))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->latest('id')
             ->paginate(15)
             ->withQueryString();
 
         $kelas = Kelas::query()
-            ->select('id', 'nama_kelas', 'periode_id')
+            ->select('id', 'nama_kelas')
             ->orderBy('nama_kelas')
             ->get();
 
-        $periodes = Periode::query()
-            ->select('id', 'nama_periode')
-            ->latest('tanggal_mulai')
-            ->get();
-
-        return view('siswa.index', compact('siswas', 'kelas', 'periodes'));
+        return view('siswa.index', compact('siswas', 'kelas'));
     }
 
     public function create(): View
@@ -86,7 +78,7 @@ class SiswaController extends Controller
         ]);
 
         try {
-            $summary = $importService->import($data['file'], $this->findActiveKelas((int) $data['kelas_id']));
+            $summary = $importService->import($data['file'], $this->findKelas((int) $data['kelas_id']));
         } catch (RuntimeException $exception) {
             return back()
                 ->with('error', $exception->getMessage());
@@ -147,11 +139,9 @@ class SiswaController extends Controller
     {
         $data = $this->validatedData($request);
 
-        // Cari data kelas terpilih untuk mengekstrak periode_id bawaannya
-        $kelasSelected = $this->findActiveKelas((int) $data['kelas_id']);
+        $kelasSelected = $this->findKelas((int) $data['kelas_id']);
 
-        // Inject otomatis data periode_id dan status default siswa baru
-        $data['periode_id'] = $kelasSelected->periode_id;
+        $data['kelas_id'] = $kelasSelected->id;
         $data['status'] = 'aktif';
 
         Siswa::create($data);
@@ -172,9 +162,8 @@ class SiswaController extends Controller
     {
         $data = $this->validatedData($request, $siswa);
 
-        // Jika kelas diubah, update juga periode_id agar mengikuti kelas yang baru
-        $kelasSelected = $this->findActiveKelas((int) $data['kelas_id']);
-        $data['periode_id'] = $kelasSelected->periode_id;
+        $kelasSelected = $this->findKelas((int) $data['kelas_id']);
+        $data['kelas_id'] = $kelasSelected->id;
 
         $siswa->update($data);
 
@@ -184,15 +173,69 @@ class SiswaController extends Controller
 
     public function destroy(Siswa $siswa): RedirectResponse
     {
-        if ($siswa->absensis()->exists()) {
+        if ($siswa->status === 'aktif' && $siswa->absensis()->exists()) {
             return to_route('siswa.index')
-                ->with('error', 'Siswa tidak dapat dihapus karena memiliki riwayat absensi. Ubah status menjadi nonaktif.');
+                ->with('error', 'Siswa aktif yang memiliki riwayat absensi tidak dapat dihapus. Ubah status menjadi nonaktif terlebih dahulu.');
         }
 
         $siswa->delete();
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil dihapus.');
+    }
+
+    public function ubahKelasForm(): View
+    {
+        return view('siswa.ubah-kelas', [
+            'kelas' => Kelas::query()
+                ->select('id', 'nama_kelas')
+                ->orderBy('nama_kelas')
+                ->get(),
+        ]);
+    }
+
+    public function ubahKelas(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'kelas_asal_id' => ['required', 'integer', 'exists:kelas,id'],
+            'kelas_tujuan_id' => ['required', 'integer', 'exists:kelas,id', 'different:kelas_asal_id'],
+        ]);
+
+        $kelasAsal = Kelas::findOrFail((int) $data['kelas_asal_id']);
+        $kelasTujuan = Kelas::findOrFail((int) $data['kelas_tujuan_id']);
+
+        $count = Siswa::query()
+            ->where('kelas_id', $kelasAsal->id)
+            ->count();
+
+        if ($count === 0) {
+            return redirect()->back()
+                ->with('error', 'Tidak ada siswa di kelas asal.');
+        }
+
+        DB::transaction(function () use ($kelasAsal, $kelasTujuan): void {
+            Siswa::query()
+                ->where('kelas_id', $kelasAsal->id)
+                ->update(['kelas_id' => $kelasTujuan->id]);
+
+            Siswa::query()
+                ->where('kelas_id', $kelasTujuan->id)
+                ->where('status', 'aktif')
+                ->chunkById(200, function ($siswas) use ($kelasAsal, $kelasTujuan): void {
+                    foreach ($siswas as $siswa) {
+                        RiwayatKelasSiswa::create([
+                            'siswa_id' => $siswa->id,
+                            'kelas_asal_id' => $kelasAsal->id,
+                            'kelas_tujuan_id' => $kelasTujuan->id,
+                            'tanggal_kenaikan' => today(),
+                            'status' => 'aktif',
+                        ]);
+                    }
+                });
+        });
+
+        return to_route('siswa.index')
+            ->with('success', "{$count} siswa berhasil dipindahkan ke kelas baru.");
     }
 
     /** @return array<string, mixed> */
@@ -232,22 +275,19 @@ class SiswaController extends Controller
     {
         return [
             'kelas' => Kelas::query()
-                ->select('id', 'nama_kelas', 'periode_id')
-                ->whereHas('periode', fn ($query) => $query->where('status_aktif', true))
+                ->select('id', 'nama_kelas')
                 ->orderBy('nama_kelas')
                 ->get(),
         ];
     }
 
-    private function findActiveKelas(int $kelasId): Kelas
+    private function findKelas(int $kelasId): Kelas
     {
-        $kelas = Kelas::query()
-            ->whereHas('periode', fn ($query) => $query->where('status_aktif', true))
-            ->find($kelasId);
+        $kelas = Kelas::query()->find($kelasId);
 
         if (! $kelas) {
             throw ValidationException::withMessages([
-                'kelas_id' => 'Kelas harus berasal dari periode yang sedang aktif.',
+                'kelas_id' => 'Kelas tidak ditemukan.',
             ]);
         }
 

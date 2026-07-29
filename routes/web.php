@@ -25,6 +25,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('guru', GuruController::class)->except('show');
 
         // Kelola Siswa (Otomatis menghasilkan URL: /siswa, /siswa/create, dll)
+        Route::get('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelasForm'])->name('siswa.ubah-kelas.form');
+        Route::post('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelas'])->name('siswa.ubah-kelas');
         Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
         Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
         Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');

@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Kelas;
-use App\Models\Periode;
 use App\Models\Siswa;
 use Illuminate\Database\Seeder;
 use RuntimeException;
@@ -20,22 +19,13 @@ class SiswaSeeder extends Seeder
 
     public function run(): void
     {
-        $activePeriod = Periode::query()
-            ->where('status_aktif', true)
-            ->first();
-
-        if (! $activePeriod) {
-            throw new RuntimeException('Seeder siswa memerlukan satu periode aktif.');
-        }
-
         $classes = Kelas::query()
-            ->where('periode_id', $activePeriod->id)
             ->whereIn('nama_kelas', KelasSeeder::CLASS_NAMES)
             ->orderBy('nama_kelas')
             ->get();
 
         if ($classes->count() !== count(KelasSeeder::CLASS_NAMES)) {
-            throw new RuntimeException('Seeder siswa memerlukan 12 kelas pada periode aktif.');
+            throw new RuntimeException('Seeder siswa memerlukan 12 kelas yang sudah di-seed.');
         }
 
         $faker = fake('id_ID');
@@ -61,7 +51,6 @@ class SiswaSeeder extends Seeder
                 'nama_wali' => $hasGuardian ? $faker->name() : null,
                 'no_whatsapp_wali' => $hasGuardian ? self::PARENT_WHATSAPP : null,
                 'kelas_id' => $class->id,
-                'periode_id' => $activePeriod->id,
                 'status' => 'aktif',
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -84,7 +73,6 @@ class SiswaSeeder extends Seeder
                     'nama_wali',
                     'no_whatsapp_wali',
                     'kelas_id',
-                    'periode_id',
                     'status',
                     'updated_at',
                 ],

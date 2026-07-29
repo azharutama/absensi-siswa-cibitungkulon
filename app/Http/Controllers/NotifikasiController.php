@@ -37,10 +37,10 @@ class NotifikasiController extends Controller
                 'absensi.kelas:id,nama_kelas',
             ])
             ->when($request->user()->role === 'guru', function ($query) use ($kelasIds): void {
-                $query->whereHas('absensi', fn($query) => $query->whereIn('kelas_id', $kelasIds));
+                $query->whereHas('absensi', fn ($query) => $query->whereIn('kelas_id', $kelasIds));
             })
             ->when($kelasId !== null, function ($query) use ($kelasId): void {
-                $query->whereHas('absensi', fn($query) => $query->where('kelas_id', $kelasId));
+                $query->whereHas('absensi', fn ($query) => $query->where('kelas_id', $kelasId));
             })
             ->when($filters['tanggal_mulai'] ?? null, function ($query, string $date): void {
                 $query->where('created_at', '>=', Carbon::parse($date)->startOfDay());

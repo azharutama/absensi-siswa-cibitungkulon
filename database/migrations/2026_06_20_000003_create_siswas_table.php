@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('siswas', function (Blueprint $table) {
@@ -25,21 +22,16 @@ return new class extends Migration
             $table->string('nama_wali')->nullable();
             $table->string('no_whatsapp_wali')->nullable();
             $table->foreignId('kelas_id')->constrained('kelas');
-            $table->foreignId('periode_id')->constrained('periodes');
             $table->string('status');
             $table->timestamps();
 
             $table->index('nama_siswa');
             $table->index('status');
             $table->index(['kelas_id', 'nama_siswa']);
-            $table->index(['periode_id', 'status']);
             $table->index(['status', 'created_at']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('siswas');

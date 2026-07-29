@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Database\Factories\SiswaFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Siswa extends Model
 {
-    /** @use HasFactory<SiswaFactory> */
     use HasFactory;
 
     protected $table = 'siswas';
@@ -28,22 +27,68 @@ class Siswa extends Model
         'nama_wali',
         'no_whatsapp_wali',
         'kelas_id',
-        'periode_id',
         'status',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     public function kelas(): BelongsTo
     {
         return $this->belongsTo(Kelas::class);
     }
 
-    public function periode(): BelongsTo
-    {
-        return $this->belongsTo(Periode::class);
-    }
-
     public function absensis(): HasMany
     {
         return $this->hasMany(Absensi::class);
+    }
+
+    public function riwayatKelas(): HasMany
+    {
+        return $this->hasMany(RiwayatKelasSiswa::class);
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('status', 'aktif');
+    }
+
+    public function scopeInactive(Builder $query): void
+    {
+        $query->where('status', 'nonaktif');
+    }
+
+    public function markAsInactive(): void
+    {
+        $this->update(['status' => 'nonaktif']);
+    }
+
+    public function kelasLulusan(): ?string
+    {
+        return $this->kelas?->nama_kelas;
+    }
+
+    public function pindahKeKelas(Kelas $kelasTujuan, string $tanggalKenaikan, ?string $keterangan = null): RiwayatKelasSiswa
+    {
+        $kelasAsal = $this->kelas;
+
+        $this->update(['kelas_id' => $kelasTujuan->id]);
+
+        $activePeriode = Periode::query()->where('status_aktif', true)->first();
+
+        return $this->riwayatKelas()->create([
+            'kelas_asal_id' => $kelasAsal?->id,
+            'kelas_tujuan_id' => $kelasTujuan->id,
+            'tanggal_kenaikan' => $tanggalKenaikan,
+            'tahun_ajaran' => $activePeriode?->tahun_ajaran,
+            'semester' => $activePeriode?->semester,
+            'keterangan' => $keterangan,
+            'status' => 'aktif',
+        ]);
     }
 }

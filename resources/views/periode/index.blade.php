@@ -33,11 +33,18 @@
                 </div>
 
                 @if($periodes->isNotEmpty())
-                    <x-table :headers="['No', 'Nama Periode', 'Tanggal Mulai', 'Tanggal Selesai', 'Status', 'Aksi']">
+                        <x-table :headers="['No', 'Tahun Ajaran', 'Semester', 'Tanggal Mulai', 'Tanggal Selesai', 'Status', 'Aksi']">
                         @foreach ($periodes as $index => $p)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-16">{{ $periodes->firstItem() + $index }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $p->nama_periode }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $p->tahun_ajaran }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
+                                    @if($p->tipe_periode === 'semester')
+                                        Semester {{ $p->semester === 1 ? 'Ganjil' : 'Genap' }}
+                                    @else
+                                        -
+                                    @endif
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">{{ \Carbon\Carbon::parse($p->tanggal_mulai)->format('d M Y') }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">{{ \Carbon\Carbon::parse($p->tanggal_selesai)->format('d M Y') }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm border-b">

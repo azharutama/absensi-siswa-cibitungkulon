@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Absensi;
 use App\Models\Kelas;
-use App\Models\Periode;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,19 +20,18 @@ class KelasController extends Controller
         $search = trim($filters['search'] ?? '');
 
         $query = Kelas::query()
-            ->select(['id', 'nama_kelas', 'periode_id'])
-            ->with([
-                'periode:id,nama_periode,status_aktif',
-                'gurus' => fn ($query) => $query
-                    ->select(['users.id', 'users.nama', 'users.nip'])
-                    ->wherePivot('is_wali_kelas', true),
-            ]);
+            ->select(['id', 'nama_kelas', 'status']);
 
         if ($search !== '') {
             $query->where('nama_kelas', 'like', "%{$search}%");
         }
 
         $kelas = $query
+            ->with([
+                'gurus' => fn ($query) => $query
+                    ->select(['users.id', 'users.nama', 'users.nip'])
+                    ->wherePivot('is_wali_kelas', true),
+            ])
             ->orderBy('nama_kelas')
             ->paginate(15)
             ->withQueryString();
@@ -44,27 +42,18 @@ class KelasController extends Controller
     public function create()
     {
         $gurus = $this->availableWaliKelasQuery()->get();
-        $periodeAktif = $this->activePeriodeQuery()->first();
 
-        return view('kelas.create', compact('gurus', 'periodeAktif'));
+        return view('kelas.create', compact('gurus'));
     }
 
     public function store(Request $request)
     {
-        $periodeAktif = $this->activePeriodeQuery()->first();
-
-        if (! $periodeAktif) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Gagal membuat kelas. Pastikan ada satu Periode Akademik yang berstatus aktif.');
-        }
-
         $request->validate([
             'nama_kelas' => [
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('kelas', 'nama_kelas')->where(fn ($query) => $query->where('periode_id', $periodeAktif->id)),
+                Rule::unique('kelas', 'nama_kelas'),
             ],
             'guru_id' => 'nullable|exists:users,id',
         ]);
@@ -75,19 +64,7 @@ class KelasController extends Controller
                 ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia sebagai wali kelas.']);
         }
 
-        DB::transaction(function () use ($periodeAktif, $request): void {
-            $activePeriode = Periode::query()
-                ->whereKey($periodeAktif->id)
-                ->where('status_aktif', true)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $activePeriode) {
-                throw ValidationException::withMessages([
-                    'nama_kelas' => 'Periode aktif berubah. Muat ulang halaman sebelum membuat kelas.',
-                ]);
-            }
-
+        DB::transaction(function () use ($request): void {
             if ($request->filled('guru_id')) {
                 User::query()->whereKey($request->integer('guru_id'))->lockForUpdate()->firstOrFail();
 
@@ -100,7 +77,6 @@ class KelasController extends Controller
 
             $kelas = Kelas::create([
                 'nama_kelas' => $request->string('nama_kelas')->trim()->toString(),
-                'periode_id' => $activePeriode->id,
                 'status' => 'aktif',
             ]);
 
@@ -117,8 +93,7 @@ class KelasController extends Controller
     public function edit($id)
     {
         $kelas = Kelas::query()
-            ->select(['id', 'nama_kelas', 'periode_id'])
-            ->with('periode:id,nama_periode')
+            ->select(['id', 'nama_kelas'])
             ->findOrFail($id);
 
         $currentWaliId = $kelas->gurus()
@@ -126,9 +101,8 @@ class KelasController extends Controller
             ->value('users.id');
 
         $gurus = $this->waliKelasOptionsQuery($currentWaliId)->get();
-        $periodeAktif = $this->activePeriodeQuery()->first();
 
-        return view('kelas.edit', compact('kelas', 'gurus', 'periodeAktif', 'currentWaliId'));
+        return view('kelas.edit', compact('kelas', 'gurus', 'currentWaliId'));
     }
 
     public function update(Request $request, $id)
@@ -140,9 +114,7 @@ class KelasController extends Controller
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('kelas', 'nama_kelas')
-                    ->where(fn ($query) => $query->where('periode_id', $kelas->periode_id))
-                    ->ignore($kelas->id),
+                Rule::unique('kelas', 'nama_kelas')->ignore($kelas->id),
             ],
             'guru_id' => 'nullable|exists:users,id',
         ]);
@@ -213,8 +185,7 @@ class KelasController extends Controller
             ->select(['id', 'nama', 'nip'])
             ->where('role', 'guru')
             ->whereDoesntHave('kelas', function ($query) {
-                $query->where('kelas_user.is_wali_kelas', true)
-                    ->whereHas('periode', fn ($query) => $query->where('status_aktif', true));
+                $query->where('kelas_user.is_wali_kelas', true);
             })
             ->orderBy('nama');
     }
@@ -226,8 +197,7 @@ class KelasController extends Controller
             ->where('role', 'guru')
             ->where(function ($query) use ($currentWaliId) {
                 $query->whereDoesntHave('kelas', function ($query) {
-                    $query->where('kelas_user.is_wali_kelas', true)
-                        ->whereHas('periode', fn ($query) => $query->where('status_aktif', true));
+                    $query->where('kelas_user.is_wali_kelas', true);
                 });
 
                 if ($currentWaliId) {
@@ -235,13 +205,5 @@ class KelasController extends Controller
                 }
             })
             ->orderBy('nama');
-    }
-
-    private function activePeriodeQuery()
-    {
-        return Periode::query()
-            ->select(['id', 'nama_periode'])
-            ->where('status_aktif', true)
-            ->latest('tanggal_mulai');
     }
 }

@@ -2,25 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Kelas extends Model
 {
-    /** @use HasFactory<\Database\Factories\KelasFactory> */
     use HasFactory;
 
     protected $table = 'kelas';
 
     protected $fillable = [
         'nama_kelas',
-        'periode_id',
         'status',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     public function scopeAccessibleBy(Builder $query, User $user): Builder
     {
@@ -33,19 +38,26 @@ class Kelas extends Model
         };
     }
 
-    public function periode(): BelongsTo
-    {
-        return $this->belongsTo(Periode::class);
-    }
-
     public function siswas(): HasMany
     {
         return $this->hasMany(Siswa::class);
     }
 
-    /**
-     * Relasi many-to-many ke model User (Guru)
-     */
+    public function absensis(): HasMany
+    {
+        return $this->hasMany(Absensi::class);
+    }
+
+    public function riwayatMasuk(): HasMany
+    {
+        return $this->hasMany(RiwayatKelasSiswa::class, 'kelas_tujuan_id');
+    }
+
+    public function riwayatKeluar(): HasMany
+    {
+        return $this->hasMany(RiwayatKelasSiswa::class, 'kelas_asal_id');
+    }
+
     public function gurus(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'kelas_user', 'kelas_id', 'user_id')

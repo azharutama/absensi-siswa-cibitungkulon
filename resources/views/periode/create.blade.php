@@ -1,24 +1,24 @@
+@php
+    $listMingguan = collect(old('libur_mingguan', []))
+        ->map(fn ($item) => [
+            'hari' => is_array($item) ? ($item['hari'] ?? 'Minggu') : 'Minggu',
+            'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
+        ])
+        ->values()
+        ->all();
+
+    $listNasional = collect(old('libur_nasional', []))
+        ->map(fn ($item) => [
+            'tanggal' => is_array($item) ? ($item['tanggal'] ?? '') : '',
+            'nama_libur' => is_array($item) ? ($item['nama_libur'] ?? '') : '',
+            'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
+        ])
+        ->values()
+        ->all();
+@endphp
+
 <x-app-layout>
     <x-form-card :title="__('Tambah Periode Tahun Ajaran')" :backUrl="route('periode.index')" maxWidth="max-w-5xl">
-        @php
-            $listMingguan = collect(old('libur_mingguan', []))
-                ->map(fn ($item) => [
-                    'hari' => is_array($item) ? ($item['hari'] ?? 'Minggu') : 'Minggu',
-                    'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
-                ])
-                ->values()
-                ->all();
-
-            $listNasional = collect(old('libur_nasional', []))
-                ->map(fn ($item) => [
-                    'tanggal' => is_array($item) ? ($item['tanggal'] ?? '') : '',
-                    'nama_libur' => is_array($item) ? ($item['nama_libur'] ?? '') : '',
-                    'keterangan' => is_array($item) ? ($item['keterangan'] ?? '') : '',
-                ])
-                ->values()
-                ->all();
-        @endphp
-        
         <form method="POST" action="{{ route('periode.store') }}" class="space-y-8" x-data="{ 
             listMingguan: @js($listMingguan),
             listNasional: @js($listNasional),
@@ -41,24 +41,44 @@
                 <h3 class="text-sm font-bold text-gray-900 border-b pb-2">Data Periode</h3>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                    <x-input-label for="nama_periode" :value="__('Tahun Ajaran *')" class="md:text-right md:pe-4" />
+                    <x-input-label for="tahun_ajaran" :value="__('Tahun Ajaran *')" class="md:text-right md:pe-4" />
                     <div class="md:col-span-2">
-                        <x-text-input id="nama_periode" name="nama_periode" type="text" class="w-full" :value="old('nama_periode')" placeholder="Contoh: 2026/2027" required autofocus />
-                        <x-input-error class="mt-1" :messages="$errors->get('nama_periode')" />
+                        <x-text-input id="tahun_ajaran" name="tahun_ajaran" type="text" class="w-full" :value="old('tahun_ajaran')" placeholder="Contoh: 2025/2026" required autofocus />
+                        <x-input-error class="mt-1" :messages="$errors->get('tahun_ajaran')" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 border rounded-lg p-4 bg-gray-50">
+                    <div class="space-y-3">
+                        <h4 class="font-semibold text-sm text-gray-800 border-b pb-1">Semester 1 (Ganjil)</h4>
+                        <div>
+                            <x-input-label for="semester_1_tanggal_mulai" :value="__('Tanggal Mulai *')" />
+                            <x-text-input id="semester_1_tanggal_mulai" name="semester_1_tanggal_mulai" type="date" class="mt-1 w-full" :value="old('semester_1_tanggal_mulai')" required />
+                            <x-input-error class="mt-1" :messages="$errors->get('semester_1_tanggal_mulai')" />
+                        </div>
+                        <div>
+                            <x-input-label for="semester_1_tanggal_selesai" :value="__('Tanggal Selesai *')" />
+                            <x-text-input id="semester_1_tanggal_selesai" name="semester_1_tanggal_selesai" type="date" class="mt-1 w-full" :value="old('semester_1_tanggal_selesai')" required />
+                            <x-input-error class="mt-1" :messages="$errors->get('semester_1_tanggal_selesai')" />
+                        </div>
                     </div>
 
-                    <x-input-label for="tanggal_mulai" :value="__('Tanggal Mulai *')" class="md:text-right md:pe-4" />
-                    <div class="md:col-span-2">
-                        <x-text-input id="tanggal_mulai" name="tanggal_mulai" type="date" class="w-full" :value="old('tanggal_mulai')" required />
-                        <x-input-error class="mt-1" :messages="$errors->get('tanggal_mulai')" />
+                    <div class="space-y-3">
+                        <h4 class="font-semibold text-sm text-gray-800 border-b pb-1">Semester 2 (Genap)</h4>
+                        <div>
+                            <x-input-label for="semester_2_tanggal_mulai" :value="__('Tanggal Mulai *')" />
+                            <x-text-input id="semester_2_tanggal_mulai" name="semester_2_tanggal_mulai" type="date" class="mt-1 w-full" :value="old('semester_2_tanggal_mulai')" required />
+                            <x-input-error class="mt-1" :messages="$errors->get('semester_2_tanggal_mulai')" />
+                        </div>
+                        <div>
+                            <x-input-label for="semester_2_tanggal_selesai" :value="__('Tanggal Selesai *')" />
+                            <x-text-input id="semester_2_tanggal_selesai" name="semester_2_tanggal_selesai" type="date" class="mt-1 w-full" :value="old('semester_2_tanggal_selesai')" required />
+                            <x-input-error class="mt-1" :messages="$errors->get('semester_2_tanggal_selesai')" />
+                        </div>
                     </div>
+                </div>
 
-                    <x-input-label for="tanggal_selesai" :value="__('Tanggal Selesai *')" class="md:text-right md:pe-4" />
-                    <div class="md:col-span-2">
-                        <x-text-input id="tanggal_selesai" name="tanggal_selesai" type="date" class="w-full" :value="old('tanggal_selesai')" required />
-                        <x-input-error class="mt-1" :messages="$errors->get('tanggal_selesai')" />
-                    </div>
-
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                     <x-input-label :value="__('Status Periode *')" class="md:text-right md:pe-4" />
                     <div class="md:col-span-2 flex flex-col gap-2 pt-1">
                         <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer">
@@ -182,6 +202,5 @@
                 </x-primary-button>
             </div>
         </form>
-
     </x-form-card>
 </x-app-layout>

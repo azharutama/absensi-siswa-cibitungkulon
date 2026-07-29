@@ -3,20 +3,10 @@
 namespace Database\Factories;
 
 use App\Models\Kelas;
-use App\Models\Periode;
-use App\Models\Siswa;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Siswa>
- */
 class SiswaFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
@@ -31,7 +21,6 @@ class SiswaFactory extends Factory
             'nama_wali' => null,
             'no_whatsapp_wali' => null,
             'kelas_id' => Kelas::factory(),
-            'periode_id' => Periode::factory(),
             'status' => 'aktif',
         ];
     }

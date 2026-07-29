@@ -1,13 +1,6 @@
 <x-app-layout>
     <x-form-card :title="__('Edit Data Kelas')" :backUrl="route('kelas.index')" maxWidth="max-w-2xl">
         
-        <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600 flex justify-between items-center">
-            <span class="font-medium">Periode Kelas Ini:</span>
-            <span class="font-semibold bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs uppercase">
-                {{ $kelas->periode->nama_periode ?? $periodeAktif->nama_periode ?? '-' }}
-            </span>
-        </div>
-
         <form method="POST" action="{{ route('kelas.update', $kelas->id) }}" class="space-y-6">
             @csrf
             @method('PUT')

@@ -64,7 +64,6 @@ class SiswaImportService
         'nama_wali' => ['nullable', 'string', 'max:255'],
         'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
         'kelas_id' => ['required', 'integer'],
-        'periode_id' => ['required', 'integer'],
         'status' => ['required', 'in:aktif,nonaktif'],
     ];
 
@@ -190,7 +189,6 @@ class SiswaImportService
             default => $gender ?: null,
         };
         $data['kelas_id'] = $this->kelas->id;
-        $data['periode_id'] = $this->kelas->periode_id;
         $data['status'] = $this->normalizeKey($data['status'] ?: 'aktif');
 
         $validator = Validator::make($data, self::RULES);

@@ -6,6 +6,7 @@ use App\Jobs\SendAlpaWhatsappNotificationJob;
 use App\Models\Absensi;
 use App\Models\HariLibur;
 use App\Models\Kelas;
+use App\Models\Periode;
 use App\Models\Siswa;
 use App\Models\WhatsappNotification;
 use Carbon\Carbon;
@@ -18,17 +19,11 @@ use Illuminate\Validation\ValidationException;
 
 class AbsensiController extends Controller
 {
-    /**
-     * Halaman Utama Menu Absensi (Menampilkan 2 Tombol Utama)
-     */
     public function index(): View
     {
         return view('absensi.index');
     }
 
-    /**
-     * Halaman Buat/Isi Absensi Baru (Create)
-     */
     public function create(Request $request): View
     {
         $filters = $request->validate([
@@ -51,15 +46,15 @@ class AbsensiController extends Controller
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId) {
-            $selectedKelas = Kelas::query()
+            $activePeriode = $this->activePeriodeOrFail($tanggal);
+
+            Kelas::query()
                 ->accessibleBy($request->user())
-                ->select(['id', 'periode_id'])
-                ->with('periode:id,tanggal_mulai,tanggal_selesai')
                 ->findOrFail($kelasId);
 
-            $holidayMessage = $this->attendanceDateError($selectedKelas, $tanggal);
+            $holidayMessage = $this->attendanceDateError($activePeriode, $tanggal);
             $holiday = $holidayMessage === null
-                ? $this->findHariLibur($selectedKelas->periode_id, $tanggal)
+                ? $this->findHariLibur($activePeriode->id, $tanggal)
                 : null;
 
             if ($holiday) {
@@ -75,34 +70,28 @@ class AbsensiController extends Controller
             $siswaIds = $siswas->pluck('id');
             $stats['total'] = $siswas->count();
 
-            // 1. Ambil seluruh rekam data absensi pada hari tersebut jika sudah ada
             $absensiSiswa = Absensi::where('tanggal', $tanggal)
                 ->whereIn('siswa_id', $siswaIds)
                 ->pluck('status', 'siswa_id')
                 ->toArray();
 
-            // 2. Tentukan status kunci: jika array tidak kosong, otomatis LOCK form isi baru
             if (! empty($absensiSiswa)) {
                 $isLocked = true;
             }
 
-            // 3. Kalkulasi data statistik untuk widget card atas
             if ($isLocked) {
                 foreach ($siswas as $s) {
                     $status = strtolower($absensiSiswa[$s->id] ?? 'hadir');
                     $stats[$status]++;
                 }
             } else {
-                $stats['hadir'] = $siswas->count(); // Default awal halaman create adalah hadir semua
+                $stats['hadir'] = $siswas->count();
             }
         }
 
         return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage'));
     }
 
-    /**
-     * Memproses Penyimpanan Data Absensi Baru (Store)
-     */
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -115,18 +104,18 @@ class AbsensiController extends Controller
         $kelasId = (int) $data['kelas_id'];
         $tanggal = $data['tanggal'];
         $userId = $request->user()->getKey();
+
+        $activePeriode = $this->activePeriodeOrFail($tanggal);
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
-            ->select(['id', 'periode_id'])
-            ->with('periode:id,tanggal_mulai,tanggal_selesai')
             ->findOrFail($kelasId);
 
-        if ($dateError = $this->attendanceDateError($kelas, $tanggal)) {
+        if ($dateError = $this->attendanceDateError($activePeriode, $kelas, $tanggal)) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $dateError);
         }
 
-        $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
+        $holiday = $this->findHariLibur($activePeriode->id, $tanggal);
         if ($holiday) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
@@ -161,7 +150,7 @@ class AbsensiController extends Controller
                 'siswa_id' => $siswaId,
                 'kelas_id' => $kelasId,
                 'user_id' => $userId,
-                'periode_id' => $kelas->periode_id,
+                'periode_id' => $activePeriode->id,
                 'tanggal' => $tanggal,
                 'status' => $status,
                 'created_at' => $now,
@@ -196,9 +185,6 @@ class AbsensiController extends Controller
             ->with('success', 'Data absensi baru berhasil disimpan.');
     }
 
-    /**
-     * Halaman Perbarui / Edit Absensi
-     */
     public function edit(Request $request): View
     {
         $filters = $request->validate([
@@ -216,20 +202,20 @@ class AbsensiController extends Controller
 
         $siswas = [];
         $absensiSiswa = [];
-        $isLocked = false; // Halaman edit tidak pernah dikunci (selalu bisa diubah)
+        $isLocked = false;
         $holidayMessage = null;
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId) {
-            $selectedKelas = Kelas::query()
+            $activePeriode = $this->activePeriodeOrFail($tanggal);
+
+            Kelas::query()
                 ->accessibleBy($request->user())
-                ->select(['id', 'periode_id'])
-                ->with('periode:id,tanggal_mulai,tanggal_selesai')
                 ->findOrFail($kelasId);
 
-            $holidayMessage = $this->attendanceDateError($selectedKelas, $tanggal);
+            $holidayMessage = $this->attendanceDateError($activePeriode, $tanggal);
             $holiday = $holidayMessage === null
-                ? $this->findHariLibur($selectedKelas->periode_id, $tanggal)
+                ? $this->findHariLibur($activePeriode->id, $tanggal)
                 : null;
 
             if ($holiday) {
@@ -258,9 +244,6 @@ class AbsensiController extends Controller
         return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage'));
     }
 
-    /**
-     * Memproses Pembaruan Data Absensi Lama (Update)
-     */
     public function update(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -273,18 +256,18 @@ class AbsensiController extends Controller
         $kelasId = (int) $data['kelas_id'];
         $tanggal = $data['tanggal'];
         $userId = $request->user()->getKey();
+
+        $activePeriode = $this->activePeriodeOrFail($tanggal);
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
-            ->select(['id', 'periode_id'])
-            ->with('periode:id,tanggal_mulai,tanggal_selesai')
             ->findOrFail($kelasId);
 
-        if ($dateError = $this->attendanceDateError($kelas, $tanggal)) {
+        if ($dateError = $this->attendanceDateError($activePeriode, $kelas, $tanggal)) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $dateError);
         }
 
-        $holiday = $this->findHariLibur($kelas->periode_id, $tanggal);
+        $holiday = $this->findHariLibur($activePeriode->id, $tanggal);
         if ($holiday) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
@@ -326,7 +309,7 @@ class AbsensiController extends Controller
                 'siswa_id' => $siswaId,
                 'kelas_id' => $kelasId,
                 'user_id' => $userId,
-                'periode_id' => $kelas->periode_id,
+                'periode_id' => $activePeriode->id,
                 'tanggal' => $tanggal,
                 'status' => $status,
                 'created_at' => $existing?->created_at ?? $now,
@@ -391,14 +374,25 @@ class AbsensiController extends Controller
         }
     }
 
-    private function attendanceDateError(Kelas $kelas, string $tanggal): ?string
+    private function activePeriodeOrFail(string $tanggal): Periode
     {
-        $periode = $kelas->periode;
+        $periode = Periode::query()
+            ->where('status_aktif', true)
+            ->whereDate('tanggal_mulai', '<=', $tanggal)
+            ->whereDate('tanggal_selesai', '>=', $tanggal)
+            ->first();
 
         if (! $periode) {
-            return 'Kelas ini tidak memiliki periode akademik yang valid.';
+            throw ValidationException::withMessages([
+                'tanggal' => 'Tanggal yang dipilih tidak termasuk dalam periode aktif.',
+            ]);
         }
 
+        return $periode;
+    }
+
+    private function attendanceDateError(Periode $periode, string $tanggal): ?string
+    {
         $tanggalMulai = $periode->tanggal_mulai->toDateString();
         $tanggalSelesai = $periode->tanggal_selesai->toDateString();
 
@@ -515,7 +509,7 @@ class AbsensiController extends Controller
             ->whereIn('siswa_id', array_unique($siswaIds))
             ->where('status', 'alpa')
             ->get()
-            ->each(fn(Absensi $absensi) => $this->queueAlpaWhatsappNotification($absensi));
+            ->each(fn (Absensi $absensi) => $this->queueAlpaWhatsappNotification($absensi));
     }
 
     private function resolveParentContact(Siswa $siswa): array
@@ -544,11 +538,11 @@ class AbsensiController extends Controller
         $number = (string) preg_replace('/\D+/', '', $phone);
 
         if (str_starts_with($number, '0')) {
-            return '62' . substr($number, 1);
+            return '62'.substr($number, 1);
         }
 
         if (str_starts_with($number, '8')) {
-            return '62' . $number;
+            return '62'.$number;
         }
 
         return $number ?: null;
@@ -562,7 +556,7 @@ class AbsensiController extends Controller
         $kelas = $absensi->kelas?->nama_kelas ? " kelas {$absensi->kelas->nama_kelas}" : '';
 
         return "Assalamu'alaikum {$sapaan},\n\n"
-            . "Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
-            . 'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
+            ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
+            .'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
     }
 }

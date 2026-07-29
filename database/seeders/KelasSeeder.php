@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Kelas;
-use App\Models\Periode;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use RuntimeException;
@@ -21,10 +20,6 @@ class KelasSeeder extends Seeder
 
     public function run(): void
     {
-        $activePeriod = Periode::query()
-            ->where('status_aktif', true)
-            ->first();
-
         $teachers = User::query()
             ->where('role', 'guru')
             ->whereIn('nip', array_map(
@@ -34,14 +29,13 @@ class KelasSeeder extends Seeder
             ->get()
             ->keyBy('nip');
 
-        if (! $activePeriod || $teachers->count() !== GuruSeeder::TOTAL_GURU) {
-            throw new RuntimeException('Seeder kelas memerlukan satu periode aktif dan 40 akun guru.');
+        if ($teachers->count() !== GuruSeeder::TOTAL_GURU) {
+            throw new RuntimeException('Seeder kelas memerlukan 40 akun guru.');
         }
 
         foreach (self::CLASS_NAMES as $classIndex => $className) {
             $kelas = Kelas::query()->updateOrCreate(
                 [
-                    'periode_id' => $activePeriod->id,
                     'nama_kelas' => $className,
                 ],
                 [

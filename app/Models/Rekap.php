@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Database\Factories\RekapFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Rekap extends Model
 {
-    /** @use HasFactory<\Database\Factories\RekapFactory> */
+    /** @use HasFactory<RekapFactory> */
     use HasFactory;
 
     protected $table = 'rekap_absensis';

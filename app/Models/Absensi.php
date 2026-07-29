@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\AbsensiFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Absensi extends Model
 {
-    /** @use HasFactory<\Database\Factories\AbsensiFactory> */
+    /** @use HasFactory<AbsensiFactory> */
     use HasFactory;
 
     protected $table = 'absensis';
@@ -31,8 +32,6 @@ class Absensi extends Model
         ];
     }
 
-
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -47,6 +46,7 @@ class Absensi extends Model
     {
         return $this->hasMany(Rekap::class);
     }
+
     public function siswa(): BelongsTo
     {
         return $this->belongsTo(Siswa::class);

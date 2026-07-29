@@ -60,6 +60,9 @@ class RekapController extends Controller
 
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
+            ->with('gurus', function ($query): void {
+                $query->select(['users.id', 'users.nama']);
+            })
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();

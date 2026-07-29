@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Rekap;
 use App\Models\Absensi;
+use App\Models\Rekap;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
