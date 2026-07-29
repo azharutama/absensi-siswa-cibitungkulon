@@ -68,10 +68,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
-                <a href="{{ route('siswa.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
+                <x-secondary-button :href="route('siswa.index')">
                     Batal
-                </a>
-                <x-primary-button class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="$kelas->isEmpty()">
+                </x-secondary-button>
+                <x-primary-button :disabled="$kelas->isEmpty()">
                     {{ __('Import Data') }}
                 </x-primary-button>
             </div>

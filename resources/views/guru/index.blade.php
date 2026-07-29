@@ -56,7 +56,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
-                                    <a href="{{ route('guru.edit', $guru->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">
+                                    <a href="{{ route('guru.edit', $guru->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">
                                         Edit
                                     </a>
                                     

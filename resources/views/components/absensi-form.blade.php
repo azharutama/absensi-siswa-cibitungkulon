@@ -125,7 +125,7 @@
                     <p class="text-sm text-gray-600">
                         Form isi baru dikunci karena absensi kelas ini sudah tersimpan untuk tanggal tersebut.
                     </p>
-                    <a href="{{ route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal]) }}" class="inline-flex justify-center bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition shadow-sm">
+                    <a href="{{ route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal]) }}" class="inline-flex justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                         Buka Edit Absensi
                     </a>
                 </div>

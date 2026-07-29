@@ -109,7 +109,7 @@
             </div>
 
             <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
-                <x-primary-button class="bg-amber-600 hover:bg-amber-700">
+                <x-primary-button>
                     {{ __('Perbarui Data Siswa') }}
                 </x-primary-button>
             </div>

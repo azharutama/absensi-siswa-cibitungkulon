@@ -59,35 +59,35 @@
         <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <form method="GET" action="{{ route('rekap.index') }}" class="flex flex-wrap items-end gap-4">
                 <div class="w-full sm:w-48">
-                    <x-input-label for="kelas_id" :value="__('Kelas')" />
-                    <select id="kelas_id" name="kelas_id" class="mt-1 block w-full bg-gray-50 border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="kelas_id" class="block text-xs font-semibold text-gray-500 mb-1">Kelas</label>
+                    <select id="kelas_id" name="kelas_id" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
                         <option value="" selected disabled>Pilih Kelas</option>
-@foreach($kelas as $k)
-                                <option value="{{ $k->id }}" {{ $kelasId == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
-                            @endforeach
+                        @foreach($kelas as $k)
+                            <option value="{{ $k->id }}" {{ $kelasId == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div class="w-full sm:w-48">
-                    <x-input-label for="tanggal_mulai" :value="__('Tanggal Mulai')" />
-                    <x-text-input id="tanggal_mulai" name="tanggal_mulai" type="date" class="mt-1 block w-full bg-gray-50" :value="$tanggalMulai" />
+                    <label for="tanggal_mulai" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Mulai</label>
+                    <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggalMulai }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
 
                 <div class="w-full sm:w-48">
-                    <x-input-label for="tanggal_berakhir" :value="__('Tanggal Berakhir')" />
-                    <x-text-input id="tanggal_berakhir" name="tanggal_berakhir" type="date" class="mt-1 block w-full bg-gray-50" :value="$tanggalBerakhir" />
+                    <label for="tanggal_berakhir" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Berakhir</label>
+                    <input id="tanggal_berakhir" name="tanggal_berakhir" type="date" value="{{ $tanggalBerakhir }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
 
                 <div class="flex gap-2 w-full sm:w-auto">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg flex items-center gap-2 transition shadow-sm">
+                    <x-primary-button type="submit" class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                         </svg>
                         Filter
-                    </button>
-                    <a href="{{ route('rekap.index') }}" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm font-medium px-5 py-2.5 rounded-lg transition text-center">
+                    </x-primary-button>
+                    <x-secondary-button :href="route('rekap.index')">
                         Reset
-                    </a>
+                    </x-secondary-button>
                 </div>
             </form>
         </div>
@@ -97,7 +97,7 @@
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 gap-4 border-b border-gray-100 mb-4">
                     <h3 class="font-bold text-gray-800 text-lg">Data Kehadiran Siswa</h3>
-                    <a href="{{ route('rekap.export', ['kelas_id' => $kelasId, 'tanggal_mulai' => $tanggalMulai, 'tanggal_berakhir' => $tanggalBerakhir]) }}" download class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                    <a href="{{ route('rekap.export', ['kelas_id' => $kelasId, 'tanggal_mulai' => $tanggalMulai, 'tanggal_berakhir' => $tanggalBerakhir]) }}" download class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>

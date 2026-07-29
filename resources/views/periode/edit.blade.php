@@ -211,10 +211,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                <a href="{{ route('periode.index') }}" class="px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                <x-secondary-button :href="route('periode.index')">
                     Batal
-                </a>
-                <x-primary-button class="bg-amber-600 hover:bg-amber-700 text-white">
+                </x-secondary-button>
+                <x-primary-button>
                     {{ __('Perbarui') }}
                 </x-primary-button>
             </div>

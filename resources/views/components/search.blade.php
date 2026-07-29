@@ -12,9 +12,10 @@
     $resetUrl = $preservedQuery
         ? $action . '?' . http_build_query($preservedQuery)
         : $action;
+    $hasSearch = !blank($value);
 @endphp
 
-<form method="GET" action="{{ $action }}" data-search-form class="w-full sm:w-auto flex items-center gap-2">
+<form method="GET" action="{{ $action }}" data-search-form class="w-full sm:w-auto flex items-center gap-2" x-data="{ showReset: {{ $hasSearch ? 'true' : 'false' }} }">
     @foreach($preservedQuery as $name => $preservedValue)
         <input type="hidden" name="{{ $name }}" value="{{ $preservedValue }}">
     @endforeach
@@ -26,7 +27,8 @@
                value="{{ $value }}" 
                placeholder="{{ $placeholder }}" 
                aria-label="{{ $placeholder }}"
-               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+               @input="showReset = $el.value.length > 0"
+               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
         
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,11 +37,11 @@
         </div>
     </div>
     
-    <button type="submit" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm transition font-medium">
+    <x-primary-button type="submit">
         Cari
-    </button>
+    </x-primary-button>
     
-    <a href="{{ $resetUrl }}" data-search-reset class="text-sm text-gray-500 hover:text-gray-700 underline shrink-0 hidden">
+    <x-secondary-button :href="$resetUrl" x-show="showReset" x-cloak>
         Reset
-    </a>
+    </x-secondary-button>
 </form>

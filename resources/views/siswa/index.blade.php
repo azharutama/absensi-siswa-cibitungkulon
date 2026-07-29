@@ -47,11 +47,11 @@
                                   :value="request('search')"
                                    :preserve="request()->only(['kelas_id', 'status'])" />
 
-                        <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-yellow-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-yellow-700 transition shrink-0">
+                        <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
                             Ubah Kelas
                         </a>
 
-                        <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 transition shrink-0">
+                        <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
                             Import Excel
                         </a>
 
@@ -61,41 +61,26 @@
                     </div>
                  </div>
 
-                 <form method="GET" action="{{ route('siswa.index') }}" class="grid grid-cols-1 gap-3 border-t border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
-                     @if(request('search'))
-                         <input type="hidden" name="search" value="{{ request('search') }}">
-                     @endif
-
-                     <div>
-                         <label for="filter-kelas" class="mb-1 block text-xs font-semibold text-gray-600">Kelas</label>
-                         <select id="filter-kelas" name="kelas_id" class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                             <option value="">Semua kelas</option>
-                             @foreach($kelas as $item)
-                                 <option value="{{ $item->id }}" @selected((string) request('kelas_id') === (string) $item->id)>
-                                     {{ $item->nama_kelas }}
-                                 </option>
-                             @endforeach
-                         </select>
-                     </div>
-
-                     <div>
-                         <label for="filter-status" class="mb-1 block text-xs font-semibold text-gray-600">Status</label>
-                         <select id="filter-status" name="status" class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                             <option value="">Semua status</option>
-                             <option value="aktif" @selected(request('status') === 'aktif')>Aktif</option>
-                             <option value="nonaktif" @selected(request('status') === 'nonaktif')>Nonaktif</option>
-                         </select>
-                     </div>
-
-                     <div class="flex items-end gap-2">
-                         <button type="submit" class="inline-flex flex-1 justify-center rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700">
-                             Terapkan Filter
-                         </button>
-                         <a href="{{ route('siswa.index') }}" class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
-                             Reset
-                         </a>
-                     </div>
-                 </form>
+                 <x-filter-form 
+                     :action="route('siswa.index')"
+                     :filters="[
+                         [
+                             'name' => 'kelas_id',
+                             'label' => 'Kelas',
+                             'placeholder' => 'Semua kelas',
+                             'options' => $kelas->pluck('nama_kelas', 'id')->toArray()
+                         ],
+                         [
+                             'name' => 'status',
+                             'label' => 'Status',
+                             'placeholder' => 'Semua status',
+                             'options' => [
+                                 'aktif' => 'Aktif',
+                                 'nonaktif' => 'Nonaktif'
+                             ]
+                         ]
+                     ]"
+                 />
 
                  @if($siswas->isNotEmpty())
                     <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Status', 'Aksi']">
@@ -114,7 +99,7 @@
                                      </span>
                                  </td>
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
-                                     <a href="{{ route('siswa.edit', $siswa->id) }}" class="inline-flex items-center text-amber-600 hover:text-amber-900 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 transition">Edit</a>
+                                     <a href="{{ route('siswa.edit', $siswa->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">Edit</a>
                                     
                                     <button type="button" data-open-delete-modal data-delete-action="{{ route('siswa.destroy', $siswa->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
                                         Hapus
