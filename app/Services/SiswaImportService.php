@@ -39,7 +39,6 @@ class SiswaImportService
         'nama wali' => 'nama_wali',
         'no whatsapp wali' => 'no_whatsapp_wali',
         'wa wali' => 'no_whatsapp_wali',
-        'status' => 'status',
     ];
 
     private const REQUIRED_HEADERS = [
@@ -64,7 +63,6 @@ class SiswaImportService
         'nama_wali' => ['nullable', 'string', 'max:255'],
         'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
         'kelas_id' => ['required', 'integer'],
-        'status' => ['required', 'in:aktif,nonaktif'],
     ];
 
     private Kelas $kelas;
@@ -158,7 +156,7 @@ class SiswaImportService
         $data = array_fill_keys([
             'nis', 'nisn', 'nama_siswa', 'jenis_kelamin', 'nama_ayah',
             'no_whatsapp_ayah', 'nama_ibu', 'no_whatsapp_ibu', 'nama_wali', 'no_whatsapp_wali',
-        ], null) + ['status' => 'aktif'];
+        ], null);
 
         foreach ($row as $header => $value) {
             $field = self::HEADER_ALIASES[$this->normalizeKey((string) $header)] ?? null;
@@ -169,7 +167,7 @@ class SiswaImportService
             }
         }
 
-        if (! collect($data)->contains(fn (?string $value) => filled($value) && $value !== 'aktif')) {
+        if (! collect($data)->contains(fn (?string $value) => filled($value))) {
             $this->summary['skipped']++;
 
             return null;
@@ -189,7 +187,6 @@ class SiswaImportService
             default => $gender ?: null,
         };
         $data['kelas_id'] = $this->kelas->id;
-        $data['status'] = $this->normalizeKey($data['status'] ?: 'aktif');
 
         $validator = Validator::make($data, self::RULES);
 

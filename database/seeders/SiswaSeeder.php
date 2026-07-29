@@ -51,7 +51,6 @@ class SiswaSeeder extends Seeder
                 'nama_wali' => $hasGuardian ? $faker->name() : null,
                 'no_whatsapp_wali' => $hasGuardian ? self::PARENT_WHATSAPP : null,
                 'kelas_id' => $class->id,
-                'status' => 'aktif',
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -73,7 +72,6 @@ class SiswaSeeder extends Seeder
                     'nama_wali',
                     'no_whatsapp_wali',
                     'kelas_id',
-                    'status',
                     'updated_at',
                 ],
             );

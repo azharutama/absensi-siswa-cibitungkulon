@@ -23,7 +23,6 @@ class SiswaController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'status' => ['nullable', Rule::in(['aktif', 'nonaktif'])],
         ]);
 
         $siswas = Siswa::query()
@@ -34,7 +33,6 @@ class SiswaController extends Controller
                 'nama_siswa',
                 'jenis_kelamin',
                 'kelas_id',
-                'status',
             ])
             ->with([
                 'kelas:id,nama_kelas',
@@ -47,7 +45,6 @@ class SiswaController extends Controller
                 });
             })
             ->when($filters['kelas_id'] ?? null, fn ($query, $kelasId) => $query->where('kelas_id', $kelasId))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->latest('id')
             ->paginate(15)
             ->withQueryString();
@@ -104,7 +101,6 @@ class SiswaController extends Controller
             'no_whatsapp_ibu',
             'nama_wali',
             'no_whatsapp_wali',
-            'status',
         ];
 
         $rows = [
@@ -120,7 +116,6 @@ class SiswaController extends Controller
                 '081234567891',
                 '',
                 '',
-                'aktif',
             ],
         ];
 
@@ -142,7 +137,6 @@ class SiswaController extends Controller
         $kelasSelected = $this->findKelas((int) $data['kelas_id']);
 
         $data['kelas_id'] = $kelasSelected->id;
-        $data['status'] = 'aktif';
 
         Siswa::create($data);
 
@@ -173,9 +167,9 @@ class SiswaController extends Controller
 
     public function destroy(Siswa $siswa): RedirectResponse
     {
-        if ($siswa->status === 'aktif' && $siswa->absensis()->exists()) {
+        if ($siswa->absensis()->exists()) {
             return to_route('siswa.index')
-                ->with('error', 'Siswa aktif yang memiliki riwayat absensi tidak dapat dihapus. Ubah status menjadi nonaktif terlebih dahulu.');
+                ->with('error', 'Siswa yang memiliki riwayat absensi tidak dapat dihapus.');
         }
 
         $siswa->delete();
@@ -266,7 +260,6 @@ class SiswaController extends Controller
             'no_whatsapp_wali' => ['nullable', 'string', 'max:20'],
             'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
             'alamat' => ['nullable', 'string'],
-            'status' => [$siswa ? 'required' : 'nullable', Rule::in(['aktif', 'nonaktif'])],
         ]);
     }
 

@@ -45,7 +45,7 @@
                         <x-search :action="route('siswa.index')" 
                                   placeholder="Cari NIS, NISN, atau nama siswa..." 
                                   :value="request('search')"
-                                   :preserve="request()->only(['kelas_id', 'status'])" />
+                                  :preserve="request()->only(['kelas_id'])" />
 
                         <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
                             Ubah Kelas
@@ -69,35 +69,21 @@
                              'label' => 'Kelas',
                              'placeholder' => 'Semua kelas',
                              'options' => $kelas->pluck('nama_kelas', 'id')->toArray()
-                         ],
-                         [
-                             'name' => 'status',
-                             'label' => 'Status',
-                             'placeholder' => 'Semua status',
-                             'options' => [
-                                 'aktif' => 'Aktif',
-                                 'nonaktif' => 'Nonaktif'
-                             ]
                          ]
                      ]"
                  />
 
                  @if($siswas->isNotEmpty())
-                    <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Status', 'Aksi']">
+                    <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Aksi']">
                         @foreach ($siswas as $index => $siswa)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswas->firstItem() + $index }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b font-mono">
                                     {{ $siswa->nis ?: '-' }} / {{ $siswa->nisn ?: '-' }}
                                 </td>
-<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $siswa->nama_siswa }}</td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->kelas->nama_kelas ?? '-' }}</td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b capitalize">{{ $siswa->jenis_kelamin }}</td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm border-b">
-                                     <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $siswa->status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">
-                                         {{ $siswa->status === 'aktif' ? 'Aktif' : 'Nonaktif' }}
-                                     </span>
-                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $siswa->nama_siswa }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->kelas->nama_kelas ?? '-' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b capitalize">{{ $siswa->jenis_kelamin }}</td>
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
                                      <a href="{{ route('siswa.edit', $siswa->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">Edit</a>
                                     

@@ -22,13 +22,10 @@ return new class extends Migration
             $table->string('nama_wali')->nullable();
             $table->string('no_whatsapp_wali')->nullable();
             $table->foreignId('kelas_id')->constrained('kelas');
-            $table->string('status');
             $table->timestamps();
 
             $table->index('nama_siswa');
-            $table->index('status');
             $table->index(['kelas_id', 'nama_siswa']);
-            $table->index(['status', 'created_at']);
         });
     }
 

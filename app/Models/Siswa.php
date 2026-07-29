@@ -27,7 +27,6 @@ class Siswa extends Model
         'nama_wali',
         'no_whatsapp_wali',
         'kelas_id',
-        'status',
     ];
 
     protected function casts(): array
@@ -51,21 +50,6 @@ class Siswa extends Model
     public function riwayatKelas(): HasMany
     {
         return $this->hasMany(RiwayatKelasSiswa::class);
-    }
-
-    public function scopeActive(Builder $query): void
-    {
-        $query->where('status', 'aktif');
-    }
-
-    public function scopeInactive(Builder $query): void
-    {
-        $query->where('status', 'nonaktif');
-    }
-
-    public function markAsInactive(): void
-    {
-        $this->update(['status' => 'nonaktif']);
     }
 
     public function kelasLulusan(): ?string

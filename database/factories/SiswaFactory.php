@@ -21,7 +21,6 @@ class SiswaFactory extends Factory
             'nama_wali' => null,
             'no_whatsapp_wali' => null,
             'kelas_id' => Kelas::factory(),
-            'status' => 'aktif',
         ];
     }
 }
