@@ -15,7 +15,7 @@ class ActivityLogController extends Controller
         ]);
 
         $logs = ActivityLog::query()
-            ->with('user:id,name')
+            ->with('user:id,nama')
             ->when($filters['model_type'] ?? null, fn($q, $type) => $q->where('model_type', $type))
             ->when($filters['activity_type'] ?? null, fn($q, $type) => $q->where('activity_type', $type))
             ->latest()

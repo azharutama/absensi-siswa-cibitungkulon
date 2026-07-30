@@ -45,7 +45,7 @@
                                 {{ $log->created_at->format('d M Y, H:i') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $log->user->name ?? 'Unknown' }}
+                                {{ $log->user->nama ?? 'Unknown' }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <span class="px-2 py-1 rounded text-xs font-semibold

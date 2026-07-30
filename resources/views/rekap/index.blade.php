@@ -55,41 +55,89 @@
             </div>
         @endif
 
-        <!-- 2. BLOK FILTER RENTANG WAKTU -->
-        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <form method="GET" action="{{ route('rekap.index') }}" class="flex flex-wrap items-end gap-4">
-                <div class="w-full sm:w-48">
-                    <label for="kelas_id" class="block text-xs font-semibold text-gray-500 mb-1">Kelas</label>
-                    <select id="kelas_id" name="kelas_id" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="" selected disabled>Pilih Kelas</option>
-                        @foreach($kelas as $k)
-                            <option value="{{ $k->id }}" {{ $kelasId == $k->id ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
-                        @endforeach
-                    </select>
+        <!-- 2. BLOK FILTER CEPAT DAN MANUAL -->
+        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+            
+            {{-- Pilih Kelas (Selalu Tampil) --}}
+            <div>
+                <label for="kelas_id_preset" class="block text-sm font-semibold text-gray-700 mb-2">Pilih Kelas</label>
+                <select id="kelas_id_preset" onchange="window.location.href = this.value" class="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="{{ route('rekap.index', ['preset' => $preset ?? 'this_month']) }}">-- Pilih Kelas --</option>
+                    @foreach($kelas as $k)
+                        <option value="{{ route('rekap.index', ['preset' => $preset ?? 'this_month', 'kelas_id' => $k->id]) }}" {{ $kelasId == $k->id ? 'selected' : '' }}>
+                            {{ $k->nama_kelas }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            @if($kelasId)
+                {{-- Filter Cepat --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Filter Periode</label>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('rekap.index', ['preset' => 'today', 'kelas_id' => $kelasId]) }}" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'today' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                            Hari Ini
+                        </a>
+                        <a href="{{ route('rekap.index', ['preset' => 'this_week', 'kelas_id' => $kelasId]) }}" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'this_week' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                            Minggu Ini
+                        </a>
+                        <a href="{{ route('rekap.index', ['preset' => 'this_month', 'kelas_id' => $kelasId]) }}" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'this_month' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                            Bulan Ini
+                        </a>
+                        <a href="{{ route('rekap.index', ['preset' => 'semester_1', 'kelas_id' => $kelasId]) }}" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'semester_1' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                            Semester 1
+                        </a>
+                        <a href="{{ route('rekap.index', ['preset' => 'semester_2', 'kelas_id' => $kelasId]) }}" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'semester_2' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                            Semester 2
+                        </a>
+                    </div>
                 </div>
 
-                <div class="w-full sm:w-48">
-                    <label for="tanggal_mulai" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Mulai</label>
-                    <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggalMulai }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-
-                <div class="w-full sm:w-48">
-                    <label for="tanggal_berakhir" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Berakhir</label>
-                    <input id="tanggal_berakhir" name="tanggal_berakhir" type="date" value="{{ $tanggalBerakhir }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <x-primary-button type="submit" class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                {{-- Filter Manual --}}
+                <div x-data="{ showManual: {{ ($preset ?? 'this_month') === 'custom' ? 'true' : 'false' }} }">
+                    <button @click="showManual = !showManual" type="button" class="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                        <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="showManual ? 'rotate-180' : ''">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
-                        Filter
-                    </x-primary-button>
-                    <x-secondary-button :href="route('rekap.index')">
-                        Reset
-                    </x-secondary-button>
+                        <span x-text="showManual ? 'Sembunyikan Filter Custom' : 'Gunakan Tanggal Custom'"></span>
+                    </button>
+
+                    <form method="GET" action="{{ route('rekap.index') }}" class="mt-4 flex flex-wrap items-end gap-4" x-show="showManual" x-cloak>
+                        <input type="hidden" name="preset" value="custom">
+                        <input type="hidden" name="kelas_id" value="{{ $kelasId }}">
+                        
+                        <div class="w-full sm:w-48">
+                            <label for="tanggal_mulai" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Mulai</label>
+                            <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggalMulai }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+
+                        <div class="w-full sm:w-48">
+                            <label for="tanggal_berakhir" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Berakhir</label>
+                            <input id="tanggal_berakhir" name="tanggal_berakhir" type="date" value="{{ $tanggalBerakhir }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
+
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <x-primary-button type="submit" class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                                </svg>
+                                Terapkan
+                            </x-primary-button>
+                            <x-secondary-button :href="route('rekap.index', ['kelas_id' => $kelasId])">
+                                Reset
+                            </x-secondary-button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            @else
+                <p class="text-sm text-gray-500 italic">Silakan pilih kelas terlebih dahulu untuk melihat rekap absensi.</p>
+            @endif
         </div>
 
         <!-- 3. TABEL UTAMA DATA REKAP KEHADIRAN -->

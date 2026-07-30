@@ -48,12 +48,13 @@ class RekapController extends Controller
     }
 
     /**
-     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, persentase: float|int}>, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null}
+     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, persentase: float|int}>, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null}
      */
     private function rekapData(Request $request): array
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
             'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
             'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
         ]);
@@ -68,8 +69,16 @@ class RekapController extends Controller
             ->get();
 
         $kelasId = $filters['kelas_id'] ?? null;
-        $tanggalMulai = $filters['tanggal_mulai'] ?? today()->startOfMonth()->toDateString();
-        $tanggalBerakhir = $filters['tanggal_berakhir'] ?? today()->toDateString();
+        $preset = $filters['preset'] ?? 'this_month';
+        
+        // Jika preset custom, gunakan tanggal manual
+        if ($preset === 'custom') {
+            $tanggalMulai = $filters['tanggal_mulai'] ?? today()->startOfMonth()->toDateString();
+            $tanggalBerakhir = $filters['tanggal_berakhir'] ?? today()->toDateString();
+        } else {
+            // Gunakan preset
+            [$tanggalMulai, $tanggalBerakhir] = $this->getPresetDateRange($preset);
+        }
 
         $rekapSiswa = [];
         $namaKelas = null;
@@ -146,6 +155,59 @@ class RekapController extends Controller
             }
         }
 
-        return compact('kelas', 'rekapSiswa', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas');
+        return compact('kelas', 'rekapSiswa', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas', 'preset');
+    }
+
+    /**
+     * Get date range based on preset filter
+     * 
+     * @return array{0: string, 1: string}
+     */
+    private function getPresetDateRange(string $preset): array
+    {
+        $today = today();
+        
+        return match($preset) {
+            'today' => [
+                $today->toDateString(),
+                $today->toDateString()
+            ],
+            'this_week' => [
+                $today->copy()->startOfWeek()->toDateString(),
+                $today->copy()->endOfWeek()->toDateString()
+            ],
+            'this_month' => [
+                $today->copy()->startOfMonth()->toDateString(),
+                $today->copy()->endOfMonth()->toDateString()
+            ],
+            'semester_1' => $this->getSemesterDateRange(1),
+            'semester_2' => $this->getSemesterDateRange(2),
+            default => [
+                $today->copy()->startOfMonth()->toDateString(),
+                $today->toDateString()
+            ]
+        };
+    }
+
+    /**
+     * Get semester date range from active periode
+     * 
+     * @return array{0: string, 1: string}
+     */
+    private function getSemesterDateRange(int $semester): array
+    {
+        $periode = \App\Models\Periode::query()
+            ->where('status_aktif', true)
+            ->where('semester', $semester)
+            ->first();
+
+        if (!$periode) {
+            return [today()->toDateString(), today()->toDateString()];
+        }
+
+        return [
+            $periode->tanggal_mulai->toDateString(),
+            $periode->tanggal_selesai->toDateString()
+        ];
     }
 }
