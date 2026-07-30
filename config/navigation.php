@@ -9,6 +9,7 @@ return [
         ['label' => 'Data Periode', 'route' => 'periode.index'],
         ['label' => 'Rekap Absensi', 'route' => 'rekap.index'],
         ['label' => 'Notifikasi WhatsApp', 'route' => 'notifikasi.index'],
+        ['label' => 'Log Aktivitas', 'route' => 'activity-logs.index'],
     ],
 
     'guru' => [
@@ -21,6 +22,7 @@ return [
     'kepala_sekolah' => [
         ['label' => 'Dashboard', 'route' => 'dashboard'],
         ['label' => 'Rekap Absensi', 'route' => 'rekap.index'],
+        ['label' => 'Log Aktivitas', 'route' => 'activity-logs.index'],
     ],
 
     'role_labels' => [
@@ -54,6 +56,7 @@ return [
         'absensi.edit' => 'Edit Absensi',
         'rekap.index' => 'Rekap Absensi',
         'notifikasi.index' => 'Notifikasi WhatsApp',
+        'activity-logs.index' => 'Log Aktivitas',
         'profile.edit' => 'Profil',
     ],
 ];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kelas;
 use App\Models\User;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -90,6 +91,14 @@ class GuruController extends Controller
             if ($user->role === 'guru' && $request->filled('kelas')) {
                 $this->syncKelasDiampu($user, $request->input('kelas', []));
             }
+
+            ActivityLog::log(
+                'create',
+                'Guru',
+                $user->id,
+                "Menambahkan pengguna baru: {$user->nama} ({$user->role})",
+                ['user' => $user->makeHidden('password')->toArray()]
+            );
         });
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil ditambahkan.');
@@ -173,6 +182,7 @@ class GuruController extends Controller
                 ]);
             }
 
+            $oldData = $lockedUser->makeHidden('password')->toArray();
             $lockedUser->update($data);
 
             if ($lockedUser->role === 'guru') {
@@ -180,6 +190,14 @@ class GuruController extends Controller
             } else {
                 $lockedUser->kelas()->detach();
             }
+
+            ActivityLog::log(
+                'update',
+                'Guru',
+                $lockedUser->id,
+                "Memperbarui data pengguna: {$lockedUser->nama}",
+                ['old' => $oldData, 'new' => $lockedUser->fresh()->makeHidden('password')->toArray()]
+            );
         });
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil diperbarui.');
@@ -210,8 +228,19 @@ class GuruController extends Controller
                 return 'Pengguna tidak dapat dihapus karena memiliki riwayat absensi atau rekap.';
             }
 
+            $userData = $user->makeHidden('password')->toArray();
+            $userName = $user->nama;
+            
             $user->kelas()->detach();
             $user->delete();
+
+            ActivityLog::log(
+                'delete',
+                'Guru',
+                null,
+                "Menghapus pengguna: {$userName}",
+                ['user' => $userData]
+            );
 
             return null;
         });
