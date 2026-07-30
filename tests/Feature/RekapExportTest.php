@@ -35,6 +35,7 @@ class RekapExportTest extends TestCase
         $this->actingAs($operator)
             ->get(route('rekap.export', [
                 'kelas_id' => $kelas->id,
+                'preset' => 'custom',
                 'tanggal_mulai' => '2026-07-01',
                 'tanggal_berakhir' => '2026-07-31',
             ]))
