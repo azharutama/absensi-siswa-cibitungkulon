@@ -192,7 +192,7 @@
                     <x-secondary-button x-show="editMode" @click="editMode = false">
                         Batal
                     </x-secondary-button>
-                    <x-primary-button class="bg-gray-900 hover:bg-gray-800 text-white" x-show="editMode">
+                    <x-primary-button class="bg-blue-600 hover:bg-blue-700 text-white" x-show="editMode">
                         {{ __('Simpan') }}
                     </x-primary-button>
                 </div>

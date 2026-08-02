@@ -26,6 +26,9 @@ class NotifikasiController extends Controller
 
         $kelasIds = $kelas->pluck('id');
         $kelasId = isset($filters['kelas_id']) ? (int) $filters['kelas_id'] : null;
+        if ($kelasId === null && $kelas->count() === 1) {
+            $kelasId = $kelas->first()->id;
+        }
 
         abort_if($kelasId !== null && ! $kelasIds->contains($kelasId), 404);
 

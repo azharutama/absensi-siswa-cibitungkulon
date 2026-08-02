@@ -191,7 +191,7 @@
                         </a>
                     </div>
                 @else
-                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold text-base px-10 py-3 rounded-xl transition shadow-md">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-base px-10 py-3 rounded-xl transition shadow-md">
                         {{ $buttonText }}
                     </button>
                 @endif

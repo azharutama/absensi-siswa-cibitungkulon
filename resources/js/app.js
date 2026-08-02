@@ -1,5 +1,5 @@
 import Alpine from "alpinejs";
-import "./confirm-modal.js";
+import { openConfirmModal, closeConfirmModal } from "./confirm-modal.js";
 import "./form-guru.js";
 import "./search.js";
 

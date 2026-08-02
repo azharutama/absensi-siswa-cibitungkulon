@@ -15,7 +15,7 @@ function modalElements() {
     };
 }
 
-function openConfirmModal(options = {}) {
+export function openConfirmModal(options = {}) {
     const { modal, form, cancelButton, title, description, iconContainer, icon, submitButton } = modalElements();
 
     if (!modal || !form) {
@@ -107,7 +107,7 @@ function openConfirmModal(options = {}) {
     window.requestAnimationFrame(() => cancelButton?.focus());
 }
 
-function closeConfirmModal(confirmed = false) {
+export function closeConfirmModal(confirmed = false) {
     const { modal, form } = modalElements();
 
     if (modal) {
@@ -169,7 +169,8 @@ document.addEventListener("click", (event) => {
 
     const confirmTrigger = event.target.closest("[data-confirm-message]");
 
-    if (confirmTrigger instanceof HTMLElement) {
+    // Konfirmasi pada <form> ditangani lewat event submit, bukan klik.
+    if (confirmTrigger instanceof HTMLElement && !(confirmTrigger instanceof HTMLFormElement)) {
         const message = confirmTrigger.dataset.confirmMessage || "Apakah Anda yakin ingin melanjutkan?";
         const title = confirmTrigger.dataset.confirmTitle || "Konfirmasi";
         const confirmText = confirmTrigger.dataset.confirmText || "Konfirmasi";

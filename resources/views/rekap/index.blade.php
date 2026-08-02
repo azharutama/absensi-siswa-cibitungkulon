@@ -9,15 +9,15 @@
         @if($kelasId)
             <!-- 1. WIDGET CARDS STATISTIK KELAS (Sesuai Desain image_618dc9.png) -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <!-- Hari Absensi Terisi -->
+                <!-- Hari Aktif -->
                 <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
                     <div class="p-2 bg-blue-50 text-blue-600 rounded-full mb-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hari Absensi</p>
-                    <p class="text-3xl font-bold text-blue-600 mt-1">{{ $totalHariAbsensi }}/{{ $totalHariAktif }}</p>
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hari Aktif</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-1">{{ $totalHariAktif }}</p>
                     <p class="text-xs text-gray-400 mt-1">hari</p>
                 </div>
 

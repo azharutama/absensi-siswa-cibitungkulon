@@ -73,6 +73,9 @@ class RekapController extends Controller
             ->get();
 
         $kelasId = $filters['kelas_id'] ?? null;
+        if (blank($kelasId) && $kelas->count() === 1) {
+            $kelasId = $kelas->first()->id;
+        }
         $preset = $filters['preset'] ?? 'this_month';
         
         // Jika preset custom, gunakan tanggal manual
