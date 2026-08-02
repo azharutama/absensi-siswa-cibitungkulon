@@ -16,18 +16,11 @@ return new class extends Migration
             $table->string('nama_periode');
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');
-            $table->boolean('status_aktif');
-            $table->unsignedTinyInteger('active_guard')
-                ->nullable()
-                ->storedAs('IF(status_aktif = 1, 1, NULL)');
             $table->timestamps();
 
-            $table->unique('active_guard', 'periodes_single_active_unique');
             $table->unique(['tahun_ajaran', 'semester'], 'periodes_tahun_semester_unique');
-            $table->index('status_aktif');
             $table->index('tahun_ajaran');
             $table->index('tanggal_mulai');
-            $table->index(['status_aktif', 'tanggal_mulai']);
         });
     }
 

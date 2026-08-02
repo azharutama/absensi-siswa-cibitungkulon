@@ -44,16 +44,13 @@
 
                         <div class="flex items-center gap-2 md:gap-4">
                             <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
-                            <span class="text-xs md:text-sm font-medium text-blue-600 uppercase bg-blue-50 px-2.5 py-1 rounded-md md:bg-transparent md:p-0">
-                                {{ config('navigation.role_labels.' . auth()->user()->role, auth()->user()->role) }}
-                            </span>
                             <a
                                 href="{{ route('profile.edit') }}"
                                 aria-label="Buka profil {{ auth()->user()->nama }}"
                                 title="Profil"
-                                class="flex w-8 h-8 md:w-9 md:h-9 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-700 shrink-0 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                class="text-xs md:text-sm font-medium text-blue-600 uppercase bg-blue-50 px-2.5 py-1 rounded-md hover:bg-blue-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:bg-transparent md:p-0 md:hover:bg-transparent"
                             >
-                                {{ mb_strtoupper(mb_substr(auth()->user()->nama, 0, 1)) }}
+                                {{ config('navigation.role_labels.' . auth()->user()->role, auth()->user()->role) }}
                             </a>
                         </div>
                     </div>
