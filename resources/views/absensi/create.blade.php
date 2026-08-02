@@ -28,6 +28,7 @@
                 method="POST"
                 :siswas="$siswas" 
                 :absensiSiswa="$absensiSiswa"
+                :kelas="$kelas"
                 :kelasId="$kelasId" 
                 :tanggal="$tanggal" 
                 :isLocked="$isLocked"

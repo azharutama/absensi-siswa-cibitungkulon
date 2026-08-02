@@ -67,7 +67,7 @@ class DataIntegrityTest extends TestCase
 
     public function test_student_csv_import_uses_the_active_class(): void
     {
-        $periode = Periode::factory()->create(['status_aktif' => true]);
+        $periode = Periode::factory()->create();
         $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '4-A']);
         $operator = User::factory()->operator()->create();
         $csv = implode("\n", [
@@ -170,7 +170,6 @@ class DataIntegrityTest extends TestCase
     {
         $periode = Periode::factory()->create([
             'nama_periode' => 'Semester Ganjil 2026/2027',
-            'status_aktif' => true,
         ]);
         $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '2-A']);
         $operator = User::factory()->operator()->create();
@@ -215,7 +214,6 @@ class DataIntegrityTest extends TestCase
             'nama_periode' => $periode->nama_periode,
             'tanggal_mulai' => today()->subDays(30)->toDateString(),
             'tanggal_selesai' => today()->toDateString(),
-            'status_aktif' => false,
         ]);
 
         $response->assertSessionHasErrors(['tanggal_mulai', 'tanggal_selesai']);
@@ -235,7 +233,6 @@ class DataIntegrityTest extends TestCase
             'nama_periode' => 'Semester Bertumpuk',
             'tanggal_mulai' => today()->subDays(30)->toDateString(),
             'tanggal_selesai' => today()->addDays(30)->toDateString(),
-            'status_aktif' => false,
         ]);
 
         $response->assertSessionHasErrors('tanggal_mulai');

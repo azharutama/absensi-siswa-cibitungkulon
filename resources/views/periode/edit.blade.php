@@ -100,18 +100,6 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                    <x-input-label :value="__('Status Periode *')" class="md:text-right md:pe-4" />
-                    <div class="md:col-span-2 flex flex-col gap-2 pt-1">
-                        <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer">
-                            <input type="radio" name="status_aktif" value="1" {{ old('status_aktif', $periode->status_aktif) == 1 ? 'checked' : '' }} class="border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ms-2">Aktif</span>
-                        </label>
-                        <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer">
-                            <input type="radio" name="status_aktif" value="0" {{ old('status_aktif', $periode->status_aktif) == 0 ? 'checked' : '' }} class="border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="ms-2">Nonaktif</span>
-                        </label>
-                    </div>
                 </div>
             </div>
             </div>

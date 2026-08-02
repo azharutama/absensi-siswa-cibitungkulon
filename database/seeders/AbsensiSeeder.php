@@ -16,7 +16,7 @@ class AbsensiSeeder extends Seeder
     public function run(): void
     {
         $activePeriod = Periode::query()
-            ->where('status_aktif', true)
+            ->latest('id')
             ->first();
         $students = Siswa::query()
             ->with('kelas:id,nama_kelas')

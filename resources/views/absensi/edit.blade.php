@@ -28,6 +28,7 @@
                 method="PUT"
                 :siswas="$siswas" 
                 :absensiSiswa="$absensiSiswa"
+                :kelas="$kelas"
                 :kelasId="$kelasId" 
                 :tanggal="$tanggal" 
                 buttonText="Perbarui Data Absensi" 

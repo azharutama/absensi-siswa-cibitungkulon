@@ -20,7 +20,6 @@ class Periode extends Model
         'nama_periode',
         'tanggal_mulai',
         'tanggal_selesai',
-        'status_aktif',
     ];
 
     protected function casts(): array
@@ -30,18 +29,7 @@ class Periode extends Model
             'tanggal_selesai' => 'date',
             'tahun_ajaran' => 'string',
             'semester' => 'integer',
-            'status_aktif' => 'boolean',
         ];
-    }
-
-    public function scopeActive(Builder $query): void
-    {
-        $query->where('status_aktif', true);
-    }
-
-    public function scopeInactive(Builder $query): void
-    {
-        $query->where('status_aktif', false);
     }
 
     public function scopeForTahunAjaran(Builder $query, string $tahunAjaran): void
@@ -85,21 +73,13 @@ class Periode extends Model
         return "Semester {$semesterNama} {$this->tahun_ajaran}";
     }
 
-    public function isActive(): bool
+    public function isEndingSoon(int $days = 7): bool
     {
-        return $this->status_aktif;
+        return $this->tanggal_selesai->diffInDays(now()) <= $days;
     }
 
-    public function activate(): void
+    public function daysUntilEnd(): int
     {
-        self::query()
-            ->where('status_aktif', true)
-            ->update(['status_aktif' => false]);
-        $this->update(['status_aktif' => true]);
-    }
-
-    public function deactivate(): void
-    {
-        $this->update(['status_aktif' => false]);
+        return $this->tanggal_selesai->diffInDays(now(), false);
     }
 }

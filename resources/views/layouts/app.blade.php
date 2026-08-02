@@ -68,6 +68,8 @@
             </div>
         </div>
 
+        <x-confirm-modal />
+
             <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {

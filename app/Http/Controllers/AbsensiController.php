@@ -64,7 +64,6 @@ class AbsensiController extends Controller
             $siswas = Siswa::query()
                 ->select(['id', 'nama_siswa'])
                 ->where('kelas_id', $kelasId)
-                ->where('status', 'aktif')
                 ->orderBy('nama_siswa')
                 ->get();
             $siswaIds = $siswas->pluck('id');
@@ -123,7 +122,6 @@ class AbsensiController extends Controller
 
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasId)
-            ->where('status', 'aktif')
             ->orderBy('id')
             ->pluck('id')
             ->all();
@@ -225,7 +223,6 @@ class AbsensiController extends Controller
             $siswas = Siswa::query()
                 ->select(['id', 'nama_siswa'])
                 ->where('kelas_id', $kelasId)
-                ->where('status', 'aktif')
                 ->orderBy('nama_siswa')
                 ->get();
             $stats['total'] = $siswas->count();
@@ -275,7 +272,6 @@ class AbsensiController extends Controller
 
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasId)
-            ->where('status', 'aktif')
             ->orderBy('id')
             ->pluck('id')
             ->all();
@@ -377,15 +373,15 @@ class AbsensiController extends Controller
     private function activePeriodeOrFail(string $tanggal): Periode
     {
         $periode = Periode::query()
-            ->where('status_aktif', true)
-            ->whereDate('tanggal_mulai', '<=', $tanggal)
-            ->whereDate('tanggal_selesai', '>=', $tanggal)
+            ->latest('id')
             ->first();
 
         if (! $periode) {
-            throw ValidationException::withMessages([
-                'tanggal' => 'Tanggal yang dipilih tidak termasuk dalam periode aktif.',
-            ]);
+            abort(404, 'Periode akademik tidak ditemukan.');
+        }
+
+        if ($periode->tanggal_mulai->gt($tanggal) || $periode->tanggal_selesai->lt($tanggal)) {
+            abort(404, 'Periode akademik tidak ditemukan untuk tanggal tersebut.');
         }
 
         return $periode;

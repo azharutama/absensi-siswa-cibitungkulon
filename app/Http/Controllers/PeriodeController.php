@@ -13,32 +13,41 @@ class PeriodeController extends Controller
 {
     public function index(Request $request)
     {
-        $filters = $request->validate([
-            'search' => ['nullable', 'string', 'max:100'],
-        ]);
-        $search = trim($filters['search'] ?? '');
+        $periode = Periode::query()->latest('id')->first();
 
-        $query = Periode::query()
-            ->select(['id', 'tahun_ajaran', 'semester', 'tipe_periode', 'nama_periode', 'tanggal_mulai', 'tanggal_selesai', 'status_aktif', 'created_at']);
+        $periodeData = null;
+        $liburMingguan = collect();
+        $liburNasional = collect();
 
-        if ($search !== '') {
-            $query->where(function ($q) use ($search): void {
-                $q->where('tahun_ajaran', 'like', "%{$search}%")
-                    ->orWhere('nama_periode', 'like', "%{$search}%");
-            });
+        if ($periode) {
+            $tahunAjaran = $periode->tahun_ajaran;
+            $semester1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
+            $semester2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
+
+            $periodeData = [
+                'tahun_ajaran' => $tahunAjaran,
+                'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->toDateString(),
+                'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString(),
+                'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString(),
+                'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString(),
+            ];
+
+            $liburMingguan = $periode->hariLiburs
+                ->where('tipe', 'mingguan')
+                ->map(fn ($item) => [
+                    'hari' => $item->hari,
+                    'keterangan' => $item->keterangan,
+                ]);
+
+            $liburNasional = $periode->hariLiburs
+                ->where('tipe', 'nasional')
+                ->map(fn ($item) => [
+                    'tanggal' => $item->tanggal?->format('Y-m-d') ?? '',
+                    'nama_libur' => $item->keterangan,
+                ]);
         }
 
-        $periodes = $query
-            ->latest('id')
-            ->paginate(15)
-            ->withQueryString();
-
-        return view('periode.index', compact('periodes'));
-    }
-
-    public function create()
-    {
-        return view('periode.create');
+        return view('periode.index', compact('periode', 'periodeData', 'liburMingguan', 'liburNasional'));
     }
 
     public function store(Request $request)
@@ -49,12 +58,6 @@ class PeriodeController extends Controller
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
 
             $tahunAjaran = trim($validated['tahun_ajaran']);
-
-            if ((bool) ($validated['status_aktif'] ?? false)) {
-                Periode::query()
-                    ->where('status_aktif', true)
-                    ->update(['status_aktif' => false]);
-            }
 
             $this->ensureSemesterDatesDoNotOverlap($tahunAjaran, $validated);
 
@@ -70,7 +73,6 @@ class PeriodeController extends Controller
                 'nama_periode' => "Semester Ganjil {$tahunAjaran}",
                 'tanggal_mulai' => $semester1Start,
                 'tanggal_selesai' => $semester1End,
-                'status_aktif' => false,
             ]);
 
             Periode::create([
@@ -80,7 +82,6 @@ class PeriodeController extends Controller
                 'nama_periode' => "Semester Genap {$tahunAjaran}",
                 'tanggal_mulai' => $semester2Start,
                 'tanggal_selesai' => $semester2End,
-                'status_aktif' => false,
             ]);
 
             $periode1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
@@ -111,7 +112,6 @@ class PeriodeController extends Controller
             'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString(),
             'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString(),
             'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString(),
-            'status_aktif' => $periode->status_aktif,
         ];
 
         return view('periode.edit', compact('periode', 'periodeData'));
@@ -129,13 +129,6 @@ class PeriodeController extends Controller
 
             $this->ensureSemesterDatesDoNotOverlap($tahunAjaran, $validated, $lockedPeriode->id);
 
-            if ((bool) ($validated['status_aktif'] ?? false)) {
-                Periode::query()
-                    ->whereKeyNot($lockedPeriode->id)
-                    ->where('status_aktif', true)
-                    ->update(['status_aktif' => false]);
-            }
-
             $semester1 = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaran)
                 ->where('semester', 1)
@@ -151,7 +144,6 @@ class PeriodeController extends Controller
                 $semester1->update([
                     'tanggal_mulai' => $validated['semester_1_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_1_tanggal_selesai'],
-                    'status_aktif' => (bool) ($validated['status_aktif'] ?? $semester1->status_aktif),
                 ]);
                 $semester1->hariLiburs()->delete();
                 $this->storeHariLiburs($semester1, $validated);
@@ -161,10 +153,27 @@ class PeriodeController extends Controller
                 $semester2->update([
                     'tanggal_mulai' => $validated['semester_2_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
-                    'status_aktif' => false,
                 ]);
                 $semester2->hariLiburs()->delete();
                 $this->storeHariLiburs($semester2, $validated);
+            } else {
+                Periode::create([
+                    'tahun_ajaran' => $tahunAjaran,
+                    'semester' => 2,
+                    'tipe_periode' => 'semester',
+                    'nama_periode' => "Semester Genap {$tahunAjaran}",
+                    'tanggal_mulai' => $validated['semester_2_tanggal_mulai'],
+                    'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
+                ]);
+
+                $semester2 = Periode::query()
+                    ->where('tahun_ajaran', $tahunAjaran)
+                    ->where('semester', 2)
+                    ->first();
+
+                if ($semester2) {
+                    $this->storeHariLiburs($semester2, $validated);
+                }
             }
         });
 
@@ -175,10 +184,6 @@ class PeriodeController extends Controller
     {
         $periode = Periode::findOrFail($id);
         $tahunAjaran = $periode->tahun_ajaran;
-
-        if ($periode->status_aktif) {
-            return redirect()->route('periode.index')->with('error', 'Periode aktif tidak dapat dihapus.');
-        }
 
         $totalAbsensi = Absensi::query()
             ->whereIn('periode_id', function ($query) use ($tahunAjaran): void {
@@ -216,7 +221,6 @@ class PeriodeController extends Controller
             'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
             'semester_2_tanggal_mulai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_selesai'],
             'semester_2_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_2_tanggal_mulai'],
-            'status_aktif' => ['nullable', 'boolean'],
             'libur_mingguan' => ['nullable', 'array'],
             'libur_mingguan.*' => ['array'],
             'libur_mingguan.*.hari' => [

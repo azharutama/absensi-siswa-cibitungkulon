@@ -1,80 +1,206 @@
+@php
+    $listMingguan = $liburMingguan ?? collect();
+    $listNasional = $liburNasional ?? collect();
+@endphp
+
 <x-app-layout>
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
-            @if (session('success'))
-                <div class="mb-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm">
-                    {{ session('success') }}
-                </div>
-            @endif
-            
-            @if (session('error'))
-                <div class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-                
-                <div class="flex flex-col md:flex-row justify-between items-center p-6 gap-4 border-b border-gray-200 bg-gray-50/50">
-                    <div>
-                        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                            {{ __('Daftar Periode Akademik') }}
-                        </h2>
-                    </div>
-                    
-                    <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto justify-end">
-                        <x-search :action="route('periode.index')" placeholder="Cari periode..." :value="request('search')" />
-
-                        <a href="{{ route('periode.create') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
-                            + Tambah Periode
-                        </a>
-                    </div>
-                </div>
-
-                @if($periodes->isNotEmpty())
-                        <x-table :headers="['No', 'Tahun Ajaran', 'Semester', 'Tanggal Mulai', 'Tanggal Selesai', 'Status', 'Aksi']">
-                        @foreach ($periodes as $index => $p)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-16">{{ $periodes->firstItem() + $index }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">{{ $p->tahun_ajaran }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
-                                    @if($p->tipe_periode === 'semester')
-                                        Semester {{ $p->semester === 1 ? 'Ganjil' : 'Genap' }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">{{ \Carbon\Carbon::parse($p->tanggal_mulai)->format('d M Y') }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">{{ \Carbon\Carbon::parse($p->tanggal_selesai)->format('d M Y') }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm border-b">
-                                    @if($p->status_aktif)
-                                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 uppercase">Aktif</span>
-                                    @else
-                                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 uppercase">Tidak Aktif</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2 w-48">
-                                    <a href="{{ route('periode.edit', $p->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">Edit</a>
-                                    
-                                    <button type="button" data-open-delete-modal data-delete-action="{{ route('periode.destroy', $p->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">Hapus</button>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </x-table>
-                @else
-                    <div class="p-12 text-center text-gray-500">Data Periode Akademik kosong.</div>
-                @endif
-
+    <x-form-card :title="__('Periode Aktif')" :backUrl="route('dashboard')" maxWidth="max-w-5xl">
+        @if(session('success'))
+            <div class="mb-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm">
+                {{ session('success') }}
             </div>
+        @endif
 
-            @if($periodes->hasPages())
-                <div class="mt-4">
-                    {{ $periodes->links() }}
+        @if(session('error'))
+            <div class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if($periode)
+            <form method="POST" action="{{ route('periode.update', $periode->id) }}" class="space-y-8" x-data="{ 
+                editMode: false,
+                listMingguan: @js($listMingguan),
+                listNasional: @js($listNasional),
+                addMingguan() {
+                    this.listMingguan.push({ hari: 'Minggu', keterangan: 'Libur Rutin Mingguan' });
+                },
+                removeMingguan(index) {
+                    this.listMingguan.splice(index, 1);
+                },
+                addNasional() {
+                    this.listNasional.push({ tanggal: '', nama_libur: '', keterangan: '' });
+                },
+                removeNasional(index) {
+                    this.listNasional.splice(index, 1);
+                }
+            }">
+                @csrf
+                @method('PUT')
+
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-gray-900 border-b pb-2">Data Periode</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <x-input-label for="tahun_ajaran" :value="__('Tahun Ajaran *')" class="md:text-right md:pe-4" />
+                        <div class="md:col-span-2">
+                            <x-text-input id="tahun_ajaran" name="tahun_ajaran" type="text" class="w-full" :value="old('tahun_ajaran', $periodeData['tahun_ajaran'])" placeholder="Contoh: 2025/2026" required x-bind:disabled="!editMode" />
+                            <x-input-error class="mt-1" :messages="$errors->get('tahun_ajaran')" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 border rounded-lg p-4 bg-gray-50">
+                        <div class="space-y-3">
+                            <h4 class="font-semibold text-sm text-gray-800 border-b pb-1">Semester 1 (Ganjil)</h4>
+                            <div>
+                                <x-input-label for="semester_1_tanggal_mulai" :value="__('Tanggal Mulai *')" />
+                                <x-text-input id="semester_1_tanggal_mulai" name="semester_1_tanggal_mulai" type="date" class="mt-1 w-full" :value="old('semester_1_tanggal_mulai', $periodeData['semester_1_tanggal_mulai'])" required x-bind:disabled="!editMode" />
+                                <x-input-error class="mt-1" :messages="$errors->get('semester_1_tanggal_mulai')" />
+                            </div>
+                            <div>
+                                <x-input-label for="semester_1_tanggal_selesai" :value="__('Tanggal Selesai *')" />
+                                <x-text-input id="semester_1_tanggal_selesai" name="semester_1_tanggal_selesai" type="date" class="mt-1 w-full" :value="old('semester_1_tanggal_selesai', $periodeData['semester_1_tanggal_selesai'])" required x-bind:disabled="!editMode" />
+                                <x-input-error class="mt-1" :messages="$errors->get('semester_1_tanggal_selesai')" />
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h4 class="font-semibold text-sm text-gray-800 border-b pb-1">Semester 2 (Genap)</h4>
+                            <div>
+                                <x-input-label for="semester_2_tanggal_mulai" :value="__('Tanggal Mulai *')" />
+                                <x-text-input id="semester_2_tanggal_mulai" name="semester_2_tanggal_mulai" type="date" class="mt-1 w-full" :value="old('semester_2_tanggal_mulai', $periodeData['semester_2_tanggal_mulai'])" required x-bind:disabled="!editMode" />
+                                <x-input-error class="mt-1" :messages="$errors->get('semester_2_tanggal_mulai')" />
+                            </div>
+                            <div>
+                                <x-input-label for="semester_2_tanggal_selesai" :value="__('Tanggal Selesai *')" />
+                                <x-text-input id="semester_2_tanggal_selesai" name="semester_2_tanggal_selesai" type="date" class="mt-1 w-full" :value="old('semester_2_tanggal_selesai', $periodeData['semester_2_tanggal_selesai'])" required x-bind:disabled="!editMode" />
+                                <x-input-error class="mt-1" :messages="$errors->get('semester_2_tanggal_selesai')" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            @endif
-        </div>
-    </div>
 
-    <x-confirm-modal />
+                <div class="space-y-2 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-900 mb-4">Hari Libur</h3>
+                    
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        
+                        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="text-xs font-bold text-gray-800 uppercase tracking-wide">Hari Libur Mingguan</h4>
+                                <button type="button" x-show="editMode" @click="addMingguan()" class="px-2.5 py-1 text-xs font-semibold border border-gray-300 rounded hover:bg-gray-50 text-gray-700 transition">
+                                    + Tambah Mingguan
+                                </button>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 border text-xs">
+                                    <thead class="bg-gray-50 font-semibold text-gray-700">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left w-12">No</th>
+                                            <th class="px-3 py-2 text-left w-32">Hari</th>
+                                            <th class="px-3 py-2 text-left">Keterangan</th>
+                                            <th class="px-3 py-2 text-center w-16">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        <template x-for="(item, index) in listMingguan" :key="index">
+                                            <tr>
+                                                <td class="px-3 py-2 text-gray-500 text-center" x-text="index + 1"></td>
+                                                <td class="px-2 py-1">
+                                                    <select x-show="editMode" :name="`libur_mingguan[${index}][hari]`" x-model="item.hari" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500">
+                                                        <option value="Minggu">Minggu</option>
+                                                        <option value="Sabtu">Sabtu</option>
+                                                        <option value="Jumat">Jumat</option>
+                                                    </select>
+                                                    <span x-show="!editMode" x-text="item.hari"></span>
+                                                </td>
+                                                <td class="px-2 py-1">
+                                                    <input x-show="editMode" type="text" :name="`libur_mingguan[${index}][keterangan]`" x-model="item.keterangan" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500" required>
+                                                    <span x-show="!editMode" x-text="item.keterangan"></span>
+                                                </td>
+                                                <td x-show="editMode" class="px-3 py-2 text-center">
+                                                    <button type="button" @click="removeMingguan(index)" class="text-red-600 hover:text-red-900 font-medium">Hapus</button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <tr x-show="listMingguan.length === 0">
+                                            <td colspan="4" class="px-3 py-6 text-center text-gray-400 bg-gray-50/50">Belum ada data hari libur mingguan</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-2 italic">Tambahkan hanya jika periode memiliki hari libur mingguan.</p>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="text-xs font-bold text-gray-800 uppercase tracking-wide">Hari Libur Nasional</h4>
+                                <button type="button" x-show="editMode" @click="addNasional()" class="px-2.5 py-1 text-xs font-semibold border border-gray-300 rounded hover:bg-gray-50 text-gray-700 transition">
+                                    + Tambah Nasional
+                                </button>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 border text-xs">
+                                    <thead class="bg-gray-50 font-semibold text-gray-700">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left w-12">No</th>
+                                            <th class="px-3 py-2 text-left w-28">Tanggal</th>
+                                            <th class="px-3 py-2 text-left">Nama Hari Libur</th>
+                                            <th class="px-3 py-2 text-left">Keterangan</th>
+                                            <th class="px-3 py-2 text-center w-16">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        <template x-for="(item, index) in listNasional" :key="index">
+                                            <tr>
+                                                <td class="px-3 py-2 text-gray-500 text-center" x-text="index + 1"></td>
+                                                <td class="px-2 py-1">
+                                                    <input x-show="editMode" type="date" :name="`libur_nasional[${index}][tanggal]`" x-model="item.tanggal" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500" required>
+                                                    <span x-show="!editMode" x-text="item.tanggal"></span>
+                                                </td>
+                                                <td class="px-2 py-1">
+                                                    <input x-show="editMode" type="text" :name="`libur_nasional[${index}][nama_libur]`" x-model="item.nama_libur" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500" required>
+                                                    <span x-show="!editMode" x-text="item.nama_libur"></span>
+                                                </td>
+                                                <td class="px-2 py-1">
+                                                    <input x-show="editMode" type="text" :name="`libur_nasional[${index}][keterangan]`" x-model="item.keterangan" placeholder="Opsional" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500">
+                                                    <span x-show="!editMode" x-text="item.keterangan"></span>
+                                                </td>
+                                                <td x-show="editMode" class="px-3 py-2 text-center">
+                                                    <button type="button" @click="removeNasional(index)" class="text-red-600 hover:text-red-900 font-medium">Hapus</button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <tr x-show="listNasional.length === 0">
+                                            <td colspan="4" class="px-3 py-6 text-center text-gray-400 bg-gray-50/50">Belum ada data hari libur nasional</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-2 italic">Tambahkan hanya jika periode memiliki hari libur nasional.</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" x-show="!editMode" @click="editMode = true" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+                        Ubah
+                    </button>
+                    <x-secondary-button x-show="editMode" @click="editMode = false">
+                        Batal
+                    </x-secondary-button>
+                    <x-primary-button class="bg-gray-900 hover:bg-gray-800 text-white" x-show="editMode">
+                        {{ __('Simpan') }}
+                    </x-primary-button>
+                </div>
+            </form>
+        @else
+            <div class="p-12 text-center text-gray-500">
+                Belum ada data periode akademik. Silakan buat periode baru.
+            </div>
+        @endif
+    </x-form-card>
 </x-app-layout>

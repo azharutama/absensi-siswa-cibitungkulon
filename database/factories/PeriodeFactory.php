@@ -20,7 +20,6 @@ class PeriodeFactory extends Factory
             'nama_periode' => 'Semester '.($semester === 1 ? 'Ganjil' : 'Genap')." {$tahunAjaran}",
             'tanggal_mulai' => $start->format('Y-m-d'),
             'tanggal_selesai' => $end->format('Y-m-d'),
-            'status_aktif' => false,
         ];
     }
 }

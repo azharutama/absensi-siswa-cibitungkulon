@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kelas;
+use App\Models\Periode;
 use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -20,7 +21,15 @@ class DashboardController extends Controller
             ? User::query()->where('role', 'guru')->count()
             : 0;
 
+        $endingSoonPeriod = Periode::query()
+            ->latest('id')
+            ->first();
+
+        if ($endingSoonPeriod && ! $endingSoonPeriod->isEndingSoon()) {
+            $endingSoonPeriod = null;
+        }
+
         // Kirim data ke view dashboard
-        return view('dashboard', compact('totalKelas', 'totalSiswa', 'totalGuru'));
+        return view('dashboard', compact('totalKelas', 'totalSiswa', 'totalGuru', 'endingSoonPeriod'));
     }
 }

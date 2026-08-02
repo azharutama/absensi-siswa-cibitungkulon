@@ -194,14 +194,14 @@ class RekapController extends Controller
      * 
      * @return array{0: string, 1: string}
      */
-    private function getSemesterDateRange(int $semester): array
+private function getSemesterDateRange(int $semester): array
     {
         $periode = \App\Models\Periode::query()
-            ->where('status_aktif', true)
             ->where('semester', $semester)
+            ->latest('id')
             ->first();
 
-        if (!$periode) {
+        if (! $periode) {
             return [today()->toDateString(), today()->toDateString()];
         }
 

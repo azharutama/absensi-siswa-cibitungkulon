@@ -84,9 +84,15 @@ document.addEventListener("submit", (event) => {
         return;
     }
 
-    if (!window.confirm(form.dataset.confirmMessage)) {
-        event.preventDefault();
-    }
+    event.preventDefault();
+
+    openConfirmModal({
+        message: form.dataset.confirmMessage,
+        title: form.dataset.confirmTitle || "Konfirmasi",
+        confirmText: form.dataset.confirmText || "Konfirmasi",
+        confirmColor: form.dataset.confirmColor || "blue",
+        pendingForm: form,
+    });
 });
 
 document.addEventListener("submit", (event) => {
