@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Absensi;
 use App\Models\Periode;
+use App\Models\Rekap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -15,23 +16,18 @@ class PeriodeController extends Controller
     {
         $periode = Periode::query()->latest('id')->first();
 
-        $periodeData = null;
+        $periodeData = [
+            'tahun_ajaran' => $periode?->tahun_ajaran ?? old('tahun_ajaran', ''),
+            'semester_1_tanggal_mulai' => $periode?->tanggal_mulai?->toDateString() ?? old('semester_1_tanggal_mulai', ''),
+            'semester_1_tanggal_selesai' => $periode?->tanggal_selesai?->toDateString() ?? old('semester_1_tanggal_selesai', ''),
+            'semester_2_tanggal_mulai' => $periode?->tanggal_mulai?->toDateString() ?? old('semester_2_tanggal_mulai', ''),
+            'semester_2_tanggal_selesai' => $periode?->tanggal_selesai?->toDateString() ?? old('semester_2_tanggal_selesai', ''),
+        ];
+
         $liburMingguan = collect();
         $liburNasional = collect();
 
         if ($periode) {
-            $tahunAjaran = $periode->tahun_ajaran;
-            $semester1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
-            $semester2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
-
-            $periodeData = [
-                'tahun_ajaran' => $tahunAjaran,
-                'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->toDateString(),
-                'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString(),
-                'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString(),
-                'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString(),
-            ];
-
             $liburMingguan = $periode->hariLiburs
                 ->where('tipe', 'mingguan')
                 ->map(fn ($item) => [
@@ -203,6 +199,17 @@ class PeriodeController extends Controller
         });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
+    }
+
+    public function reset(Request $request)
+    {
+        DB::transaction(function (): void {
+            Rekap::query()->delete();
+            Absensi::query()->delete();
+            Periode::query()->delete();
+        });
+
+        return redirect()->route('periode.index')->with('success', 'Semua data periode, absensi, dan rekap berhasil direset.');
     }
 
     /** @return array<string, mixed> */
