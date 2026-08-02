@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Exports\RekapAbsensiExport;
 use App\Models\Absensi;
+use App\Models\HariLibur;
 use App\Models\Kelas;
+use App\Models\Periode;
 use App\Models\Siswa;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -122,8 +125,7 @@ class RekapController extends Controller
                 ->get()
                 ->keyBy('siswa_id');
 
-            $totalHariAktif = \Carbon\Carbon::parse($tanggalMulai)
-                ->diffInDays(\Carbon\Carbon::parse($tanggalBerakhir)) + 1;
+            $totalHariAktif = $this->hitungHariAktif($tanggalMulai, $tanggalBerakhir);
 
             $totalHariAbsensi = Absensi::query()
                 ->where('kelas_id', $kelasId)
@@ -209,7 +211,7 @@ class RekapController extends Controller
      */
 private function getSemesterDateRange(int $semester): array
     {
-        $periode = \App\Models\Periode::query()
+        $periode = Periode::query()
             ->where('semester', $semester)
             ->latest('id')
             ->first();
@@ -222,5 +224,64 @@ private function getSemesterDateRange(int $semester): array
             $periode->tanggal_mulai->toDateString(),
             $periode->tanggal_selesai->toDateString()
         ];
+    }
+
+    /**
+     * Hitung jumlah hari aktif (hari di mana guru dapat mengisi absensi)
+     * dengan mengeluarkan hari libur mingguan dan nasional dalam rentang tanggal.
+     */
+    private function hitungHariAktif(string $tanggalMulai, string $tanggalBerakhir): int
+    {
+        $mulai = Carbon::parse($tanggalMulai);
+        $akhir = Carbon::parse($tanggalBerakhir);
+
+        if ($akhir->lt($mulai)) {
+            return 0;
+        }
+
+        $periode = Periode::query()
+            ->whereDate('tanggal_mulai', '<=', $mulai->toDateString())
+            ->whereDate('tanggal_selesai', '>=', $mulai->toDateString())
+            ->first();
+
+        $hariLiburNasional = collect();
+        $hariLiburMingguan = collect();
+
+        if ($periode) {
+            $hariLiburNasional = HariLibur::query()
+                ->where('periode_id', $periode->id)
+                ->where('tipe', 'nasional')
+                ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
+                ->pluck('tanggal')
+                ->map(fn ($t) => $t instanceof Carbon ? $t->toDateString() : Carbon::parse($t)->toDateString())
+                ->values();
+
+            $hariLiburMingguan = HariLibur::query()
+                ->where('periode_id', $periode->id)
+                ->where('tipe', 'mingguan')
+                ->pluck('hari')
+                ->values();
+        }
+
+        $namaHari = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+
+        $hariAktif = 0;
+        $hari = $mulai->copy();
+
+        while ($hari->lte($akhir)) {
+            $tanggalStr = $hari->toDateString();
+            $namaHariIni = $namaHari[$hari->dayOfWeek];
+
+            $isHariLibur = $hariLiburNasional->contains($tanggalStr)
+                || $hariLiburMingguan->contains($namaHariIni);
+
+            if (! $isHariLibur) {
+                $hariAktif++;
+            }
+
+            $hari->addDay();
+        }
+
+        return $hariAktif;
     }
 }

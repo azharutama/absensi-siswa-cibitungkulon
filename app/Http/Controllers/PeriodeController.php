@@ -127,7 +127,7 @@ class PeriodeController extends Controller
             $lockedPeriode = Periode::query()->findOrFail($id);
             $tahunAjaran = trim($validated['tahun_ajaran']);
 
-            $this->ensureSemesterDatesDoNotOverlap($tahunAjaran, $validated, $lockedPeriode->id);
+            $this->ensureSemesterDatesDoNotOverlap($tahunAjaran, $validated);
 
             $semester1 = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaran)
@@ -270,16 +270,16 @@ class PeriodeController extends Controller
     }
 
     /** @param array<string, mixed> $validated */
-    private function ensureSemesterDatesDoNotOverlap(string $tahunAjaran, array $validated, ?int $ignoredPeriodId = null): void
+    private function ensureSemesterDatesDoNotOverlap(string $tahunAjaran, array $validated): void
     {
         $s1Start = $validated['semester_1_tanggal_mulai'];
         $s1End = $validated['semester_1_tanggal_selesai'];
         $s2Start = $validated['semester_2_tanggal_mulai'];
         $s2End = $validated['semester_2_tanggal_selesai'];
 
+        // Abaikan periode tahun ajaran yang sedang dibuat/diubah (kedua semester ditangani bersamaan)
         $existing = Periode::query()
-            ->when($ignoredPeriodId, fn ($q) => $q->whereKeyNot($ignoredPeriodId))
-            ->where('tahun_ajaran', $tahunAjaran)
+            ->where('tahun_ajaran', '!=', $tahunAjaran)
             ->where(function ($q) use ($s1Start, $s1End, $s2Start, $s2End): void {
                 $q->whereBetween('tanggal_mulai', [$s1Start, $s1End])
                     ->orWhereBetween('tanggal_selesai', [$s1Start, $s1End])
@@ -294,7 +294,7 @@ class PeriodeController extends Controller
 
         if ($existing) {
             throw ValidationException::withMessages([
-                'tahun_ajaran' => 'Rentang tanggal semester bertabrakan dengan periode yang sudah ada untuk tahun ajaran yang sama.',
+                'tahun_ajaran' => 'Rentang tanggal semester bertabrakan dengan periode tahun ajaran lain yang sudah ada.',
             ]);
         }
     }
