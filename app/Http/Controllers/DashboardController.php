@@ -22,7 +22,8 @@ class DashboardController extends Controller
             : 0;
 
         $endingSoonPeriod = Periode::query()
-            ->latest('id')
+            ->whereDate('tanggal_mulai', '<=', today())
+            ->whereDate('tanggal_selesai', '>=', today())
             ->first();
 
         if ($endingSoonPeriod && ! $endingSoonPeriod->isEndingSoon()) {

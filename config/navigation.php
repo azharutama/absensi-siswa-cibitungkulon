@@ -14,7 +14,7 @@ return [
 
     'guru' => [
         ['label' => 'Dashboard', 'route' => 'dashboard'],
-        ['label' => 'Absensi', 'route' => 'absensi.index'],
+        ['label' => 'Absensi', 'route' => 'absensi.create'],
         ['label' => 'Rekap Absensi', 'route' => 'rekap.index'],
         ['label' => 'Notifikasi WhatsApp', 'route' => 'notifikasi.index'],
     ],
@@ -49,7 +49,6 @@ return [
         'kelas.create' => 'Tambah Kelas',
         'kelas.edit' => 'Edit Kelas',
         'periode.index' => 'Periode Aktif',
-        'absensi.index' => 'Absensi',
         'absensi.create' => 'Isi Absensi',
         'absensi.edit' => 'Edit Absensi',
         'rekap.index' => 'Rekap Absensi',

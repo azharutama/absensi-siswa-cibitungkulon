@@ -63,7 +63,10 @@ class Siswa extends Model
 
         $this->update(['kelas_id' => $kelasTujuan->id]);
 
-        $activePeriode = Periode::query()->latest('id')->first();
+        $activePeriode = Periode::query()
+            ->whereDate('tanggal_mulai', '<=', today())
+            ->whereDate('tanggal_selesai', '>=', today())
+            ->first();
 
         return $this->riwayatKelas()->create([
             'kelas_asal_id' => $kelasAsal?->id,

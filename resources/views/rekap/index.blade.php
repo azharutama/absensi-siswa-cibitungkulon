@@ -9,15 +9,16 @@
         @if($kelasId)
             <!-- 1. WIDGET CARDS STATISTIK KELAS (Sesuai Desain image_618dc9.png) -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <!-- Rata-rata Hadir -->
+                <!-- Hari Absensi Terisi -->
                 <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
                     <div class="p-2 bg-blue-50 text-blue-600 rounded-full mb-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rata-Rata Hadir</p>
-                    <p class="text-3xl font-bold text-blue-600 mt-1">{{ $stats['rata_hadir'] }}%</p>
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hari Absensi</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-1">{{ $totalHariAbsensi }}/{{ $totalHariAktif }}</p>
+                    <p class="text-xs text-gray-400 mt-1">hari</p>
                 </div>
 
                 <!-- Total Sakit -->
@@ -162,7 +163,7 @@
                                 <th class="px-6 py-4 border-r border-gray-200 text-left" rowspan="2">Nama Siswa</th>
                                 <th class="px-4 py-4 border-r border-gray-200 w-24" rowspan="2">Kelas</th>
                                 <th class="px-4 py-2 border-b border-gray-200" colspan="4">Status Kehadiran</th>
-                                <th class="px-4 py-4 border-l border-gray-200 w-32" rowspan="2">Persentase</th>
+                                <th class="px-4 py-4 border-l border-gray-200 w-36" rowspan="2">Persentase</th>
                             </tr>
                             <tr class="bg-gray-50/50 text-gray-500 font-medium text-xs border-b border-gray-200">
                                 <th class="px-2 py-2 border-r border-gray-200 bg-green-50/30 text-green-700 w-20">Hadir</th>

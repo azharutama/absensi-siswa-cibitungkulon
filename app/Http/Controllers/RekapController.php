@@ -42,13 +42,14 @@ class RekapController extends Controller
                 $data['namaKelas'],
                 $data['tanggalMulai'],
                 $data['tanggalBerakhir'],
+                $data['totalHariAktif'],
             ),
             $filename,
         );
     }
 
     /**
-     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, persentase: float|int}>, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null}
+     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_hari_masuk: int}>, totalHariAktif: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null}
      */
     private function rekapData(Request $request): array
     {
@@ -82,6 +83,8 @@ class RekapController extends Controller
 
         $rekapSiswa = [];
         $namaKelas = null;
+        $totalHariAktif = 0;
+        $totalHariAbsensi = 0;
         $stats = [
             'rata_hadir' => 0,
             'total_sakit' => 0,
@@ -119,6 +122,15 @@ class RekapController extends Controller
                 ->get()
                 ->keyBy('siswa_id');
 
+            $totalHariAktif = \Carbon\Carbon::parse($tanggalMulai)
+                ->diffInDays(\Carbon\Carbon::parse($tanggalBerakhir)) + 1;
+
+            $totalHariAbsensi = Absensi::query()
+                ->where('kelas_id', $kelasId)
+                ->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])
+                ->distinct()
+                ->count('tanggal');
+
             $totalPersentaseSemuaSiswa = 0;
             $namaKelas = $selectedKelas->nama_kelas;
 
@@ -139,6 +151,7 @@ class RekapController extends Controller
                     'sakit' => $sakit,
                     'izin' => $izin,
                     'alpa' => $alpa,
+                    'total_hari_masuk' => $totalHariMasuk,
                     'persentase' => $persentase,
                 ];
 
@@ -155,7 +168,7 @@ class RekapController extends Controller
             }
         }
 
-        return compact('kelas', 'rekapSiswa', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas', 'preset');
+        return compact('kelas', 'rekapSiswa', 'totalHariAktif', 'totalHariAbsensi', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas', 'preset');
     }
 
     /**

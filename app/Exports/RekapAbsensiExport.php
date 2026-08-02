@@ -15,13 +15,14 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, WithTitle
 {
     /**
-     * @param  array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, persentase: float|int}>  $rekapSiswa
+     * @param  array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_hari_masuk: int, persentase: float|int}>  $rekapSiswa
      */
     public function __construct(
         private array $rekapSiswa,
         private string $namaKelas,
         private string $tanggalMulai,
         private string $tanggalBerakhir,
+        private int $totalHariAktif = 0,
     ) {}
 
     /**
@@ -46,6 +47,7 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
                 $rekap['sakit'],
                 $rekap['izin'],
                 $rekap['alpa'],
+                $rekap['total_hari_masuk'],
                 $rekap['persentase'].'%',
             ];
         }

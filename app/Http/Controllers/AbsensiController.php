@@ -19,11 +19,6 @@ use Illuminate\Validation\ValidationException;
 
 class AbsensiController extends Controller
 {
-    public function index(): View
-    {
-        return view('absensi.index');
-    }
-
     public function create(Request $request): View
     {
         $filters = $request->validate([
@@ -37,6 +32,9 @@ class AbsensiController extends Controller
             ->orderBy('nama_kelas')
             ->get();
         $kelasId = $filters['kelas_id'] ?? null;
+        if (blank($kelasId) && $kelas->count() === 1) {
+            $kelasId = $kelas->first()->id;
+        }
         $tanggal = $filters['tanggal'] ?? today()->toDateString();
 
         $siswas = [];
@@ -109,7 +107,7 @@ class AbsensiController extends Controller
             ->accessibleBy($request->user())
             ->findOrFail($kelasId);
 
-        if ($dateError = $this->attendanceDateError($activePeriode, $kelas, $tanggal)) {
+        if ($dateError = $this->attendanceDateError($activePeriode, $tanggal)) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $dateError);
         }
@@ -196,6 +194,9 @@ class AbsensiController extends Controller
             ->orderBy('nama_kelas')
             ->get();
         $kelasId = $filters['kelas_id'] ?? null;
+        if (blank($kelasId) && $kelas->count() === 1) {
+            $kelasId = $kelas->first()->id;
+        }
         $tanggal = $filters['tanggal'] ?? today()->toDateString();
 
         $siswas = [];
@@ -259,7 +260,7 @@ class AbsensiController extends Controller
             ->accessibleBy($request->user())
             ->findOrFail($kelasId);
 
-        if ($dateError = $this->attendanceDateError($activePeriode, $kelas, $tanggal)) {
+        if ($dateError = $this->attendanceDateError($activePeriode, $tanggal)) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $dateError);
         }
@@ -373,14 +374,11 @@ class AbsensiController extends Controller
     private function activePeriodeOrFail(string $tanggal): Periode
     {
         $periode = Periode::query()
-            ->latest('id')
+            ->whereDate('tanggal_mulai', '<=', $tanggal)
+            ->whereDate('tanggal_selesai', '>=', $tanggal)
             ->first();
 
         if (! $periode) {
-            abort(404, 'Periode akademik tidak ditemukan.');
-        }
-
-        if ($periode->tanggal_mulai->gt($tanggal) || $periode->tanggal_selesai->lt($tanggal)) {
             abort(404, 'Periode akademik tidak ditemukan untuk tanggal tersebut.');
         }
 
