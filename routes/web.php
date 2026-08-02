@@ -25,20 +25,38 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware('role:operator')->group(function () {
 
-        // Kelola Guru (Otomatis menghasilkan URL: /guru, /guru/create, dll)
-        Route::resource('guru', GuruController::class)->except('show');
+        // Kelola Guru
+        Route::get('/guru', [GuruController::class, 'index'])->name('guru.index');
+        Route::get('/guru/create', [GuruController::class, 'create'])->name('guru.create');
+        Route::post('/guru', [GuruController::class, 'store'])->name('guru.store');
+        Route::put('/guru/{guru}', [GuruController::class, 'update'])->name('guru.update');
+        Route::delete('/guru/{guru}', [GuruController::class, 'destroy'])->name('guru.destroy');
 
-        // Kelola Siswa (Otomatis menghasilkan URL: /siswa, /siswa/create, dll)
+        // Kelola Siswa
         Route::get('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelasForm'])->name('siswa.ubah-kelas.form');
         Route::post('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelas'])->name('siswa.ubah-kelas');
         Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
         Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
         Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');
-        Route::resource('siswa', SiswaController::class)->except('show');
+        Route::get('/siswa', [SiswaController::class, 'index'])->name('siswa.index');
+        Route::get('/siswa/create', [SiswaController::class, 'create'])->name('siswa.create');
+        Route::post('/siswa', [SiswaController::class, 'store'])->name('siswa.store');
+        Route::put('/siswa/{siswa}', [SiswaController::class, 'update'])->name('siswa.update');
+        Route::delete('/siswa/{siswa}', [SiswaController::class, 'destroy'])->name('siswa.destroy');
 
-        Route::resource('kelas', KelasController::class)->except('show');
+        // Kelola Kelas
+        Route::get('/kelas', [KelasController::class, 'index'])->name('kelas.index');
+        Route::get('/kelas/create', [KelasController::class, 'create'])->name('kelas.create');
+        Route::post('/kelas', [KelasController::class, 'store'])->name('kelas.store');
+        Route::put('/kelas/{kelas}', [KelasController::class, 'update'])->name('kelas.update');
+        Route::delete('/kelas/{kelas}', [KelasController::class, 'destroy'])->name('kelas.destroy');
 
-        Route::resource('periode', PeriodeController::class)->except('show');
+        // Kelola Periode
+        Route::get('/periode', [PeriodeController::class, 'index'])->name('periode.index');
+        Route::get('/periode/create', [PeriodeController::class, 'create'])->name('periode.create');
+        Route::post('/periode', [PeriodeController::class, 'store'])->name('periode.store');
+        Route::put('/periode/{periode}', [PeriodeController::class, 'update'])->name('periode.update');
+        Route::delete('/periode/{periode}', [PeriodeController::class, 'destroy'])->name('periode.destroy');
     });
 
     Route::middleware('role:guru')->group(function () {
