@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AutoSelectsSingleKelas;
 use App\Jobs\SendAlpaWhatsappNotificationJob;
 use App\Models\Absensi;
 use App\Models\HariLibur;
@@ -19,7 +20,9 @@ use Illuminate\Validation\ValidationException;
 
 class AbsensiController extends Controller
 {
-    public function create(Request $request): View
+    use AutoSelectsSingleKelas;
+
+    public function create(Request $request): View|RedirectResponse
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
@@ -31,11 +34,16 @@ class AbsensiController extends Controller
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
-        $kelasId = $filters['kelas_id'] ?? null;
-        if (blank($kelasId) && $kelas->count() === 1) {
-            $kelasId = $kelas->first()->id;
-        }
+        
         $tanggal = $filters['tanggal'] ?? today()->toDateString();
+        
+        // Auto-redirect menggunakan trait
+        if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.create', ['tanggal' => $tanggal])) {
+            return $redirect;
+        }
+        
+        // Auto-select kelas menggunakan trait helper
+        $kelasId = $this->getKelasIdWithAutoSelect($filters['kelas_id'] ?? null, $kelas);
 
         $siswas = [];
         $absensiSiswa = [];
@@ -190,7 +198,7 @@ class AbsensiController extends Controller
             ->with('success', 'Data absensi baru berhasil disimpan.');
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
@@ -202,11 +210,16 @@ class AbsensiController extends Controller
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
-        $kelasId = $filters['kelas_id'] ?? null;
-        if (blank($kelasId) && $kelas->count() === 1) {
-            $kelasId = $kelas->first()->id;
-        }
+        
         $tanggal = $filters['tanggal'] ?? today()->toDateString();
+        
+        // Auto-redirect menggunakan trait
+        if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.edit', ['tanggal' => $tanggal])) {
+            return $redirect;
+        }
+        
+        // Auto-select kelas menggunakan trait helper
+        $kelasId = $this->getKelasIdWithAutoSelect($filters['kelas_id'] ?? null, $kelas);
 
         $siswas = [];
         $absensiSiswa = [];

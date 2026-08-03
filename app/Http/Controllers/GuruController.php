@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Kelas;
 use App\Models\User;
-use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class GuruController extends Controller
 {
+    use LogsActivity;
+
     /**
      * Ambil data user beserta filter pencarian jika ada
      */
@@ -92,10 +94,10 @@ class GuruController extends Controller
                 $this->syncKelasDiampu($user, $request->input('kelas', []));
             }
 
-            ActivityLog::log(
-                'create',
+            // Log activity menggunakan trait
+            $this->logCreate(
                 'Guru',
-                $user->id,
+                $user,
                 "Menambahkan pengguna baru: {$user->nama} ({$user->role})",
                 ['user' => $user->makeHidden('password')->toArray()]
             );
@@ -191,12 +193,12 @@ class GuruController extends Controller
                 $lockedUser->kelas()->detach();
             }
 
-            ActivityLog::log(
-                'update',
+            // Log activity menggunakan trait
+            $this->logUpdate(
                 'Guru',
-                $lockedUser->id,
-                "Memperbarui data pengguna: {$lockedUser->nama}",
-                ['old' => $oldData, 'new' => $lockedUser->fresh()->makeHidden('password')->toArray()]
+                $lockedUser,
+                ['old' => $oldData, 'new' => $lockedUser->fresh()->makeHidden('password')->toArray()],
+                "Memperbarui data pengguna: {$lockedUser->nama}"
             );
         });
 
@@ -230,17 +232,13 @@ class GuruController extends Controller
 
             $userData = $user->makeHidden('password')->toArray();
             $userName = $user->nama;
+            $userId = $user->id;
             
             $user->kelas()->detach();
             $user->delete();
 
-            ActivityLog::log(
-                'delete',
-                'Guru',
-                null,
-                "Menghapus pengguna: {$userName}",
-                ['user' => $userData]
-            );
+            // Log activity menggunakan trait
+            $this->logDelete('Guru', $userId, $userName);
 
             return null;
         });

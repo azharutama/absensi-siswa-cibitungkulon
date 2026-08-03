@@ -14,25 +14,16 @@ class PeriodeController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil tahun ajaran terbaru
-        $tahunAjaranTerbaru = Periode::query()
+        // Optimasi: Ambil kedua semester sekaligus dalam 1 query
+        $periodes = Periode::query()
+            ->with('hariLiburs')
             ->orderBy('tahun_ajaran', 'desc')
-            ->value('tahun_ajaran');
+            ->orderBy('semester', 'asc')
+            ->limit(2)
+            ->get();
 
-        $semester1 = null;
-        $semester2 = null;
-
-        if ($tahunAjaranTerbaru) {
-            $semester1 = Periode::query()
-                ->where('tahun_ajaran', $tahunAjaranTerbaru)
-                ->where('semester', 1)
-                ->first();
-
-            $semester2 = Periode::query()
-                ->where('tahun_ajaran', $tahunAjaranTerbaru)
-                ->where('semester', 2)
-                ->first();
-        }
+        $semester1 = $periodes->firstWhere('semester', 1);
+        $semester2 = $periodes->firstWhere('semester', 2);
 
         $periodeData = [
             'tahun_ajaran' => $semester1?->tahun_ajaran ?? $semester2?->tahun_ajaran ?? old('tahun_ajaran', ''),

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Kelas;
 use App\Models\RiwayatKelasSiswa;
 use App\Models\Siswa;
-use App\Models\ActivityLog;
 use App\Services\SiswaImportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -19,6 +19,8 @@ use ZipArchive;
 
 class SiswaController extends Controller
 {
+    use LogsActivity;
+
     public function index(Request $request): View
     {
         $filters = $request->validate([
@@ -141,13 +143,8 @@ class SiswaController extends Controller
 
         $siswa = Siswa::create($data);
 
-        ActivityLog::log(
-            'create',
-            'Siswa',
-            $siswa->id,
-            "Menambahkan siswa baru: {$siswa->nama_siswa}",
-            ['siswa' => $siswa->toArray()]
-        );
+        // Log activity menggunakan trait
+        $this->logCreate('Siswa', $siswa, "Menambahkan siswa baru: {$siswa->nama_siswa}", ['siswa' => $siswa->toArray()]);
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil ditambahkan.');
@@ -171,13 +168,8 @@ class SiswaController extends Controller
         $oldData = $siswa->toArray();
         $siswa->update($data);
 
-        ActivityLog::log(
-            'update',
-            'Siswa',
-            $siswa->id,
-            "Memperbarui data siswa: {$siswa->nama_siswa}",
-            ['old' => $oldData, 'new' => $siswa->fresh()->toArray()]
-        );
+        // Log activity menggunakan trait
+        $this->logUpdate('Siswa', $siswa, ['old' => $oldData, 'new' => $siswa->fresh()->toArray()], "Memperbarui data siswa: {$siswa->nama_siswa}");
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil diperbarui.');
@@ -192,15 +184,11 @@ class SiswaController extends Controller
 
         $siswaData = $siswa->toArray();
         $siswaName = $siswa->nama_siswa;
+        $siswaId = $siswa->id;
         $siswa->delete();
 
-        ActivityLog::log(
-            'delete',
-            'Siswa',
-            null,
-            "Menghapus siswa: {$siswaName}",
-            ['siswa' => $siswaData]
-        );
+        // Log activity menggunakan trait
+        $this->logDelete('Siswa', $siswaId, $siswaName);
 
         return to_route('siswa.index')
             ->with('success', 'Data siswa berhasil dihapus.');

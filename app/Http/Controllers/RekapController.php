@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\RekapAbsensiExport;
+use App\Http\Controllers\Concerns\AutoSelectsSingleKelas;
 use App\Models\Absensi;
 use App\Models\HariLibur;
 use App\Models\Kelas;
@@ -10,6 +11,7 @@ use App\Models\Periode;
 use App\Models\Siswa;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -18,8 +20,27 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class RekapController extends Controller
 {
-    public function index(Request $request): View
+    use AutoSelectsSingleKelas;
+
+    public function index(Request $request): View|RedirectResponse
     {
+        $filters = $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
+            'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
+            'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
+        ]);
+
+        $kelas = Kelas::query()
+            ->accessibleBy($request->user())
+            ->select(['id'])
+            ->get();
+
+        // Auto-redirect menggunakan trait
+        if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'rekap.index', ['preset' => $filters['preset'] ?? 'this_month'])) {
+            return $redirect;
+        }
+
         return view('rekap.index', $this->rekapData($request));
     }
 
@@ -72,11 +93,10 @@ class RekapController extends Controller
             ->orderBy('nama_kelas')
             ->get();
 
-        $kelasId = $filters['kelas_id'] ?? null;
-        if (blank($kelasId) && $kelas->count() === 1) {
-            $kelasId = $kelas->first()->id;
-        }
         $preset = $filters['preset'] ?? 'this_month';
+        
+        // Auto-select kelas menggunakan trait helper
+        $kelasId = $this->getKelasIdWithAutoSelect($filters['kelas_id'] ?? null, $kelas);
         
         // Jika preset custom, gunakan tanggal manual
         if ($preset === 'custom') {
@@ -236,26 +256,19 @@ private function getSemesterDateRange(int $semester): array
      */
     private function hitungHariAktifPeriode(): int
     {
-        // Ambil tahun ajaran terbaru
-        $tahunAjaranTerbaru = Periode::query()
+        // Optimasi: Ambil kedua semester sekaligus dalam 1 query
+        $periodes = Periode::query()
             ->orderBy('tahun_ajaran', 'desc')
-            ->orderBy('semester', 'desc')
-            ->value('tahun_ajaran');
+            ->orderBy('semester', 'asc')
+            ->limit(2)
+            ->get();
 
-        if (!$tahunAjaranTerbaru) {
+        if ($periodes->isEmpty()) {
             return 0;
         }
 
-        // Ambil periode semester 1 dan 2 dari tahun ajaran yang sama (terbaru)
-        $periodeSemester1 = Periode::query()
-            ->where('tahun_ajaran', $tahunAjaranTerbaru)
-            ->where('semester', 1)
-            ->first();
-
-        $periodeSemester2 = Periode::query()
-            ->where('tahun_ajaran', $tahunAjaranTerbaru)
-            ->where('semester', 2)
-            ->first();
+        $periodeSemester1 = $periodes->firstWhere('semester', 1);
+        $periodeSemester2 = $periodes->firstWhere('semester', 2);
 
         // Jika tidak ada periode sama sekali, return 0
         if (!$periodeSemester1 && !$periodeSemester2) {
