@@ -10,7 +10,7 @@ class PeriodeFactory extends Factory
     {
         $start = fake()->dateTimeBetween('-1 year', '+6 months');
         $end = (clone $start)->modify('+6 months');
-        $tahunAjaran = $start->format('Y').'/'.($start->copy()->addYear()->format('y'));
+        $tahunAjaran = $start->format('Y').'/'.((clone $start)->modify('+1 year')->format('y'));
         $semester = fake()->randomElement([1, 2]);
 
         return [

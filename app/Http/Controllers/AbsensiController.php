@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AutoSelectsSingleKelas;
-use App\Jobs\SendAlpaWhatsappNotificationJob;
+use App\Jobs\SendAlpaWhatsappBatchJob;
 use App\Models\Absensi;
 use App\Models\HariLibur;
 use App\Models\Kelas;
@@ -34,14 +34,14 @@ class AbsensiController extends Controller
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
-        
+
         $tanggal = $filters['tanggal'] ?? today()->toDateString();
-        
+
         // Auto-redirect menggunakan trait
         if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.create', ['tanggal' => $tanggal])) {
             return $redirect;
         }
-        
+
         // Auto-select kelas menggunakan trait helper
         $kelasId = $this->getKelasIdWithAutoSelect($filters['kelas_id'] ?? null, $kelas);
 
@@ -58,7 +58,7 @@ class AbsensiController extends Controller
             ->whereDate('tanggal_selesai', '>=', $tanggal)
             ->first();
 
-        if (!$activePeriode) {
+        if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan input absensi.';
         }
 
@@ -210,14 +210,14 @@ class AbsensiController extends Controller
             ->select(['id', 'nama_kelas'])
             ->orderBy('nama_kelas')
             ->get();
-        
+
         $tanggal = $filters['tanggal'] ?? today()->toDateString();
-        
+
         // Auto-redirect menggunakan trait
         if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.edit', ['tanggal' => $tanggal])) {
             return $redirect;
         }
-        
+
         // Auto-select kelas menggunakan trait helper
         $kelasId = $this->getKelasIdWithAutoSelect($filters['kelas_id'] ?? null, $kelas);
 
@@ -234,7 +234,7 @@ class AbsensiController extends Controller
             ->whereDate('tanggal_selesai', '>=', $tanggal)
             ->first();
 
-        if (!$activePeriode) {
+        if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan edit absensi.';
         }
 
@@ -464,61 +464,6 @@ class AbsensiController extends Controller
         ][$dayOfWeek];
     }
 
-    private function queueAlpaWhatsappNotification(Absensi $absensi): void
-    {
-        $absensi->loadMissing(['siswa', 'kelas']);
-
-        if (! $absensi->siswa) {
-            return;
-        }
-
-        [$parentName, $parentPhone] = $this->resolveParentContact($absensi->siswa);
-        $normalizedPhone = $this->normalizeWhatsappNumber($parentPhone);
-
-        $notification = WhatsappNotification::firstOrCreate(
-            [
-                'absensi_id' => $absensi->id,
-                'provider' => 'fonnte',
-            ],
-            [
-                'siswa_id' => $absensi->siswa_id,
-                'parent_name' => $parentName,
-                'parent_phone' => $normalizedPhone,
-                'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
-                'status' => 'pending',
-            ]
-        );
-
-        if (! $notification->wasRecentlyCreated && in_array($notification->status, ['failed', 'cancelled'], true)) {
-            $notification->update([
-                'parent_name' => $parentName,
-                'parent_phone' => $normalizedPhone,
-                'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
-                'status' => 'pending',
-                'last_error' => null,
-            ]);
-        }
-
-        if (blank($normalizedPhone)) {
-            $notification->update([
-                'status' => 'failed',
-                'last_error' => 'Nomor WhatsApp orang tua/wali tidak tersedia.',
-            ]);
-
-            return;
-        }
-
-        $notification->update([
-            'status' => 'pending',
-            'last_error' => null,
-            'parent_name' => $parentName,
-            'parent_phone' => $normalizedPhone,
-            'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
-        ]);
-
-        SendAlpaWhatsappNotificationJob::dispatch($notification->id);
-    }
-
     /**
      * @param  array<int, int>  $siswaIds
      */
@@ -528,13 +473,55 @@ class AbsensiController extends Controller
             return;
         }
 
-        Absensi::query()
+        $notificationIds = Absensi::query()
             ->with(['siswa', 'kelas'])
             ->where('tanggal', $tanggal)
             ->whereIn('siswa_id', array_unique($siswaIds))
             ->where('status', 'alpa')
             ->get()
-            ->each(fn (Absensi $absensi) => $this->queueAlpaWhatsappNotification($absensi));
+            ->map(fn (Absensi $absensi) => $this->upsertAlpaWhatsappNotification($absensi))
+            ->filter(fn (?int $id) => $id !== null)
+            ->values()
+            ->all();
+
+        if ($notificationIds !== []) {
+            SendAlpaWhatsappBatchJob::dispatch($notificationIds);
+        }
+    }
+
+    private function upsertAlpaWhatsappNotification(Absensi $absensi): ?int
+    {
+        $siswa = $absensi->siswa;
+
+        if (! $siswa) {
+            return null;
+        }
+
+        [$parentName, $parentPhone] = $this->resolveParentContact($siswa);
+        $normalizedPhone = $this->normalizeWhatsappNumber($parentPhone);
+        $hasPhone = filled($normalizedPhone);
+
+        $notification = WhatsappNotification::query()
+            ->firstOrNew([
+                'absensi_id' => $absensi->id,
+                'provider' => 'fonnte',
+            ]);
+
+        if ($notification->status === 'sent') {
+            return (int) $notification->id;
+        }
+
+        $notification->fill([
+            'siswa_id' => $absensi->siswa_id,
+            'parent_name' => $parentName,
+            'parent_phone' => $normalizedPhone,
+            'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
+            'status' => $hasPhone ? 'pending' : 'failed',
+            'last_error' => $hasPhone ? null : 'Nomor WhatsApp orang tua/wali tidak tersedia.',
+            'sent_at' => null,
+        ])->save();
+
+        return $hasPhone ? (int) $notification->id : null;
     }
 
     private function resolveParentContact(Siswa $siswa): array
