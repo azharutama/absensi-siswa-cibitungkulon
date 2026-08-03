@@ -42,10 +42,19 @@ class AbsensiController extends Controller
         $isLocked = false;
         $holidayMessage = null;
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        $periodeWarning = null;
 
-        if ($kelasId) {
-            $activePeriode = $this->activePeriodeOrFail($tanggal);
+        // Cek apakah ada periode aktif
+        $activePeriode = Periode::query()
+            ->whereDate('tanggal_mulai', '<=', $tanggal)
+            ->whereDate('tanggal_selesai', '>=', $tanggal)
+            ->first();
 
+        if (!$activePeriode) {
+            $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan input absensi.';
+        }
+
+        if ($kelasId && $activePeriode) {
             Kelas::query()
                 ->accessibleBy($request->user())
                 ->findOrFail($kelasId);
@@ -60,7 +69,7 @@ class AbsensiController extends Controller
             }
 
             $siswas = Siswa::query()
-                ->select(['id', 'nama_siswa'])
+                ->select(['id', 'nama_siswa', 'nisn'])
                 ->where('kelas_id', $kelasId)
                 ->orderBy('nama_siswa')
                 ->get();
@@ -86,7 +95,7 @@ class AbsensiController extends Controller
             }
         }
 
-        return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage'));
+        return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage', 'periodeWarning'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -204,10 +213,19 @@ class AbsensiController extends Controller
         $isLocked = false;
         $holidayMessage = null;
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        $periodeWarning = null;
 
-        if ($kelasId) {
-            $activePeriode = $this->activePeriodeOrFail($tanggal);
+        // Cek apakah ada periode aktif
+        $activePeriode = Periode::query()
+            ->whereDate('tanggal_mulai', '<=', $tanggal)
+            ->whereDate('tanggal_selesai', '>=', $tanggal)
+            ->first();
 
+        if (!$activePeriode) {
+            $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan edit absensi.';
+        }
+
+        if ($kelasId && $activePeriode) {
             Kelas::query()
                 ->accessibleBy($request->user())
                 ->findOrFail($kelasId);
@@ -222,7 +240,7 @@ class AbsensiController extends Controller
             }
 
             $siswas = Siswa::query()
-                ->select(['id', 'nama_siswa'])
+                ->select(['id', 'nama_siswa', 'nisn'])
                 ->where('kelas_id', $kelasId)
                 ->orderBy('nama_siswa')
                 ->get();
@@ -239,7 +257,7 @@ class AbsensiController extends Controller
             }
         }
 
-        return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage'));
+        return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage', 'periodeWarning'));
     }
 
     public function update(Request $request): RedirectResponse

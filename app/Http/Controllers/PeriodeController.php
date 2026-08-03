@@ -14,18 +14,39 @@ class PeriodeController extends Controller
 {
     public function index(Request $request)
     {
-        $periode = Periode::query()->latest('id')->first();
+        // Ambil tahun ajaran terbaru
+        $tahunAjaranTerbaru = Periode::query()
+            ->orderBy('tahun_ajaran', 'desc')
+            ->value('tahun_ajaran');
+
+        $semester1 = null;
+        $semester2 = null;
+
+        if ($tahunAjaranTerbaru) {
+            $semester1 = Periode::query()
+                ->where('tahun_ajaran', $tahunAjaranTerbaru)
+                ->where('semester', 1)
+                ->first();
+
+            $semester2 = Periode::query()
+                ->where('tahun_ajaran', $tahunAjaranTerbaru)
+                ->where('semester', 2)
+                ->first();
+        }
 
         $periodeData = [
-            'tahun_ajaran' => $periode?->tahun_ajaran ?? old('tahun_ajaran', ''),
-            'semester_1_tanggal_mulai' => $periode?->tanggal_mulai?->toDateString() ?? old('semester_1_tanggal_mulai', ''),
-            'semester_1_tanggal_selesai' => $periode?->tanggal_selesai?->toDateString() ?? old('semester_1_tanggal_selesai', ''),
-            'semester_2_tanggal_mulai' => $periode?->tanggal_mulai?->toDateString() ?? old('semester_2_tanggal_mulai', ''),
-            'semester_2_tanggal_selesai' => $periode?->tanggal_selesai?->toDateString() ?? old('semester_2_tanggal_selesai', ''),
+            'tahun_ajaran' => $semester1?->tahun_ajaran ?? $semester2?->tahun_ajaran ?? old('tahun_ajaran', ''),
+            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->toDateString() ?? old('semester_1_tanggal_mulai', ''),
+            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString() ?? old('semester_1_tanggal_selesai', ''),
+            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString() ?? old('semester_2_tanggal_mulai', ''),
+            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString() ?? old('semester_2_tanggal_selesai', ''),
         ];
 
         $liburMingguan = collect();
         $liburNasional = collect();
+
+        // Ambil periode yang pertama ditemukan untuk menampilkan hari libur
+        $periode = $semester1 ?? $semester2;
 
         if ($periode) {
             $liburMingguan = $periode->hariLiburs

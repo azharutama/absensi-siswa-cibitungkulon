@@ -128,7 +128,8 @@ class RekapController extends Controller
                 ->get()
                 ->keyBy('siswa_id');
 
-            $totalHariAktif = $this->hitungHariAktif($tanggalMulai, $tanggalBerakhir);
+            // Hitung total hari aktif dari seluruh periode aktif (tidak terpengaruh filter)
+            $totalHariAktif = $this->hitungHariAktifPeriode();
 
             $totalHariAbsensi = Absensi::query()
                 ->where('kelas_id', $kelasId)
@@ -230,6 +231,61 @@ private function getSemesterDateRange(int $semester): array
     }
 
     /**
+     * Hitung jumlah hari aktif dari seluruh tahun ajaran (semester 1 + semester 2)
+     * (tidak terpengaruh filter tanggal)
+     */
+    private function hitungHariAktifPeriode(): int
+    {
+        // Ambil tahun ajaran terbaru
+        $tahunAjaranTerbaru = Periode::query()
+            ->orderBy('tahun_ajaran', 'desc')
+            ->orderBy('semester', 'desc')
+            ->value('tahun_ajaran');
+
+        if (!$tahunAjaranTerbaru) {
+            return 0;
+        }
+
+        // Ambil periode semester 1 dan 2 dari tahun ajaran yang sama (terbaru)
+        $periodeSemester1 = Periode::query()
+            ->where('tahun_ajaran', $tahunAjaranTerbaru)
+            ->where('semester', 1)
+            ->first();
+
+        $periodeSemester2 = Periode::query()
+            ->where('tahun_ajaran', $tahunAjaranTerbaru)
+            ->where('semester', 2)
+            ->first();
+
+        // Jika tidak ada periode sama sekali, return 0
+        if (!$periodeSemester1 && !$periodeSemester2) {
+            return 0;
+        }
+
+        // Jika hanya ada semester 1
+        if ($periodeSemester1 && !$periodeSemester2) {
+            return $this->hitungHariAktif(
+                $periodeSemester1->tanggal_mulai->toDateString(),
+                $periodeSemester1->tanggal_selesai->toDateString()
+            );
+        }
+
+        // Jika hanya ada semester 2
+        if (!$periodeSemester1 && $periodeSemester2) {
+            return $this->hitungHariAktif(
+                $periodeSemester2->tanggal_mulai->toDateString(),
+                $periodeSemester2->tanggal_selesai->toDateString()
+            );
+        }
+
+        // Jika ada kedua semester, hitung dari semester 1 mulai sampai semester 2 selesai
+        $tanggalMulai = $periodeSemester1->tanggal_mulai->toDateString();
+        $tanggalBerakhir = $periodeSemester2->tanggal_selesai->toDateString();
+
+        return $this->hitungHariAktif($tanggalMulai, $tanggalBerakhir);
+    }
+
+    /**
      * Hitung jumlah hari aktif (hari di mana guru dapat mengisi absensi)
      * dengan mengeluarkan hari libur mingguan dan nasional dalam rentang tanggal.
      */
@@ -242,27 +298,40 @@ private function getSemesterDateRange(int $semester): array
             return 0;
         }
 
-        $periode = Periode::query()
-            ->whereDate('tanggal_mulai', '<=', $mulai->toDateString())
-            ->whereDate('tanggal_selesai', '>=', $mulai->toDateString())
-            ->first();
+        // Ambil semua periode yang termasuk dalam rentang tanggal
+        $periodes = Periode::query()
+            ->where(function ($query) use ($mulai, $akhir) {
+                $query->whereBetween('tanggal_mulai', [$mulai->toDateString(), $akhir->toDateString()])
+                    ->orWhereBetween('tanggal_selesai', [$mulai->toDateString(), $akhir->toDateString()])
+                    ->orWhere(function ($q) use ($mulai, $akhir) {
+                        $q->where('tanggal_mulai', '<=', $mulai->toDateString())
+                          ->where('tanggal_selesai', '>=', $akhir->toDateString());
+                    });
+            })
+            ->get();
 
         $hariLiburNasional = collect();
         $hariLiburMingguan = collect();
 
-        if ($periode) {
+        if ($periodes->isNotEmpty()) {
+            // Ambil semua hari libur nasional dari semua periode yang relevan
+            $periodeIds = $periodes->pluck('id');
+            
             $hariLiburNasional = HariLibur::query()
-                ->where('periode_id', $periode->id)
+                ->whereIn('periode_id', $periodeIds)
                 ->where('tipe', 'nasional')
                 ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
                 ->pluck('tanggal')
                 ->map(fn ($t) => $t instanceof Carbon ? $t->toDateString() : Carbon::parse($t)->toDateString())
+                ->unique()
                 ->values();
 
+            // Ambil semua hari libur mingguan dari semua periode yang relevan (gabungkan)
             $hariLiburMingguan = HariLibur::query()
-                ->where('periode_id', $periode->id)
+                ->whereIn('periode_id', $periodeIds)
                 ->where('tipe', 'mingguan')
                 ->pluck('hari')
+                ->unique()
                 ->values();
         }
 
