@@ -2,33 +2,6 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-            @if (Auth::user()->role === 'guru' && $kelasBelumAbsen->isNotEmpty())
-                <div class="mb-6 rounded-lg border-l-4 border-amber-500 bg-amber-50 p-4 shadow-sm" role="alert">
-                    <div class="flex items-start gap-3">
-                        <svg class="mt-0.5 h-6 w-6 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        <div class="min-w-0">
-                            <p class="text-sm font-semibold text-amber-800">
-                                Belum ada absensi hari ini ({{ now()->translatedFormat('l, d F Y') }})
-                            </p>
-                            <p class="mt-1 text-sm text-amber-700">
-                                Berikut kelas yang belum memasukkan data absensi:
-                            </p>
-                            <ul class="mt-2 flex flex-wrap gap-2">
-                                @foreach ($kelasBelumAbsen as $kelas)
-                                    <li>
-                                        <a href="{{ route('absensi.create', ['kelas_id' => $kelas->id, 'tanggal' => now()->toDateString()]) }}"
-                                           class="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 shadow-sm ring-1 ring-inset ring-amber-300 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500">
-                                            {{ $kelas->nama_kelas }}
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border-l-4 border-blue-500">
