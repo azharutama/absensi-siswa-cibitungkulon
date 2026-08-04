@@ -41,6 +41,10 @@ class DashboardController extends Controller
     {
         $tanggal = today()->toDateString();
 
+        if ($user->role !== 'guru') {
+            return collect();
+        }
+
         $periode = Periode::query()
             ->whereDate('tanggal_mulai', '<=', $tanggal)
             ->whereDate('tanggal_selesai', '>=', $tanggal)
