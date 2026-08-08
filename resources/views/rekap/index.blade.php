@@ -77,6 +77,10 @@
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-3">Filter Periode</label>
                     <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('rekap.index', ['preset' => 'today', 'kelas_id' => $kelasId]) }}" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'today' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                            Hari Ini
+                        </a>
                         <a href="{{ route('rekap.index', ['preset' => 'this_week', 'kelas_id' => $kelasId]) }}" 
                            class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'this_week' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                             Minggu Ini
@@ -135,7 +139,14 @@
         @if($kelasId)
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 gap-4 border-b border-gray-100 mb-4">
-                    <h3 class="font-bold text-gray-800 text-lg">Data Kehadiran Siswa</h3>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">Data Kehadiran Siswa</h3>
+                        <p class="text-sm text-gray-500 mt-0.5">
+                            {{ \Carbon\Carbon::parse($tanggalMulai)->format('d M Y') }}
+                            s/d
+                            {{ \Carbon\Carbon::parse($tanggalBerakhir)->format('d M Y') }}
+                        </p>
+                    </div>
                     <a href="{{ route('rekap.export', ['kelas_id' => $kelasId, 'preset' => 'custom', 'tanggal_mulai' => $tanggalMulai, 'tanggal_berakhir' => $tanggalBerakhir]) }}" download class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>

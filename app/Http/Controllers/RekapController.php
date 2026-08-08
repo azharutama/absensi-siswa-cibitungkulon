@@ -26,7 +26,7 @@ class RekapController extends Controller
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:this_week,this_month,semester_1,semester_2,custom'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
             'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
             'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
         ]);
@@ -79,7 +79,7 @@ class RekapController extends Controller
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:this_week,this_month,semester_1,semester_2,custom'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
             'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
             'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
         ]);
@@ -212,6 +212,10 @@ class RekapController extends Controller
         $today = today();
         
         return match($preset) {
+            'today' => [
+                $today->toDateString(),
+                $today->toDateString()
+            ],
             'this_week' => [
                 $today->copy()->startOfWeek()->toDateString(),
                 $today->copy()->endOfWeek()->toDateString()
