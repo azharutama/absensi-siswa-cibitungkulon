@@ -33,9 +33,6 @@
 
     {{-- Action Buttons --}}
     <div class="flex items-end gap-2">
-        <x-primary-button type="submit" class="flex-1">
-            Terapkan Filter
-        </x-primary-button>
         <x-secondary-button :href="$action">
             Reset
         </x-secondary-button>

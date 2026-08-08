@@ -37,10 +37,6 @@
         </div>
     </div>
     
-    <x-primary-button type="submit">
-        Cari
-    </x-primary-button>
-    
     <x-secondary-button :href="$resetUrl" x-show="showReset" x-cloak>
         Reset
     </x-secondary-button>
