@@ -33,19 +33,6 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/guru/{guru}', [GuruController::class, 'update'])->name('guru.update');
         Route::delete('/guru/{guru}', [GuruController::class, 'destroy'])->name('guru.destroy');
 
-        // Kelola Siswa
-        Route::get('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelasForm'])->name('siswa.ubah-kelas.form');
-        Route::post('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelas'])->name('siswa.ubah-kelas');
-        Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
-        Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
-        Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');
-        Route::get('/siswa', [SiswaController::class, 'index'])->name('siswa.index');
-        Route::get('/siswa/create', [SiswaController::class, 'create'])->name('siswa.create');
-        Route::post('/siswa', [SiswaController::class, 'store'])->name('siswa.store');
-        Route::get('/siswa/{siswa}/edit', [SiswaController::class, 'edit'])->name('siswa.edit');
-        Route::put('/siswa/{siswa}', [SiswaController::class, 'update'])->name('siswa.update');
-        Route::delete('/siswa/{siswa}', [SiswaController::class, 'destroy'])->name('siswa.destroy');
-
         // Kelola Kelas
         Route::get('/kelas', [KelasController::class, 'index'])->name('kelas.index');
         Route::get('/kelas/create', [KelasController::class, 'create'])->name('kelas.create');
@@ -61,6 +48,23 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/periode/{periode}', [PeriodeController::class, 'update'])->name('periode.update');
         Route::delete('/periode/{periode}', [PeriodeController::class, 'destroy'])->name('periode.destroy');
         Route::post('/periode/reset', [PeriodeController::class, 'reset'])->name('periode.reset');
+
+        // Kelola Siswa - operasi massal khusus operator
+        Route::get('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelasForm'])->name('siswa.ubah-kelas.form');
+        Route::post('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelas'])->name('siswa.ubah-kelas');
+        Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
+        Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
+        Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');
+    });
+
+    Route::middleware('role:operator,guru')->group(function () {
+        // Kelola Siswa - operator melihat semua, guru hanya kelas yang diajarnya
+        Route::get('/siswa', [SiswaController::class, 'index'])->name('siswa.index');
+        Route::get('/siswa/create', [SiswaController::class, 'create'])->name('siswa.create');
+        Route::post('/siswa', [SiswaController::class, 'store'])->name('siswa.store');
+        Route::get('/siswa/{siswa}/edit', [SiswaController::class, 'edit'])->name('siswa.edit');
+        Route::put('/siswa/{siswa}', [SiswaController::class, 'update'])->name('siswa.update');
+        Route::delete('/siswa/{siswa}', [SiswaController::class, 'destroy'])->name('siswa.destroy');
     });
 
     Route::middleware('role:guru')->group(function () {

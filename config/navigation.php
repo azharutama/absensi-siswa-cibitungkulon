@@ -15,6 +15,7 @@ return [
     'guru' => [
         ['label' => 'Dashboard', 'route' => 'dashboard'],
         ['label' => 'Absensi', 'route' => 'absensi.create'],
+        ['label' => 'Data Siswa', 'route' => 'siswa.index'],
         ['label' => 'Rekap Absensi', 'route' => 'rekap.index'],
         ['label' => 'Notifikasi WhatsApp', 'route' => 'notifikasi.index'],
     ],

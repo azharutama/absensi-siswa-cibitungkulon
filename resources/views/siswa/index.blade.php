@@ -47,13 +47,15 @@
                                   :value="request('search')"
                                   :preserve="request()->only(['kelas_id'])" />
 
-                        <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
-                            Ubah Kelas
-                        </a>
+                        @if(auth()->user()->role === 'operator')
+                            <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
+                                Ubah Kelas
+                            </a>
 
-                        <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
-                            Import Excel
-                        </a>
+                            <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
+                                Import Excel
+                            </a>
+                        @endif
 
                         <a href="{{ route('siswa.create') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
                             + Tambah Siswa

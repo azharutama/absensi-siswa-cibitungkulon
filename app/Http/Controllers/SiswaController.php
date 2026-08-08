@@ -47,6 +47,7 @@ class SiswaController extends Controller
             ->with([
                 'kelas:id,nama_kelas',
             ])
+            ->whereHas('kelas', fn ($query) => $query->accessibleBy($request->user()))
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('nama_siswa', 'like', "%{$search}%")
@@ -60,6 +61,7 @@ class SiswaController extends Controller
             ->withQueryString();
 
         $kelas = Kelas::query()
+            ->accessibleBy($request->user())
             ->select('id', 'nama_kelas')
             ->orderBy('nama_kelas')
             ->get();
@@ -159,6 +161,8 @@ class SiswaController extends Controller
 
     public function edit(Siswa $siswa): View
     {
+        $this->authorizeSiswaAccess($siswa);
+
         return view('siswa.edit', [
             'siswa' => $siswa,
             ...$this->formOptions(),
@@ -167,6 +171,8 @@ class SiswaController extends Controller
 
     public function update(Request $request, Siswa $siswa): RedirectResponse
     {
+        $this->authorizeSiswaAccess($siswa);
+
         $data = $this->validatedData($request, $siswa);
 
         $kelasSelected = $this->findKelas((int) $data['kelas_id']);
@@ -184,6 +190,8 @@ class SiswaController extends Controller
 
     public function destroy(Siswa $siswa): RedirectResponse
     {
+        $this->authorizeSiswaAccess($siswa);
+
         if ($siswa->absensis()->exists()) {
             return to_route('siswa.index')
                 ->with('error', 'Siswa yang memiliki riwayat absensi tidak dapat dihapus.');
@@ -291,6 +299,7 @@ class SiswaController extends Controller
     {
         return [
             'kelas' => Kelas::query()
+                ->accessibleBy(auth()->user())
                 ->select('id', 'nama_kelas')
                 ->orderBy('nama_kelas')
                 ->get(),
@@ -299,15 +308,32 @@ class SiswaController extends Controller
 
     private function findKelas(int $kelasId): Kelas
     {
-        $kelas = Kelas::query()->find($kelasId);
+        $kelas = Kelas::query()
+            ->accessibleBy(auth()->user())
+            ->find($kelasId);
 
         if (! $kelas) {
             throw ValidationException::withMessages([
-                'kelas_id' => 'Kelas tidak ditemukan.',
+                'kelas_id' => 'Kelas tidak ditemukan atau tidak dapat diakses.',
             ]);
         }
 
         return $kelas;
+    }
+
+    /**
+     * Memastikan guru/operator berhak mengelola data siswa di kelas tersebut.
+     */
+    private function authorizeSiswaAccess(Siswa $siswa): void
+    {
+        abort_unless(
+            Kelas::query()
+                ->accessibleBy(auth()->user())
+                ->whereKey($siswa->kelas_id)
+                ->exists(),
+            403,
+            'Akses ditolak. Siswa ini bukan bagian dari kelas yang Anda ampu.',
+        );
     }
 
     /**
