@@ -350,7 +350,7 @@ class AbsensiController extends Controller
         }
 
         if (! $hasChanges) {
-            return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+            return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('success', 'Tidak ada perubahan data absensi.');
         }
 
@@ -364,7 +364,7 @@ class AbsensiController extends Controller
 
         $this->queueAlpaNotificationsFor($alpaSiswaIds, $tanggal);
 
-        return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
+        return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data riwayat absensi berhasil diperbarui.');
     }
 

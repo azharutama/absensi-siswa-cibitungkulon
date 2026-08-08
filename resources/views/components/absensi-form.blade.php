@@ -41,9 +41,9 @@
         action="{{ $action }}" 
         @if(!$isLocked)
             data-confirm-message="Apakah Anda yakin semua data kehadiran sudah benar dan ingin melakukan {{ strtoupper($method) === 'PUT' ? 'perubahan/perbarui' : 'penyimpanan' }} data absensi ini?"
-            data-confirm-title="Konfirmasi Simpan"
-            data-confirm-text="Simpan"
-            data-confirm-color="green"
+            data-confirm-title="{{ strtoupper($method) === 'PUT' ? 'Konfirmasi Simpan Perubahan' : 'Konfirmasi Simpan' }}"
+            data-confirm-text="{{ strtoupper($method) === 'PUT' ? 'Simpan Perubahan' : 'Simpan' }}"
+            data-confirm-color="blue"
         @endif
     >
         @csrf
@@ -93,7 +93,7 @@
                             <tr class="hover:bg-gray-50/80 transition-colors" x-data="{ statusSiswa: '{{ $currentStatus }}' }">
                                 <td class="ps-6 pe-3 py-2.5 text-gray-400 font-medium text-base">{{ $index + 1 }}</td>
                                 <td class="ps-6 pe-3 py-2.5">
-                                    <p class="font-bold text-gray-800 text-base uppercase">{{ $siswa->nama_siswa }}</p>
+                                    <p class="font-bold text-gray-800 text-sm md:text-base uppercase">{{ $siswa->nama_siswa }}</p>
                                     <p class="text-sm text-gray-400">{{ $siswa->nisn ?? '-' }}</p>
                                 </td>
                                 <td class="px-3 py-2.5">

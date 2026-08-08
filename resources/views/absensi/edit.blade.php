@@ -1,6 +1,6 @@
 <x-app-layout>
     <div class="p-6 space-y-6">
-        <h2 class="text-xl font-bold text-gray-800">Edit / Perbarui Absensi</h2>
+        <h2 class="text-xl font-bold text-gray-800">Edit Absensi</h2>
         
         @if (session('success'))
             <div class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm">
@@ -43,7 +43,7 @@
                 :kelas="$kelas"
                 :kelasId="$kelasId" 
                 :tanggal="$tanggal" 
-                buttonText="Perbarui Data Absensi" 
+                buttonText="Simpan Perubahan" 
             />
         @elseif($kelasId && count($siswas) === 0 && !$holidayMessage && !$periodeWarning)
             <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
