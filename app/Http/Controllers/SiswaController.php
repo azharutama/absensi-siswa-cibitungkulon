@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Kelas;
 use App\Models\RiwayatKelasSiswa;
 use App\Models\Siswa;
+use App\Models\User;
 use App\Services\SiswaImportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -69,14 +70,14 @@ class SiswaController extends Controller
         return view('siswa.index', compact('siswas', 'kelas'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('siswa.create', $this->formOptions());
+        return view('siswa.create', $this->formOptions($request->user()));
     }
 
-    public function importForm(): View
+    public function importForm(Request $request): View
     {
-        return view('siswa.import', $this->formOptions());
+        return view('siswa.import', $this->formOptions($request->user()));
     }
 
     public function import(Request $request, SiswaImportService $importService): RedirectResponse
@@ -87,7 +88,7 @@ class SiswaController extends Controller
         ]);
 
         try {
-            $summary = $importService->import($data['file'], $this->findKelas((int) $data['kelas_id']));
+            $summary = $importService->import($data['file'], $this->findKelas((int) $data['kelas_id'], $request->user()));
         } catch (RuntimeException $exception) {
             return back()
                 ->with('error', $exception->getMessage());
@@ -146,7 +147,7 @@ class SiswaController extends Controller
     {
         $data = $this->validatedData($request);
 
-        $kelasSelected = $this->findKelas((int) $data['kelas_id']);
+        $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
 
         $data['kelas_id'] = $kelasSelected->id;
 
@@ -159,23 +160,23 @@ class SiswaController extends Controller
             ->with('success', 'Data siswa berhasil ditambahkan.');
     }
 
-    public function edit(Siswa $siswa): View
+    public function edit(Request $request, Siswa $siswa): View
     {
-        $this->authorizeSiswaAccess($siswa);
+        $this->authorizeSiswaAccess($siswa, $request->user());
 
         return view('siswa.edit', [
             'siswa' => $siswa,
-            ...$this->formOptions(),
+            ...$this->formOptions($request->user()),
         ]);
     }
 
     public function update(Request $request, Siswa $siswa): RedirectResponse
     {
-        $this->authorizeSiswaAccess($siswa);
+        $this->authorizeSiswaAccess($siswa, $request->user());
 
         $data = $this->validatedData($request, $siswa);
 
-        $kelasSelected = $this->findKelas((int) $data['kelas_id']);
+        $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
         $data['kelas_id'] = $kelasSelected->id;
 
         $oldData = $siswa->toArray();
@@ -188,9 +189,9 @@ class SiswaController extends Controller
             ->with('success', 'Data siswa berhasil diperbarui.');
     }
 
-    public function destroy(Siswa $siswa): RedirectResponse
+    public function destroy(Request $request, Siswa $siswa): RedirectResponse
     {
-        $this->authorizeSiswaAccess($siswa);
+        $this->authorizeSiswaAccess($siswa, $request->user());
 
         if ($siswa->absensis()->exists()) {
             return to_route('siswa.index')
@@ -295,21 +296,21 @@ class SiswaController extends Controller
     }
 
     /** @return array{kelas: Collection} */
-    private function formOptions(): array
+    private function formOptions(User $user): array
     {
         return [
             'kelas' => Kelas::query()
-                ->accessibleBy(auth()->user())
+                ->accessibleBy($user)
                 ->select('id', 'nama_kelas')
                 ->orderBy('nama_kelas')
                 ->get(),
         ];
     }
 
-    private function findKelas(int $kelasId): Kelas
+    private function findKelas(int $kelasId, User $user): Kelas
     {
         $kelas = Kelas::query()
-            ->accessibleBy(auth()->user())
+            ->accessibleBy($user)
             ->find($kelasId);
 
         if (! $kelas) {
@@ -324,11 +325,11 @@ class SiswaController extends Controller
     /**
      * Memastikan guru/operator berhak mengelola data siswa di kelas tersebut.
      */
-    private function authorizeSiswaAccess(Siswa $siswa): void
+    private function authorizeSiswaAccess(Siswa $siswa, User $user): void
     {
         abort_unless(
             Kelas::query()
-                ->accessibleBy(auth()->user())
+                ->accessibleBy($user)
                 ->whereKey($siswa->kelas_id)
                 ->exists(),
             403,
