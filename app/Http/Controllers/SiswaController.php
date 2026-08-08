@@ -57,7 +57,7 @@ class SiswaController extends Controller
                 });
             })
             ->when($filters['kelas_id'] ?? null, fn ($query, $kelasId) => $query->where('kelas_id', $kelasId))
-            ->latest('id')
+            ->orderBy('nama_siswa')
             ->paginate(15)
             ->withQueryString();
 
