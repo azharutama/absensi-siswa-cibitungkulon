@@ -71,7 +71,7 @@
                 <x-secondary-button :href="route('siswa.index')">
                     Batal
                 </x-secondary-button>
-                <x-primary-button :disabled="$kelas->isEmpty()">
+                <x-primary-button class="bg-green-600 hover:bg-green-700" :disabled="$kelas->isEmpty()">
                     {{ __('Import Data') }}
                 </x-primary-button>
             </div>

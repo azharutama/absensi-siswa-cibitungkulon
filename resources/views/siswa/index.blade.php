@@ -52,7 +52,7 @@
                                 Ubah Kelas
                             </a>
 
-                            <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
+                            <a href="{{ route('siswa.import.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 transition shrink-0">
                                 Import Excel
                             </a>
                         @endif
