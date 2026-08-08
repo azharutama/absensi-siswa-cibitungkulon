@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class GuruSeeder extends Seeder
 {
-    public const TOTAL_GURU = 40;
+    public const TOTAL_GURU = 15;
 
     public const DEFAULT_PASSWORD = 'password';
 

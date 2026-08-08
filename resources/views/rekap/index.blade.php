@@ -77,10 +77,6 @@
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-3">Filter Periode</label>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('rekap.index', ['preset' => 'today', 'kelas_id' => $kelasId]) }}" 
-                           class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'today' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            Hari Ini
-                        </a>
                         <a href="{{ route('rekap.index', ['preset' => 'this_week', 'kelas_id' => $kelasId]) }}" 
                            class="px-4 py-2 rounded-lg text-sm font-medium transition {{ ($preset ?? 'this_month') === 'this_week' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                             Minggu Ini
@@ -115,12 +111,12 @@
                         
                         <div class="w-full sm:w-48">
                             <label for="tanggal_mulai" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Mulai</label>
-                            <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggalMulai }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
+                            <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggalMulai }}" onchange="this.form.submit()" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
                         </div>
 
                         <div class="w-full sm:w-48">
                             <label for="tanggal_berakhir" class="block text-xs font-semibold text-gray-500 mb-1">Tanggal Berakhir</label>
-                            <input id="tanggal_berakhir" name="tanggal_berakhir" type="date" value="{{ $tanggalBerakhir }}" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
+                            <input id="tanggal_berakhir" name="tanggal_berakhir" type="date" value="{{ $tanggalBerakhir }}" onchange="this.form.submit()" class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500" />
                         </div>
 
                         <div class="flex gap-2 w-full sm:w-auto">
@@ -154,6 +150,17 @@
                     </a>
                 </div>
 
+                @if($hideRekapTabel)
+                    <div class="border border-dashed border-gray-200 p-12 text-center rounded-xl">
+                        <svg class="mx-auto h-10 w-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">Tidak Ada Data Rekap</p>
+                        <p class="text-sm text-gray-400">
+                            Tidak ada data absensi pada periode yang dipilih.
+                        </p>
+                    </div>
+                @else
                 {{-- Tabel rekap kehadiran siswa --}}
                 <div class="overflow-x-auto">
                     <table class="w-full text-center border border-gray-100 text-sm">
@@ -192,6 +199,7 @@
                         </tbody>
                     </table>
                 </div>
+                @endif
             </div>
         @else
             <!-- State Kosong / Belum Memilih Parameter -->

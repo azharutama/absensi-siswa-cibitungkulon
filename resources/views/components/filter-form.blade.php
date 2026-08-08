@@ -19,6 +19,7 @@
             <select 
                 id="filter-{{ $filter['name'] }}" 
                 name="{{ $filter['name'] }}" 
+                onchange="this.form.submit()"
                 class="block w-full rounded-md border-gray-300 text-sm focus:border-blue-500 focus:ring-blue-500">
                 <option value="">{{ $filter['placeholder'] ?? 'Semua' }}</option>
                 @foreach($filter['options'] as $value => $label)

@@ -30,7 +30,7 @@ class KelasSeeder extends Seeder
             ->keyBy('nip');
 
         if ($teachers->count() !== GuruSeeder::TOTAL_GURU) {
-            throw new RuntimeException('Seeder kelas memerlukan 40 akun guru.');
+            throw new RuntimeException('Seeder kelas memerlukan '.GuruSeeder::TOTAL_GURU.' akun guru.');
         }
 
         foreach (self::CLASS_NAMES as $classIndex => $className) {

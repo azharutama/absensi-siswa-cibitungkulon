@@ -28,7 +28,7 @@ class AbsensiSeeder extends Seeder
             ->pluck('user_id', 'kelas_id');
 
         if (! $activePeriod || $students->count() !== SiswaSeeder::TOTAL_SISWA) {
-            throw new RuntimeException('Seeder absensi memerlukan satu periode aktif dan 400 siswa.');
+            throw new RuntimeException('Seeder absensi memerlukan satu periode aktif dan '.SiswaSeeder::TOTAL_SISWA.' siswa.');
         }
 
         $rows = [];

@@ -4,7 +4,7 @@
             <form method="GET" action="{{ route('notifikasi.index') }}" class="flex flex-wrap items-end gap-4">
                 <div class="w-full sm:w-44">
                     <label for="kelas_id" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Kelas</label>
-                    <select id="kelas_id" name="kelas_id" class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <select id="kelas_id" name="kelas_id" onchange="this.form.submit()" class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="">Semua kelas</option>
                         @foreach($kelas as $item)
                             <option value="{{ $item->id }}" @selected((string) request('kelas_id') === (string) $item->id)>
@@ -21,6 +21,7 @@
                         name="tanggal_mulai"
                         type="date"
                         value="{{ request('tanggal_mulai') }}"
+                        onchange="this.form.submit()"
                         class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>
@@ -34,6 +35,7 @@
                         name="tanggal_berakhir"
                         type="date"
                         value="{{ request('tanggal_berakhir') }}"
+                        onchange="this.form.submit()"
                         class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                 </div>

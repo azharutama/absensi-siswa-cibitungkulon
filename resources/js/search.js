@@ -2,15 +2,23 @@ function initializeSearchForm(form) {
     const searchInput = form.querySelector("[data-search-input]");
     const resetButton = form.querySelector("[data-search-reset]");
 
-    if (!(searchInput instanceof HTMLInputElement) || !(resetButton instanceof HTMLElement)) {
+    if (!(searchInput instanceof HTMLInputElement)) {
         return;
     }
 
     const toggleResetButton = () => {
-        resetButton.classList.toggle("hidden", searchInput.value.trim().length === 0);
+        if (resetButton instanceof HTMLElement) {
+            resetButton.classList.toggle("hidden", searchInput.value.trim().length === 0);
+        }
     };
 
-    searchInput.addEventListener("input", toggleResetButton);
+    let debounceTimer = null;
+
+    searchInput.addEventListener("input", () => {
+        toggleResetButton();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => form.submit(), 500);
+    });
     toggleResetButton();
 }
 

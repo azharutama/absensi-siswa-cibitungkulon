@@ -9,23 +9,22 @@ use RuntimeException;
 
 class SiswaSeeder extends Seeder
 {
-    public const TOTAL_SISWA = 400;
+    public const TOTAL_SISWA = 30;
 
     public const PARENT_WHATSAPP = '081398431964';
 
     public const FIRST_NIS = '20260001';
 
-    public const LAST_NIS = '20260400';
+    public const LAST_NIS = '20260030';
 
     public function run(): void
     {
-        $classes = Kelas::query()
-            ->whereIn('nama_kelas', KelasSeeder::CLASS_NAMES)
-            ->orderBy('nama_kelas')
-            ->get();
+        $class = Kelas::query()
+            ->where('nama_kelas', '1-A')
+            ->first();
 
-        if ($classes->count() !== count(KelasSeeder::CLASS_NAMES)) {
-            throw new RuntimeException('Seeder siswa memerlukan 12 kelas yang sudah di-seed.');
+        if (! $class) {
+            throw new RuntimeException('Seeder siswa memerlukan kelas 1-A yang sudah di-seed.');
         }
 
         $faker = fake('id_ID');
@@ -35,7 +34,6 @@ class SiswaSeeder extends Seeder
 
         for ($number = 1; $number <= self::TOTAL_SISWA; $number++) {
             $isFemale = $number % 2 === 0;
-            $class = $classes[($number - 1) % $classes->count()];
             $hasGuardian = $number % 10 === 0;
 
             $rows[] = [

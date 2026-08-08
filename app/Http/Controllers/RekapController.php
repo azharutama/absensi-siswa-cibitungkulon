@@ -26,7 +26,7 @@ class RekapController extends Controller
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
+            'preset' => ['nullable', 'string', 'in:this_week,this_month,semester_1,semester_2,custom'],
             'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
             'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
         ]);
@@ -73,13 +73,13 @@ class RekapController extends Controller
     }
 
     /**
-     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_hari_masuk: int}>, totalHariAktif: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null}
+     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_hari_masuk: int}>, totalHariAktif: int, totalHariAbsensi: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null, hideRekapTabel: bool}
      */
     private function rekapData(Request $request): array
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
+            'preset' => ['nullable', 'string', 'in:this_week,this_month,semester_1,semester_2,custom'],
             'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
             'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
         ]);
@@ -111,6 +111,7 @@ class RekapController extends Controller
         $namaKelas = null;
         $totalHariAktif = 0;
         $totalHariAbsensi = 0;
+        $hideRekapTabel = false;
         $stats = [
             'rata_hadir' => 0,
             'total_sakit' => 0,
@@ -194,7 +195,11 @@ class RekapController extends Controller
             }
         }
 
-        return compact('kelas', 'rekapSiswa', 'totalHariAktif', 'totalHariAbsensi', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas', 'preset');
+        if ($kelasId && $totalHariAbsensi === 0) {
+            $hideRekapTabel = true;
+        }
+
+        return compact('kelas', 'rekapSiswa', 'totalHariAktif', 'totalHariAbsensi', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas', 'preset', 'hideRekapTabel');
     }
 
     /**
@@ -207,10 +212,6 @@ class RekapController extends Controller
         $today = today();
         
         return match($preset) {
-            'today' => [
-                $today->toDateString(),
-                $today->toDateString()
-            ],
             'this_week' => [
                 $today->copy()->startOfWeek()->toDateString(),
                 $today->copy()->endOfWeek()->toDateString()

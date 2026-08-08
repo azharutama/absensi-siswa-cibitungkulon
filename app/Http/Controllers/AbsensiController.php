@@ -479,7 +479,7 @@ class AbsensiController extends Controller
             ->whereIn('siswa_id', array_unique($siswaIds))
             ->where('status', 'alpa')
             ->get()
-            ->map(fn (Absensi $absensi) => $this->upsertAlpaWhatsappNotification($absensi))
+            ->flatMap(fn (Absensi $absensi) => $this->upsertAlpaWhatsappNotifications($absensi))
             ->filter(fn (?int $id) => $id !== null)
             ->values()
             ->all();
@@ -489,56 +489,110 @@ class AbsensiController extends Controller
         }
     }
 
-    private function upsertAlpaWhatsappNotification(Absensi $absensi): ?int
+    /**
+     * @return array<int, int>
+     */
+    private function upsertAlpaWhatsappNotifications(Absensi $absensi): array
     {
         $siswa = $absensi->siswa;
 
         if (! $siswa) {
-            return null;
+            return [];
         }
 
-        [$parentName, $parentPhone] = $this->resolveParentContact($siswa);
-        $normalizedPhone = $this->normalizeWhatsappNumber($parentPhone);
-        $hasPhone = filled($normalizedPhone);
+        $contacts = $this->resolveParentContacts($siswa);
+
+        if ($contacts === []) {
+            $this->unsentParentNotification($absensi);
+
+            return [];
+        }
+
+        $notificationIds = [];
+
+        foreach ($contacts as [$parentName, $parentPhone]) {
+            $notification = WhatsappNotification::query()
+                ->firstOrNew([
+                    'absensi_id' => $absensi->id,
+                    'provider' => 'fonnte',
+                    'parent_phone' => $parentPhone,
+                ]);
+
+            if ($notification->status === 'sent') {
+                $notificationIds[] = (int) $notification->id;
+                continue;
+            }
+
+            $notification->fill([
+                'siswa_id' => $absensi->siswa_id,
+                'parent_name' => $parentName,
+                'parent_phone' => $parentPhone,
+                'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
+                'status' => 'pending',
+                'last_error' => null,
+                'sent_at' => null,
+            ])->save();
+
+            $notificationIds[] = (int) $notification->id;
+        }
+
+        return $notificationIds;
+    }
+
+    private function unsentParentNotification(Absensi $absensi): void
+    {
+        $siswa = $absensi->siswa;
 
         $notification = WhatsappNotification::query()
             ->firstOrNew([
                 'absensi_id' => $absensi->id,
                 'provider' => 'fonnte',
+                'parent_phone' => null,
             ]);
 
         if ($notification->status === 'sent') {
-            return (int) $notification->id;
+            return;
         }
 
         $notification->fill([
             'siswa_id' => $absensi->siswa_id,
-            'parent_name' => $parentName,
-            'parent_phone' => $normalizedPhone,
-            'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
-            'status' => $hasPhone ? 'pending' : 'failed',
-            'last_error' => $hasPhone ? null : 'Nomor WhatsApp orang tua/wali tidak tersedia.',
+            'parent_name' => null,
+            'parent_phone' => null,
+            'message' => $this->buildAlpaWhatsappMessage($absensi, null),
+            'status' => 'failed',
+            'last_error' => 'Nomor WhatsApp orang tua/wali tidak tersedia.',
             'sent_at' => null,
         ])->save();
-
-        return $hasPhone ? (int) $notification->id : null;
     }
 
-    private function resolveParentContact(Siswa $siswa): array
+    /**
+     * Mengembalikan daftar kontak orang tua/wali yang unik (berdasarkan nomor
+     * WhatsApp yang sudah dinormalisasi), dengan urutan prioritas wali, ayah,
+     * lalu ibu.
+     *
+     * @return array<int, array{0: ?string, 1: string}>
+     */
+    private function resolveParentContacts(Siswa $siswa): array
     {
-        $contacts = [
+        $contacts = [];
+        $seen = [];
+
+        foreach ([
             [$siswa->nama_wali, $siswa->no_whatsapp_wali],
             [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
             [$siswa->nama_ibu, $siswa->no_whatsapp_ibu],
-        ];
+        ] as [$name, $phone]) {
+            $normalized = $this->normalizeWhatsappNumber($phone);
 
-        foreach ($contacts as [$name, $phone]) {
-            if (filled($phone)) {
-                return [$name, $phone];
+            if (blank($normalized) || isset($seen[$normalized])) {
+                continue;
             }
+
+            $seen[$normalized] = true;
+            $contacts[] = [$name, $normalized];
         }
 
-        return [null, null];
+        return $contacts;
     }
 
     private function normalizeWhatsappNumber(?string $phone): ?string
