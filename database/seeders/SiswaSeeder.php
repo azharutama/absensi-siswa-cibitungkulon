@@ -13,6 +13,8 @@ class SiswaSeeder extends Seeder
 
     public const PARENT_WHATSAPP = '081398431964';
 
+    public const MOTHER_WHATSAPP = '085697265714';
+
     public const FIRST_NIS = '20260001';
 
     public const LAST_NIS = '20260030';
@@ -45,7 +47,7 @@ class SiswaSeeder extends Seeder
                 'nama_ayah' => $faker->name('male'),
                 'no_whatsapp_ayah' => self::PARENT_WHATSAPP,
                 'nama_ibu' => $faker->name('female'),
-                'no_whatsapp_ibu' => self::PARENT_WHATSAPP,
+                'no_whatsapp_ibu' => self::MOTHER_WHATSAPP,
                 'nama_wali' => $hasGuardian ? $faker->name() : null,
                 'no_whatsapp_wali' => $hasGuardian ? self::PARENT_WHATSAPP : null,
                 'kelas_id' => $class->id,

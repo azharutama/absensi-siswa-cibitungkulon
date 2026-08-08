@@ -9,10 +9,16 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use RuntimeException;
 
 class SendAlpaWhatsappBatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $tries = 5;
+
+    /** @var array<int, int> Penundaan antar percobaan dalam detik. */
+    public $backoff = [60, 300, 900, 1800, 3600];
 
     /**
      * @param  array<int, int>  $notificationIds
@@ -80,6 +86,17 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
                 'last_error' => $result['success'] ? null : $result['message'],
                 'sent_at' => $result['success'] ? now() : null,
             ]);
+        }
+
+        $unresolved = WhatsappNotification::query()
+            ->whereIn('id', $this->notificationIds)
+            ->where('status', '!=', 'sent')
+            ->whereNotNull('parent_phone')
+            ->where('parent_phone', '!=', '')
+            ->exists();
+
+        if ($unresolved) {
+            throw new RuntimeException('Masih ada notifikasi WhatsApp yang belum terkirim. Akan dicoba kembali secara otomatis.');
         }
     }
 
