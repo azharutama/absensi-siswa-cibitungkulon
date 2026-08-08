@@ -80,7 +80,16 @@ export function openConfirmModal(options = {}) {
 
     pendingForm = formToSubmit;
 
-    form.setAttribute("method", formMethod);
+    form.setAttribute("method", "POST");
+
+    let methodInput = form.querySelector('input[name="_method"]');
+    if (!methodInput) {
+        methodInput = document.createElement("input");
+        methodInput.type = "hidden";
+        methodInput.name = "_method";
+        form.appendChild(methodInput);
+    }
+    methodInput.value = formMethod && formMethod !== "POST" ? formMethod : "";
 
     if (formAction) {
         let action;
@@ -110,6 +119,21 @@ export function openConfirmModal(options = {}) {
 export function closeConfirmModal(confirmed = false) {
     const { modal, form } = modalElements();
 
+    if (confirmed && pendingForm) {
+        const formToSubmit = pendingForm;
+        pendingForm = null;
+        formToSubmit.removeAttribute("data-confirm-message");
+        formToSubmit.removeAttribute("data-confirm-title");
+        formToSubmit.removeAttribute("data-confirm-text");
+        formToSubmit.removeAttribute("data-confirm-color");
+        formToSubmit.submit();
+    } else if (confirmed && form && form.hasAttribute("action")) {
+        pendingForm = null;
+        form.submit();
+    }
+
+    pendingForm = null;
+
     if (modal) {
         modal.classList.add("hidden");
         modal.setAttribute("aria-hidden", "true");
@@ -123,18 +147,6 @@ export function closeConfirmModal(confirmed = false) {
         returnFocusElement = null;
         bodyHadOverflowHidden = false;
     }
-
-    if (confirmed && pendingForm) {
-        const formToSubmit = pendingForm;
-        pendingForm = null;
-        formToSubmit.removeAttribute("data-confirm-message");
-        formToSubmit.removeAttribute("data-confirm-title");
-        formToSubmit.removeAttribute("data-confirm-text");
-        formToSubmit.removeAttribute("data-confirm-color");
-        formToSubmit.submit();
-    }
-
-    pendingForm = null;
 }
 
 document.addEventListener("submit", (event) => {
@@ -162,7 +174,7 @@ document.addEventListener("click", (event) => {
             confirmText: "Ya, Hapus Data",
             confirmColor: "red",
             formAction: openTrigger.dataset.deleteAction,
-            formMethod: "POST",
+            formMethod: "DELETE",
         });
         return;
     }
