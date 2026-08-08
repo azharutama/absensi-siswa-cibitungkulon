@@ -39,7 +39,7 @@ return [
         'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
         'token' => env('FONNTE_TOKEN'),
         'country_code' => env('FONNTE_COUNTRY_CODE', '62'),
-        'connect_only' => env('FONNTE_CONNECT_ONLY', true),
+        'connect_only' => env('FONNTE_CONNECT_ONLY', false),
         'timeout' => env('FONNTE_TIMEOUT', 15),
         'retention_days' => env('FONNTE_RETENTION_DAYS', 365),
     ],

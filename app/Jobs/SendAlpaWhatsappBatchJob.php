@@ -81,8 +81,8 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
 
             $notification->update([
                 'status' => $result['success'] ? 'sent' : 'failed',
-                'provider_message_id' => $this->stringValue(data_get($data, 'data.id')),
-                'provider_request_id' => $this->stringValue(data_get($data, 'data.requestid')),
+                'provider_message_id' => $this->stringValue(data_get($data, 'id.0')),
+                'provider_request_id' => $this->stringValue(data_get($data, 'requestid')),
                 'last_error' => $result['success'] ? null : $result['message'],
                 'sent_at' => $result['success'] ? now() : null,
             ]);

@@ -62,7 +62,7 @@
                             {{ $item->absensi?->kelas?->nama_kelas ?? '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
-                            {{ $item->maskedParentPhone() }}
+                            {{ $item->parent_phone ?: '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm border-b">
                             @php
