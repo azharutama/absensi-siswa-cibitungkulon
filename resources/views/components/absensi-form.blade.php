@@ -91,12 +91,12 @@
                                 $currentStatus = $initialStatuses[$siswa->id];
                             @endphp
                             <tr class="hover:bg-gray-50/80 transition-colors" x-data="{ statusSiswa: '{{ $currentStatus }}' }">
-                                <td class="ps-6 pe-3 py-2.5 text-gray-400 font-medium text-base">{{ $index + 1 }}</td>
-                                <td class="ps-6 pe-3 py-2.5">
-                                    <p class="font-bold text-gray-800 text-sm md:text-base uppercase">{{ $siswa->nama_siswa }}</p>
-                                    <p class="text-sm text-gray-400">{{ $siswa->nisn ?? '-' }}</p>
+                                <td class="ps-3 pe-2 py-2 text-gray-400 font-medium text-xs md:ps-6 md:pe-3 md:py-2.5 md:text-base">{{ $index + 1 }}</td>
+                                <td class="ps-3 pe-2 py-2 md:ps-6 md:pe-3 md:py-2.5">
+                                    <p class="font-bold text-gray-800 text-xs md:text-base uppercase leading-tight">{{ $siswa->nama_siswa }}</p>
+                                    <p class="text-[10px] md:text-sm text-gray-400">{{ $siswa->nisn ?? '-' }}</p>
                                 </td>
-                                <td class="px-3 py-2.5">
+                                <td class="px-2 py-2 md:px-3 md:py-2.5">
                                     @if($isLocked)
                                         <div class="flex justify-center">
                                             @if($currentStatus == 'hadir')
@@ -110,11 +110,11 @@
                                             @endif
                                         </div>
                                     @else
-                                        <div class="flex justify-center items-center gap-3">
+                                        <div class="flex justify-center items-center gap-1 md:gap-3">
                                             
                                             <label class="cursor-pointer relative flex items-center justify-center">
                                                 <input type="radio" name="absensi[{{ $siswa->id }}]" value="hadir" x-model="statusSiswa" @change="setStatus({{ $siswa->id }}, 'hadir')" aria-label="Hadir untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
-                                                <span class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
+                                                <span class="w-7 h-7 md:w-8 md:h-8 rounded-full border flex items-center justify-center text-xs md:text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                       :class="statusSiswa == 'hadir' ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                     H
                                                 </span>
@@ -122,7 +122,7 @@
 
                                             <label class="cursor-pointer relative flex items-center justify-center">
                                                 <input type="radio" name="absensi[{{ $siswa->id }}]" value="izin" x-model="statusSiswa" @change="setStatus({{ $siswa->id }}, 'izin')" aria-label="Izin untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
-                                                <span class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
+                                                <span class="w-7 h-7 md:w-8 md:h-8 rounded-full border flex items-center justify-center text-xs md:text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                       :class="statusSiswa == 'izin' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                     I
                                                 </span>
@@ -130,7 +130,7 @@
 
                                             <label class="cursor-pointer relative flex items-center justify-center">
                                                 <input type="radio" name="absensi[{{ $siswa->id }}]" value="sakit" x-model="statusSiswa" @change="setStatus({{ $siswa->id }}, 'sakit')" aria-label="Sakit untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
-                                                <span class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
+                                                <span class="w-7 h-7 md:w-8 md:h-8 rounded-full border flex items-center justify-center text-xs md:text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                       :class="statusSiswa == 'sakit' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                     S
                                                 </span>
@@ -138,7 +138,7 @@
 
                                             <label class="cursor-pointer relative flex items-center justify-center">
                                                 <input type="radio" name="absensi[{{ $siswa->id }}]" value="alpa" x-model="statusSiswa" @change="setStatus({{ $siswa->id }}, 'alpa')" aria-label="Alpa untuk {{ $siswa->nama_siswa }}" class="sr-only peer">
-                                                <span class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
+                                                <span class="w-7 h-7 md:w-8 md:h-8 rounded-full border flex items-center justify-center text-xs md:text-sm font-bold transition peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"
                                                       :class="statusSiswa == 'alpa' ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-gray-300 text-gray-500'">
                                                     A
                                                 </span>
