@@ -69,7 +69,7 @@ class GuruController extends Controller
             'nama' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'no_telepon' => 'required|numeric|unique:users,no_telepon',
-            'alamat' => 'nullable|string|max:255',
+            'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
             'password' => 'required|string|min:8|confirmed',
@@ -133,11 +133,11 @@ class GuruController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'nip' => 'nullable|numeric|unique:users,nip,'.$user->id,
+            'nip' => 'required|numeric|unique:users,nip,'.$user->id,
             'nama' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'no_telepon' => 'required|numeric|unique:users,no_telepon,'.$user->id,
-            'alamat' => 'nullable|string|max:255',
+            'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
             'password' => 'nullable|string|min:8|confirmed',

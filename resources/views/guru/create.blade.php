@@ -52,8 +52,8 @@
             </div>
 
             <div>
-                <x-input-label for="alamat" :value="__('Alamat Tempat Tinggal (Opsional)')" />
-                <textarea id="alamat" name="alamat" rows="3" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
+                <x-input-label for="alamat" :value="__('Alamat Tempat Tinggal *')" />
+                <textarea id="alamat" name="alamat" rows="3" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
                 <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
             </div>
 

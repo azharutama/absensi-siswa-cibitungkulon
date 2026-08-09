@@ -16,16 +16,15 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <x-input-label for="nis" :value="__('NIS (Opsional)')" />
-                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis')" placeholder="Contoh: 20260001" autofocus />
+                        <x-input-label for="nis" :value="__('NIS *')" />
+                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis')" placeholder="Contoh: 20260001" required autofocus />
                         <x-input-error class="mt-2" :messages="$errors->get('nis')" />
                     </div>
 
                     <div>
-                        <x-input-label for="nisn" :value="__('NISN (Opsional)')" />
-                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn')" placeholder="Contoh: 0099123456" />
+                        <x-input-label for="nisn" :value="__('NISN *')" />
+                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn')" placeholder="Contoh: 0099123456" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nisn')" />
-                        <p class="mt-2 text-xs text-gray-500">Isi minimal salah satu: NIS atau NISN.</p>
                     </div>
 
                     <div>
@@ -59,8 +58,8 @@
                 </div>
 
                 <div class="mt-4">
-                    <x-input-label for="alamat" :value="__('Alamat Rumah (Opsional)')" />
-                    <textarea id="alamat" name="alamat" rows="2" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
+                    <x-input-label for="alamat" :value="__('Alamat Rumah *')" />
+                    <textarea id="alamat" name="alamat" rows="2" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
                     <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
                 </div>
             </div>

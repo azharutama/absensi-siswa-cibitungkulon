@@ -196,15 +196,13 @@ class SiswaController extends Controller
     {
         $data = $request->validate([
             'nis' => [
-                'required_without:nisn',
-                'nullable',
+                'required',
                 'numeric',
                 'max_digits:50',
                 Rule::unique('siswas', 'nis')->ignore($siswa),
             ],
             'nisn' => [
-                'required_without:nis',
-                'nullable',
+                'required',
                 'numeric',
                 'max_digits:50',
                 Rule::unique('siswas', 'nisn')->ignore($siswa),
@@ -216,7 +214,7 @@ class SiswaController extends Controller
             'nama_ibu' => ['required', 'string', 'max:255'],
             'no_whatsapp_ibu' => ['nullable', 'numeric', 'max_digits:20'],
             'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-            'alamat' => ['nullable', 'string'],
+            'alamat' => ['required', 'string'],
         ]);
 
         if (blank($data['no_whatsapp_ayah']) && blank($data['no_whatsapp_ibu'])) {

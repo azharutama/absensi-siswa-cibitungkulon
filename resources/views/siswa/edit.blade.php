@@ -10,14 +10,14 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <x-input-label for="nis" :value="__('NIS (Nomor Induk Siswa) (Opsional)')" />
-                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis', $siswa->nis)" placeholder="Contoh: 20260001" />
+                        <x-input-label for="nis" :value="__('NIS (Nomor Induk Siswa) *')" />
+                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis', $siswa->nis)" placeholder="Contoh: 20260001" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nis')" />
                     </div>
 
                     <div>
-                        <x-input-label for="nisn" :value="__('NISN (Opsional)')" />
-                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn', $siswa->nisn)" placeholder="Contoh: 0099123456" />
+                        <x-input-label for="nisn" :value="__('NISN *')" />
+                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn', $siswa->nisn)" placeholder="Contoh: 0099123456" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nisn')" />
                     </div>
 
@@ -51,8 +51,8 @@
                 </div>
 
                 <div class="mt-4">
-                    <x-input-label for="alamat" :value="__('Alamat Rumah (Opsional)')" />
-                    <textarea id="alamat" name="alamat" rows="2" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat', $siswa->alamat) }}</textarea>
+                    <x-input-label for="alamat" :value="__('Alamat Rumah *')" />
+                    <textarea id="alamat" name="alamat" rows="2" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat', $siswa->alamat) }}</textarea>
                     <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
                 </div>
             </div>

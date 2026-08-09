@@ -30,6 +30,7 @@ class GuruSeeder extends Seeder
         $this->saveUser([
             'nama' => 'Operator SD',
             'nip' => '197001012005011001',
+            'address' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
             'email' => 'operator@gmail.com',
             'no_telepon' => '081200000001',
             'role' => 'operator',
@@ -45,6 +46,7 @@ class GuruSeeder extends Seeder
                     ? self::PRIMARY_TEACHER_NAME
                     : $faker->unique()->name($isFemale ? 'female' : 'male'),
                 'nip' => self::nipFor($number),
+                'address' => $faker->address(),
                 'email' => $number === 1
                     ? self::PRIMARY_TEACHER_EMAIL
                     : "guru{$number}@gmail.com",
@@ -58,6 +60,7 @@ class GuruSeeder extends Seeder
         $this->saveUser([
             'nama' => 'Kepala Sekolah',
             'nip' => '196001012005011001',
+            'address' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
             'email' => 'kepala.sekolah@gmail.com',
             'no_telepon' => '081299999999',
             'role' => 'kepala_sekolah',
