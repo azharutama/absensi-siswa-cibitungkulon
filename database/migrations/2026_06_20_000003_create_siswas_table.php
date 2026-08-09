@@ -16,9 +16,9 @@ return new class extends Migration
             $table->enum('jenis_kelamin', ['laki-laki', 'perempuan']);
             $table->text('alamat')->nullable();
             $table->string('nama_ayah');
-            $table->string('no_whatsapp_ayah');
+            $table->string('no_whatsapp_ayah')->nullable();
             $table->string('nama_ibu');
-            $table->string('no_whatsapp_ibu');
+            $table->string('no_whatsapp_ibu')->nullable();
             $table->foreignId('kelas_id')->constrained('kelas');
             $table->timestamps();
 

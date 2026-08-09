@@ -194,7 +194,7 @@ class SiswaController extends Controller
     /** @return array<string, mixed> */
     private function validatedData(Request $request, ?Siswa $siswa = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'nis' => [
                 'required_without:nisn',
                 'nullable',
