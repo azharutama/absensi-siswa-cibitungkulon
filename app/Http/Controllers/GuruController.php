@@ -25,7 +25,8 @@ class GuruController extends Controller
         $search = trim($filters['search'] ?? '');
 
         $query = User::query()
-            ->select(['id', 'nip', 'nama', 'no_telepon', 'role']);
+            ->select(['id', 'nip', 'nama', 'no_telepon', 'role', 'email', 'address'])
+            ->with('kelas:id,nama_kelas');
 
         // Cari berdasarkan nama, wa, atau nip
         if ($search !== '') {
@@ -233,7 +234,7 @@ class GuruController extends Controller
             $userData = $user->makeHidden('password')->toArray();
             $userName = $user->nama;
             $userId = $user->id;
-            
+
             $user->kelas()->detach();
             $user->delete();
 

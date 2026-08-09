@@ -35,7 +35,7 @@
                 </div>
 
                 @if($gurus->isNotEmpty())
-                    <x-table :headers="['No', 'NIP', 'Nama Lengkap', 'No. Telepon', 'Role Akses', 'Aksi']">
+                    <x-table :headers="['No', 'NIP', 'Nama Lengkap', 'Alamat', 'Email', 'No. Telepon', 'Role Akses', 'Kelas Diampu', 'Aksi']">
                         @foreach ($gurus as $index => $guru)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
@@ -47,6 +47,12 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">
                                     {{ $guru->nama }}
                                 </td>
+                                <td class="px-6 py-4 text-sm text-gray-500 border-b">
+                                    {{ $guru->alamat ?: '-' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
+                                    {{ $guru->email }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
                                     {{ $guru->no_telepon }}
                                 </td>
@@ -54,6 +60,13 @@
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800 uppercase">
                                         {{ str_replace('_', ' ', $guru->role) }}
                                     </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500 border-b">
+                                    @if($guru->kelas->isNotEmpty())
+                                        {{ $guru->kelas->pluck('nama_kelas')->implode(', ') }}
+                                    @else
+                                        -
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
                                     <a href="{{ route('guru.edit', $guru->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">
