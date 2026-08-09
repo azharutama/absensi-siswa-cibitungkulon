@@ -52,9 +52,6 @@ Route::middleware(['auth'])->group(function () {
         // Kelola Siswa - operasi massal khusus operator
         Route::get('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelasForm'])->name('siswa.ubah-kelas.form');
         Route::post('/siswa/ubah-kelas', [SiswaController::class, 'ubahKelas'])->name('siswa.ubah-kelas');
-        Route::get('/siswa/import', [SiswaController::class, 'importForm'])->name('siswa.import.form');
-        Route::post('/siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
-        Route::get('/siswa/template-import', [SiswaController::class, 'downloadTemplate'])->name('siswa.template-import');
     });
 
     Route::middleware('role:operator,guru')->group(function () {

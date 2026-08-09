@@ -45,7 +45,6 @@ return [
         'siswa.index' => 'Data Siswa',
         'siswa.create' => 'Tambah Siswa',
         'siswa.edit' => 'Edit Siswa',
-        'siswa.import.form' => 'Import Siswa',
         'kelas.index' => 'Data Kelas',
         'kelas.create' => 'Tambah Kelas',
         'kelas.edit' => 'Edit Kelas',

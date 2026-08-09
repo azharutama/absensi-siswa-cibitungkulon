@@ -9,7 +9,6 @@ use App\Models\Siswa;
 use App\Models\User;
 use App\Models\WhatsappNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -63,32 +62,6 @@ class DataIntegrityTest extends TestCase
         $this->assertSame('msg-1', $notification->provider_message_id);
         $this->assertSame('req-1', $notification->provider_request_id);
         Http::assertSentCount(1);
-    }
-
-    public function test_student_csv_import_uses_the_active_class(): void
-    {
-        $periode = Periode::factory()->create();
-        $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '4-A']);
-        $operator = User::factory()->operator()->create();
-        $csv = implode("\n", [
-            'nis,nisn,nama_siswa,jenis_kelamin,nama_ayah,no_whatsapp_ayah,nama_ibu,no_whatsapp_ibu,status',
-            '101,0012345678,Siswa Impor,L,Ayah Siswa,081234567890,Ibu Siswa,081234567891,aktif',
-        ]);
-
-        $this->actingAs($operator)
-            ->post(route('siswa.import'), [
-                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
-                'kelas_id' => $kelas->id,
-            ])
-            ->assertRedirect(route('siswa.index'));
-
-        $this->assertDatabaseHas('siswas', [
-            'nis' => '101',
-            'nisn' => '0012345678',
-            'nama_siswa' => 'Siswa Impor',
-            'kelas_id' => $kelas->id,
-            'periode_id' => $periode->id,
-        ]);
     }
 
     public function test_attendance_date_must_be_inside_the_class_period(): void
