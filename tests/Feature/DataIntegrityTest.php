@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Periode;
+use App\Models\Rekap;
+use App\Models\RiwayatKelasSiswa;
 use App\Models\Siswa;
 use App\Models\User;
 use App\Models\WhatsappNotification;
@@ -110,6 +112,50 @@ class DataIntegrityTest extends TestCase
 
         $response->assertSessionHasErrors('tanggal');
         $this->assertDatabaseCount('absensis', 0);
+    }
+
+    public function test_student_with_attendance_history_can_be_deleted(): void
+    {
+        $periode = Periode::factory()->create([
+            'nama_periode' => 'Semester Ganjil 2025/2026',
+        ]);
+        $kelas = Kelas::factory()->create(['nama_kelas' => '1-A']);
+        $operator = User::factory()->operator()->create();
+        $guru = User::factory()->guru()->create();
+        $siswa = Siswa::factory()->create([
+            'kelas_id' => $kelas->id,
+        ]);
+        $absensi = Absensi::factory()->create([
+            'siswa_id' => $siswa->id,
+            'kelas_id' => $kelas->id,
+            'user_id' => $guru->id,
+            'periode_id' => $periode->id,
+            'tanggal' => $periode->tanggal_mulai,
+        ]);
+        Rekap::factory()->create([
+            'absensi_id' => $absensi->id,
+            'user_id' => $operator->id,
+        ]);
+        RiwayatKelasSiswa::create([
+            'siswa_id' => $siswa->id,
+            'kelas_asal_id' => $kelas->id,
+            'kelas_tujuan_id' => $kelas->id,
+            'tanggal_kenaikan' => today(),
+            'status' => 'aktif',
+        ]);
+        WhatsappNotification::factory()->create([
+            'absensi_id' => $absensi->id,
+            'siswa_id' => $siswa->id,
+        ]);
+
+        $response = $this->actingAs($operator)->delete(route('siswa.destroy', $siswa));
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseMissing('siswas', ['id' => $siswa->id]);
+        $this->assertDatabaseMissing('absensis', ['id' => $absensi->id]);
+        $this->assertDatabaseMissing('rekap_absensis', ['absensi_id' => $absensi->id]);
+        $this->assertDatabaseMissing('riwayat_kelas_siswa', ['siswa_id' => $siswa->id]);
+        $this->assertDatabaseMissing('whatsapp_notifications', ['siswa_id' => $siswa->id]);
     }
 
     public function test_class_with_attendance_history_cannot_be_deleted_after_student_moves(): void

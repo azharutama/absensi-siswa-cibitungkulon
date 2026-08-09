@@ -120,15 +120,13 @@ class SiswaController extends Controller
     {
         $this->authorizeSiswaAccess($siswa, $request->user());
 
-        if ($siswa->absensis()->exists()) {
-            return to_route('siswa.index')
-                ->with('error', 'Siswa yang memiliki riwayat absensi tidak dapat dihapus.');
-        }
-
-        $siswaData = $siswa->toArray();
         $siswaName = $siswa->nama_siswa;
         $siswaId = $siswa->id;
-        $siswa->delete();
+
+        DB::transaction(function () use ($siswa): void {
+            $siswa->absensis()->delete();
+            $siswa->delete();
+        });
 
         // Log activity menggunakan trait
         $this->logDelete('Siswa', $siswaId, $siswaName);
