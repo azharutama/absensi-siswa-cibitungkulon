@@ -23,7 +23,6 @@ return [
     'kepala_sekolah' => [
         ['label' => 'Dashboard', 'route' => 'dashboard'],
         ['label' => 'Rekap Absensi', 'route' => 'rekap.index'],
-        ['label' => 'Log Aktivitas', 'route' => 'activity-logs.index'],
     ],
 
     'role_labels' => [
