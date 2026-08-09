@@ -133,9 +133,13 @@
                                             <td class="px-3 py-2 text-gray-500 text-center" x-text="index + 1"></td>
                                             <td class="px-2 py-1">
                                                 <select :name="`libur_mingguan[${index}][hari]`" x-model="item.hari" class="w-full text-xs p-1 rounded border-gray-300 focus:ring-indigo-500">
-                                                    <option value="Minggu">Minggu</option>
-                                                    <option value="Sabtu">Sabtu</option>
+                                                    <option value="Senin">Senin</option>
+                                                    <option value="Selasa">Selasa</option>
+                                                    <option value="Rabu">Rabu</option>
+                                                    <option value="Kamis">Kamis</option>
                                                     <option value="Jumat">Jumat</option>
+                                                    <option value="Sabtu">Sabtu</option>
+                                                    <option value="Minggu">Minggu</option>
                                                 </select>
                                             </td>
                                             <td class="px-2 py-1">
