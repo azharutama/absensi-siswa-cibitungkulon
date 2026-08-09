@@ -29,7 +29,7 @@ class PasswordResetLinkController extends Controller
     public function store(Request $request, FonnteService $fonnteService): RedirectResponse
     {
         $validated = $request->validate([
-            'no_telepon' => ['required', 'string', 'max:25'],
+            'no_telepon' => ['required', 'numeric', 'max_digits:25'],
         ]);
 
         $phoneNumber = trim($validated['no_telepon']);

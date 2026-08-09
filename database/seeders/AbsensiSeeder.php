@@ -16,7 +16,8 @@ class AbsensiSeeder extends Seeder
     public function run(): void
     {
         $activePeriod = Periode::query()
-            ->latest('id')
+            ->whereDate('tanggal_mulai', '<=', today())
+            ->orderByDesc('tanggal_mulai')
             ->first();
         $students = Siswa::query()
             ->with('kelas:id,nama_kelas')
@@ -43,8 +44,8 @@ class AbsensiSeeder extends Seeder
             $class = $student->kelas;
             $teacherId = $class ? $waliByClass->get($class->id) : null;
 
-            if (! $class || (int) $student->periode_id !== (int) $activePeriod->id || ! $teacherId) {
-                throw new RuntimeException('Kelas, periode, atau wali kelas siswa untuk data absensi tidak valid.');
+            if (! $class || ! $teacherId) {
+                throw new RuntimeException('Kelas atau wali kelas siswa untuk data absensi tidak valid.');
             }
 
             foreach ($dates as $dateIndex => $date) {
