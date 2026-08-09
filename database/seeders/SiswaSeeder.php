@@ -36,7 +36,6 @@ class SiswaSeeder extends Seeder
 
         for ($number = 1; $number <= self::TOTAL_SISWA; $number++) {
             $isFemale = $number % 2 === 0;
-            $hasGuardian = $number % 10 === 0;
 
             $rows[] = [
                 'nis' => sprintf('2026%04d', $number),
@@ -48,8 +47,6 @@ class SiswaSeeder extends Seeder
                 'no_whatsapp_ayah' => self::PARENT_WHATSAPP,
                 'nama_ibu' => $faker->name('female'),
                 'no_whatsapp_ibu' => self::MOTHER_WHATSAPP,
-                'nama_wali' => $hasGuardian ? $faker->name() : null,
-                'no_whatsapp_wali' => $hasGuardian ? self::PARENT_WHATSAPP : null,
                 'kelas_id' => $class->id,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -69,8 +66,6 @@ class SiswaSeeder extends Seeder
                     'no_whatsapp_ayah',
                     'nama_ibu',
                     'no_whatsapp_ibu',
-                    'nama_wali',
-                    'no_whatsapp_wali',
                     'kelas_id',
                     'updated_at',
                 ],

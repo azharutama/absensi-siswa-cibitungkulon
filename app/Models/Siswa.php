@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,8 +23,6 @@ class Siswa extends Model
         'no_whatsapp_ayah',
         'nama_ibu',
         'no_whatsapp_ibu',
-        'nama_wali',
-        'no_whatsapp_wali',
         'kelas_id',
     ];
 

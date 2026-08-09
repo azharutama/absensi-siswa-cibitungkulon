@@ -42,8 +42,6 @@ class DataIntegrityTest extends TestCase
             'periode_id' => $periode->id,
             'nama_ayah' => 'Bapak Siswa',
             'no_whatsapp_ayah' => '081234567890',
-            'nama_wali' => null,
-            'no_whatsapp_wali' => null,
         ]);
 
         $this->actingAs($guru)

@@ -18,8 +18,6 @@ class SiswaFactory extends Factory
             'no_whatsapp_ayah' => '08'.fake()->numerify('##########'),
             'nama_ibu' => fake()->name('female'),
             'no_whatsapp_ibu' => '08'.fake()->numerify('##########'),
-            'nama_wali' => null,
-            'no_whatsapp_wali' => null,
             'kelas_id' => Kelas::factory(),
         ];
     }

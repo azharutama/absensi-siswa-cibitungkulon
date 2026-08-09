@@ -520,6 +520,7 @@ class AbsensiController extends Controller
 
             if ($notification->status === 'sent') {
                 $notificationIds[] = (int) $notification->id;
+
                 continue;
             }
 
@@ -566,9 +567,8 @@ class AbsensiController extends Controller
     }
 
     /**
-     * Mengembalikan daftar kontak orang tua/wali yang unik (berdasarkan nomor
-     * WhatsApp yang sudah dinormalisasi), dengan urutan prioritas wali, ayah,
-     * lalu ibu.
+     * Mengembalikan daftar kontak orang tua yang unik (berdasarkan nomor
+     * WhatsApp yang sudah dinormalisasi), dengan urutan prioritas ayah lalu ibu.
      *
      * @return array<int, array{0: ?string, 1: string}>
      */
@@ -578,7 +578,6 @@ class AbsensiController extends Controller
         $seen = [];
 
         foreach ([
-            [$siswa->nama_wali, $siswa->no_whatsapp_wali],
             [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
             [$siswa->nama_ibu, $siswa->no_whatsapp_ibu],
         ] as [$name, $phone]) {

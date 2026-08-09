@@ -60,7 +60,7 @@
                  />
 
                  @if($siswas->isNotEmpty())
-                    <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Alamat', 'Nama Ayah', 'No. WA Ayah', 'Nama Ibu', 'No. WA Ibu', 'Nama Wali', 'No. WA Wali', 'Aksi']">
+                    <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Alamat', 'Nama Ayah', 'No. WA Ayah', 'Nama Ibu', 'No. WA Ibu', 'Aksi']">
                         @foreach ($siswas as $index => $siswa)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswas->firstItem() + $index }}</td>
@@ -75,8 +75,6 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b font-mono">{{ $siswa->no_whatsapp_ayah ?: '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->nama_ibu ?: '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b font-mono">{{ $siswa->no_whatsapp_ibu ?: '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">{{ $siswa->nama_wali ?: '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b font-mono">{{ $siswa->no_whatsapp_wali ?: '-' }}</td>
                                  <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2">
                                      <a href="{{ route('siswa.edit', $siswa->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">Edit</a>
                                     

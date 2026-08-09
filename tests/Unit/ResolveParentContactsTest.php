@@ -20,7 +20,6 @@ class ResolveParentContactsTest extends TestCase
     private function siswa(array $attributes = []): Siswa
     {
         return new Siswa(array_replace([
-            'no_whatsapp_wali' => null,
             'no_whatsapp_ayah' => null,
             'no_whatsapp_ibu' => null,
         ], $attributes));
@@ -29,8 +28,6 @@ class ResolveParentContactsTest extends TestCase
     public function test_it_collects_each_unique_parent_number_without_duplicates(): void
     {
         $contacts = $this->resolve($this->siswa([
-            'nama_wali' => 'Wali',
-            'no_whatsapp_wali' => null,
             'nama_ayah' => 'Ayah',
             'no_whatsapp_ayah' => '081234567890',
             'nama_ibu' => 'Ibu',
@@ -60,11 +57,9 @@ class ResolveParentContactsTest extends TestCase
         $this->assertSame([], $this->resolve($this->siswa()));
     }
 
-    public function test_priority_is_wali_then_ayah_then_ibu(): void
+    public function test_priority_is_ayah_then_ibu(): void
     {
         $contacts = $this->resolve($this->siswa([
-            'nama_wali' => 'Wali',
-            'no_whatsapp_wali' => '08111111111',
             'nama_ayah' => 'Ayah',
             'no_whatsapp_ayah' => '08122222222',
             'nama_ibu' => 'Ibu',
@@ -72,7 +67,6 @@ class ResolveParentContactsTest extends TestCase
         ]));
 
         $this->assertSame([
-            ['Wali', '628111111111'],
             ['Ayah', '628122222222'],
             ['Ibu', '628133333333'],
         ], $contacts);
