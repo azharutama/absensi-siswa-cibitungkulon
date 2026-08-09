@@ -19,8 +19,6 @@ return new class extends Migration
             $table->string('no_whatsapp_ayah');
             $table->string('nama_ibu');
             $table->string('no_whatsapp_ibu');
-            $table->string('nama_wali')->nullable();
-            $table->string('no_whatsapp_wali')->nullable();
             $table->foreignId('kelas_id')->constrained('kelas');
             $table->timestamps();
 
