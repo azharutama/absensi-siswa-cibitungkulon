@@ -23,7 +23,7 @@ class KelasSeeder extends Seeder
         $teachers = User::query()
             ->where('role', 'guru')
             ->whereIn('nip', array_map(
-                fn (int $number): string => sprintf('GURU%03d', $number),
+                fn (int $number): string => GuruSeeder::nipFor($number),
                 range(1, GuruSeeder::TOTAL_GURU),
             ))
             ->get()
@@ -50,7 +50,7 @@ class KelasSeeder extends Seeder
                 $teacherNumber <= GuruSeeder::TOTAL_GURU;
                 $teacherNumber += count(self::CLASS_NAMES)
             ) {
-                $teacher = $teachers->get(sprintf('GURU%03d', $teacherNumber));
+                $teacher = $teachers->get(GuruSeeder::nipFor($teacherNumber));
 
                 if (! $teacher) {
                     throw new RuntimeException('Guru untuk kelas demo tidak ditemukan.');

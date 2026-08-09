@@ -105,7 +105,7 @@
             </div>
 
             <div class="space-y-2 pt-4 border-t border-gray-200">
-                <h3 class="text-sm font-bold text-gray-900 mb-4">Hari Libur</h3>
+                <h3 class="text-sm font-bold text-gray-900 mb-4">Hari Libur (Opsional)</h3>
                 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     

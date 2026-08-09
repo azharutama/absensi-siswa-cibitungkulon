@@ -16,6 +16,11 @@ class GuruSeeder extends Seeder
 
     public const PRIMARY_TEACHER_NAME = 'Muhammad Azhar Utama';
 
+    public static function nipFor(int $number): string
+    {
+        return sprintf('1975%06d', $number);
+    }
+
     public function run(): void
     {
         $password = Hash::make(self::DEFAULT_PASSWORD);
@@ -24,7 +29,7 @@ class GuruSeeder extends Seeder
 
         $this->saveUser([
             'nama' => 'Operator SD',
-            'nip' => 'OPERATOR001',
+            'nip' => '197001012005011001',
             'email' => 'operator@gmail.com',
             'no_telepon' => '081200000001',
             'role' => 'operator',
@@ -39,7 +44,7 @@ class GuruSeeder extends Seeder
                 'nama' => $number === 1
                     ? self::PRIMARY_TEACHER_NAME
                     : $faker->unique()->name($isFemale ? 'female' : 'male'),
-                'nip' => sprintf('GURU%03d', $number),
+                'nip' => self::nipFor($number),
                 'email' => $number === 1
                     ? self::PRIMARY_TEACHER_EMAIL
                     : "guru{$number}@gmail.com",
@@ -52,7 +57,7 @@ class GuruSeeder extends Seeder
 
         $this->saveUser([
             'nama' => 'Kepala Sekolah',
-            'nip' => 'KEPSEK001',
+            'nip' => '196001012005011001',
             'email' => 'kepala.sekolah@gmail.com',
             'no_telepon' => '081299999999',
             'role' => 'kepala_sekolah',

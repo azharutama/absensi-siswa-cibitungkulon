@@ -6,31 +6,31 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <x-input-label for="nip" :value="__('NIP (Nomor Induk Pegawai)')" />
-                    <x-text-input id="nip" name="nip" type="text" class="mt-1 block w-full" :value="old('nip')" required autofocus />
+                    <x-input-label for="nip" :value="__('NIP (Nomor Induk Pegawai) *')" />
+                    <x-text-input id="nip" name="nip" type="text" class="mt-1 block w-full" :value="old('nip')" placeholder="Contoh: 197801012005011001" required autofocus />
                     <x-input-error class="mt-2" :messages="$errors->get('nip')" />
                 </div>
 
                 <div>
-                    <x-input-label for="nama" :value="__('Nama Lengkap')" />
-                    <x-text-input id="nama" name="nama" type="text" class="mt-1 block w-full" :value="old('nama')" required />
+                    <x-input-label for="nama" :value="__('Nama Lengkap *')" />
+                    <x-text-input id="nama" name="nama" type="text" class="mt-1 block w-full" :value="old('nama')" placeholder="Contoh: Ahmad Fauzi" required />
                     <x-input-error class="mt-2" :messages="$errors->get('nama')" />
                 </div>
 
                 <div>
-                    <x-input-label for="email" :value="__('Alamat Email')" />
-                    <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" required />
+                    <x-input-label for="email" :value="__('Alamat Email *')" />
+                    <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" placeholder="Contoh: guru@sekolah.sch.id" required />
                     <x-input-error class="mt-2" :messages="$errors->get('email')" />
                 </div>
 
                 <div>
-                    <x-input-label for="no_telepon" :value="__('No. Telepon / WhatsApp')" />
-                    <x-text-input id="no_telepon" name="no_telepon" type="text" class="mt-1 block w-full" :value="old('no_telepon')" required />
+                    <x-input-label for="no_telepon" :value="__('No. Telepon / WhatsApp *')" />
+                    <x-text-input id="no_telepon" name="no_telepon" type="text" class="mt-1 block w-full" :value="old('no_telepon')" placeholder="Contoh: 081234567890" required />
                     <x-input-error class="mt-2" :messages="$errors->get('no_telepon')" />
                 </div>
 
                 <div>
-                    <x-input-label for="jenis_kelamin" :value="__('Jenis Kelamin')" />
+                    <x-input-label for="jenis_kelamin" :value="__('Jenis Kelamin *')" />
                     <select id="jenis_kelamin" name="jenis_kelamin" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
                         <option value="" disabled selected>-- Pilih Jenis Kelamin --</option>
                         <option value="laki-laki" {{ old('jenis_kelamin') === 'laki-laki' ? 'selected' : '' }}>Laki-laki</option>
@@ -40,7 +40,7 @@
                 </div>
 
                 <div>
-                    <x-input-label for="role" :value="__('Hak Akses (Role)')" />
+                    <x-input-label for="role" :value="__('Hak Akses (Role) *')" />
                     <select id="role" name="role" data-role-select class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
                         <option value="" disabled selected>-- Pilih Role Akses --</option>
                         <option value="operator" {{ old('role') === 'operator' ? 'selected' : '' }}>Operator</option>
@@ -52,8 +52,8 @@
             </div>
 
             <div>
-                <x-input-label for="alamat" :value="__('Alamat Tempat Tinggal')" />
-                <textarea id="alamat" name="alamat" rows="3" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
+                <x-input-label for="alamat" :value="__('Alamat Tempat Tinggal (Opsional)')" />
+                <textarea id="alamat" name="alamat" rows="3" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
                 <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
             </div>
 
@@ -78,14 +78,14 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
                 <div>
-                    <x-input-label for="password" :value="__('Password Log In')" />
-                    <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" required autocomplete="new-password" />
+                    <x-input-label for="password" :value="__('Password Log In *')" />
+                    <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" placeholder="Minimal 8 karakter" required autocomplete="new-password" />
                     <x-input-error class="mt-2" :messages="$errors->get('password')" />
                 </div>
 
                 <div>
-                    <x-input-label for="password_confirmation" :value="__('Konfirmasi Password')" />
-                    <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" required />
+                    <x-input-label for="password_confirmation" :value="__('Konfirmasi Password *')" />
+                    <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" placeholder="Ulangi password" required />
                 </div>
             </div>
 

@@ -16,26 +16,26 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <x-input-label for="nis" :value="__('NIS')" />
-                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis')" autofocus />
+                        <x-input-label for="nis" :value="__('NIS (Opsional)')" />
+                        <x-text-input id="nis" name="nis" type="text" class="mt-1 block w-full" :value="old('nis')" placeholder="Contoh: 20260001" autofocus />
                         <x-input-error class="mt-2" :messages="$errors->get('nis')" />
                     </div>
 
                     <div>
-                        <x-input-label for="nisn" :value="__('NISN')" />
-                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn')" />
+                        <x-input-label for="nisn" :value="__('NISN (Opsional)')" />
+                        <x-text-input id="nisn" name="nisn" type="text" class="mt-1 block w-full" :value="old('nisn')" placeholder="Contoh: 0099123456" />
                         <x-input-error class="mt-2" :messages="$errors->get('nisn')" />
                         <p class="mt-2 text-xs text-gray-500">Isi minimal salah satu: NIS atau NISN.</p>
                     </div>
 
                     <div>
-                        <x-input-label for="nama_siswa" :value="__('Nama Lengkap Siswa')" />
-                        <x-text-input id="nama_siswa" name="nama_siswa" type="text" class="mt-1 block w-full" :value="old('nama_siswa')" required />
+                        <x-input-label for="nama_siswa" :value="__('Nama Lengkap Siswa *')" />
+                        <x-text-input id="nama_siswa" name="nama_siswa" type="text" class="mt-1 block w-full" :value="old('nama_siswa')" placeholder="Contoh: Ahmad Fauzi" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nama_siswa')" />
                     </div>
 
                     <div>
-                        <x-input-label for="kelas_id" :value="__('Kelas')" />
+                        <x-input-label for="kelas_id" :value="__('Kelas *')" />
                         <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
                             <option value="" disabled selected>-- Pilih Kelas --</option>
                             @foreach($kelas as $k)
@@ -48,7 +48,7 @@
                     </div>
 
                     <div>
-                        <x-input-label for="jenis_kelamin" :value="__('Jenis Kelamin')" />
+                        <x-input-label for="jenis_kelamin" :value="__('Jenis Kelamin *')" />
                         <select id="jenis_kelamin" name="jenis_kelamin" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
                             <option value="" disabled selected>-- Pilih Jenis Kelamin --</option>
                             <option value="laki-laki" {{ old('jenis_kelamin') === 'laki-laki' ? 'selected' : '' }}>Laki-laki</option>
@@ -59,8 +59,8 @@
                 </div>
 
                 <div class="mt-4">
-                    <x-input-label for="alamat" :value="__('Alamat Rumah')" />
-                    <textarea id="alamat" name="alamat" rows="2" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
+                    <x-input-label for="alamat" :value="__('Alamat Rumah (Opsional)')" />
+                    <textarea id="alamat" name="alamat" rows="2" placeholder="Contoh: Jl. Merdeka No. 10, Cibitung" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">{{ old('alamat') }}</textarea>
                     <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
                 </div>
             </div>
@@ -70,8 +70,8 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <x-input-label for="nama_ayah" :value="__('Nama Ayah')" />
-                        <x-text-input id="nama_ayah" name="nama_ayah" type="text" class="mt-1 block w-full" :value="old('nama_ayah')" required />
+                        <x-input-label for="nama_ayah" :value="__('Nama Ayah *')" />
+                        <x-text-input id="nama_ayah" name="nama_ayah" type="text" class="mt-1 block w-full" :value="old('nama_ayah')" placeholder="Contoh: Budi Santoso" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nama_ayah')" />
                     </div>
 
@@ -82,8 +82,8 @@
                     </div>
 
                     <div>
-                        <x-input-label for="nama_ibu" :value="__('Nama Ibu')" />
-                        <x-text-input id="nama_ibu" name="nama_ibu" type="text" class="mt-1 block w-full" :value="old('nama_ibu')" required />
+                        <x-input-label for="nama_ibu" :value="__('Nama Ibu *')" />
+                        <x-text-input id="nama_ibu" name="nama_ibu" type="text" class="mt-1 block w-full" :value="old('nama_ibu')" placeholder="Contoh: Siti Aminah" required />
                         <x-input-error class="mt-2" :messages="$errors->get('nama_ibu')" />
                     </div>
 

@@ -198,14 +198,14 @@ class SiswaController extends Controller
             'nis' => [
                 'required_without:nisn',
                 'nullable',
-                'string',
+                'numeric',
                 'max:50',
                 Rule::unique('siswas', 'nis')->ignore($siswa),
             ],
             'nisn' => [
                 'required_without:nis',
                 'nullable',
-                'string',
+                'numeric',
                 'max:50',
                 Rule::unique('siswas', 'nisn')->ignore($siswa),
             ],

@@ -65,7 +65,7 @@ class GuruController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nip' => 'required|string|unique:users,nip',
+            'nip' => 'required|numeric|unique:users,nip',
             'nama' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'no_telepon' => 'required|string|unique:users,no_telepon',
@@ -133,7 +133,7 @@ class GuruController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'nip' => 'nullable|string|unique:users,nip,'.$user->id,
+            'nip' => 'nullable|numeric|unique:users,nip,'.$user->id,
             'nama' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'no_telepon' => 'required|string|unique:users,no_telepon,'.$user->id,
