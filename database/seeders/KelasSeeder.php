@@ -43,25 +43,14 @@ class KelasSeeder extends Seeder
                 ],
             );
 
-            $teacherAssignments = [];
+            $teacherNumber = $classIndex + 1;
+            $teacher = $teachers->get(GuruSeeder::nipFor($teacherNumber));
 
-            for (
-                $teacherNumber = $classIndex + 1;
-                $teacherNumber <= GuruSeeder::TOTAL_GURU;
-                $teacherNumber += count(self::CLASS_NAMES)
-            ) {
-                $teacher = $teachers->get(GuruSeeder::nipFor($teacherNumber));
-
-                if (! $teacher) {
-                    throw new RuntimeException('Guru untuk kelas demo tidak ditemukan.');
-                }
-
-                $teacherAssignments[$teacher->id] = [
-                    'is_wali_kelas' => $teacherNumber === $classIndex + 1,
-                ];
+            if (! $teacher) {
+                throw new RuntimeException('Guru untuk kelas demo tidak ditemukan.');
             }
 
-            $kelas->gurus()->sync($teacherAssignments);
+            $kelas->update(['guru_id' => $teacher->id]);
         }
     }
 }

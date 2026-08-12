@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Kelas extends Model
@@ -17,6 +17,7 @@ class Kelas extends Model
     protected $fillable = [
         'nama_kelas',
         'status',
+        'guru_id',
     ];
 
     protected function casts(): array
@@ -31,9 +32,7 @@ class Kelas extends Model
     {
         return match ($user->role) {
             'operator', 'kepala_sekolah' => $query,
-            'guru' => $query->whereHas('gurus', function (Builder $query) use ($user): void {
-                $query->where('users.id', $user->getKey());
-            }),
+            'guru' => $query->where('guru_id', $user->getKey()),
             default => $query->whereRaw('1 = 0'),
         };
     }
@@ -58,10 +57,8 @@ class Kelas extends Model
         return $this->hasMany(RiwayatKelasSiswa::class, 'kelas_asal_id');
     }
 
-    public function gurus(): BelongsToMany
+    public function guru(): BelongsTo
     {
-        return $this->belongsToMany(User::class, 'kelas_user', 'kelas_id', 'user_id')
-            ->withPivot('is_wali_kelas')
-            ->withTimestamps();
+        return $this->belongsTo(User::class, 'guru_id');
     }
 }

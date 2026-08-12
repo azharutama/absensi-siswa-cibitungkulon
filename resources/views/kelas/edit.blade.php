@@ -12,22 +12,22 @@
             </div>
 
             <div>
-                <x-input-label for="guru_id" :value="__('Wali Kelas (Opsional)')" />
+                <x-input-label for="guru_id" :value="__('Guru (Opsional)')" />
                 <select id="guru_id" name="guru_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
-                    <option value="" {{ old('guru_id', $currentWaliId) ? '' : 'selected' }}>-- Belum ditentukan --</option>
+                    <option value="" {{ old('guru_id', $currentGuruId) ? '' : 'selected' }}>-- Belum ditentukan --</option>
                     @foreach($gurus as $guru)
-                        <option value="{{ $guru->id }}" {{ old('guru_id', $currentWaliId) == $guru->id ? 'selected' : '' }}>
+                        <option value="{{ $guru->id }}" {{ old('guru_id', $currentGuruId) == $guru->id ? 'selected' : '' }}>
                             {{ $guru->nama }} (NIP: {{ $guru->nip ?? '-' }})
                         </option>
                     @endforeach
                 </select>
                 @if($gurus->isEmpty())
                     <p class="mt-2 text-xs text-gray-500">
-                        Belum ada guru yang tersedia sebagai wali kelas.
+                        Belum ada guru yang tersedia.
                     </p>
                 @else
                     <p class="mt-2 text-xs text-gray-500">
-                        Wali kelas dapat dikosongkan sementara dan diatur kembali saat data guru sudah siap.
+                        Guru dapat dikosongkan sementara dan diatur kembali saat data guru sudah siap.
                     </p>
                 @endif
                 <x-input-error class="mt-2" :messages="$errors->get('guru_id')" />

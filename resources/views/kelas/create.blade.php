@@ -10,7 +10,7 @@
             </div>
 
             <div>
-                <x-input-label for="guru_id" :value="__('Wali Kelas (Opsional)')" />
+                <x-input-label for="guru_id" :value="__('Guru (Opsional)')" />
                 <select id="guru_id" name="guru_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
                     <option value="" selected>-- Belum ditentukan --</option>
                     @foreach($gurus as $guru)
@@ -21,7 +21,7 @@
                 </select>
                 @if($gurus->isEmpty())
                     <p class="mt-2 text-xs text-gray-500">
-                        Belum ada guru yang tersedia sebagai wali kelas. Kelas tetap bisa dibuat, lalu wali kelas dapat diatur setelah data guru tersedia.
+                        Belum ada guru yang tersedia. Kelas tetap bisa dibuat, lalu guru dapat diatur setelah data guru tersedia.
                     </p>
                 @endif
                 <x-input-error class="mt-2" :messages="$errors->get('guru_id')" />

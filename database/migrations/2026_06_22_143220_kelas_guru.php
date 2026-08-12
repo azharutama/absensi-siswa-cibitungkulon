@@ -8,24 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('kelas_user', function (Blueprint $table) {
-            $table->id();
-            // Menghubungkan ke tabel kelas
-            $table->foreignId('kelas_id')->constrained('kelas')->onDelete('cascade');
-            // Menghubungkan ke tabel users (guru)
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            // Kolom penanda apakah guru ini merupakan wali kelas di kelas tersebut
-            $table->boolean('is_wali_kelas')->default(false);
-            $table->timestamps();
-
-            $table->unique(['kelas_id', 'user_id']);
-            $table->index(['user_id', 'is_wali_kelas']);
-            $table->index(['kelas_id', 'is_wali_kelas']);
+        Schema::table('kelas', function (Blueprint $table) {
+            $table->foreignId('guru_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->index('guru_id');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('kelas_user');
+        Schema::table('kelas', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('guru_id');
+        });
     }
 };

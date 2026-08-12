@@ -34,9 +34,6 @@
                 @if($kelas->isNotEmpty())
                     <x-table :headers="['No', 'Nama Kelas', 'Wali Kelas', 'Aksi']">
                         @foreach ($kelas as $index => $k)
-                            @php
-                                $waliKelas = $k->gurus->first();
-                            @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b w-20">
                                     {{ $kelas->firstItem() + $index }}
@@ -45,7 +42,7 @@
                                     {{ $k->nama_kelas }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b">
-                                    {{ $waliKelas?->nama ?? 'Belum ditentukan' }}
+                                    {{ $k->guru?->nama ?? 'Belum ditentukan' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center border-b font-medium space-x-2 w-48">
                                     <a href="{{ route('kelas.edit', $k->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 transition">Edit</a>

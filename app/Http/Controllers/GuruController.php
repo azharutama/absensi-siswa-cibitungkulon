@@ -50,9 +50,10 @@ class GuruController extends Controller
      */
     public function create()
     {
-        // Tetap kirim data kelas untuk opsi checkbox di view
         $kelas = Kelas::query()
             ->select(['id', 'nama_kelas'])
+            ->whereNull('guru_id')
+            ->where('status', 'aktif')
             ->orderBy('nama_kelas')
             ->get();
 
@@ -73,10 +74,7 @@ class GuruController extends Controller
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
             'password' => 'required|string|min:8|confirmed',
-
-            // Relasi kelas boleh dilengkapi setelah data guru dan kelas tersedia.
-            'kelas' => 'nullable|array',
-            'kelas.*' => 'exists:kelas,id',
+            'kelas_id' => 'nullable|exists:kelas,id',
         ]);
 
         DB::transaction(function () use ($request): void {
@@ -91,8 +89,12 @@ class GuruController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            if ($user->role === 'guru' && $request->filled('kelas')) {
-                $this->syncKelasDiampu($user, $request->input('kelas', []));
+            if ($user->role === 'guru' && $request->filled('kelas_id')) {
+                $kelas = Kelas::where('id', $request->kelas_id)
+                    ->whereNull('guru_id')
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $kelas->update(['guru_id' => $user->id]);
             }
 
             // Log activity menggunakan trait
@@ -119,6 +121,11 @@ class GuruController extends Controller
 
         $kelas = Kelas::query()
             ->select(['id', 'nama_kelas'])
+            ->where(function ($query) use ($guru) {
+                $query->whereNull('guru_id')
+                    ->orWhere('guru_id', $guru->id);
+            })
+            ->where('status', 'aktif')
             ->orderBy('nama_kelas')
             ->get();
 
@@ -141,9 +148,7 @@ class GuruController extends Controller
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
             'password' => 'nullable|string|min:8|confirmed',
-
-            'kelas' => 'nullable|array',
-            'kelas.*' => 'exists:kelas,id',
+            'kelas_id' => 'nullable|exists:kelas,id',
         ]);
 
         $data = [
@@ -188,10 +193,32 @@ class GuruController extends Controller
             $oldData = $lockedUser->makeHidden('password')->toArray();
             $lockedUser->update($data);
 
+            // Handle kelas assignment for guru role
             if ($lockedUser->role === 'guru') {
-                $this->syncKelasDiampu($lockedUser, $request->input('kelas', []));
+                $currentKelasId = $lockedUser->kelas?->id;
+                $newKelasId = $request->filled('kelas_id') ? $request->integer('kelas_id') : null;
+
+                if ($currentKelasId && $currentKelasId !== $newKelasId) {
+                    // Release old kelas
+                    Kelas::where('id', $currentKelasId)->update(['guru_id' => null]);
+                }
+
+                if ($newKelasId && $currentKelasId !== $newKelasId) {
+                    // Assign new kelas
+                    $kelas = Kelas::where('id', $newKelasId)
+                        ->where(function ($query) use ($lockedUser) {
+                            $query->whereNull('guru_id')
+                                ->orWhere('guru_id', $lockedUser->id);
+                        })
+                        ->lockForUpdate()
+                        ->firstOrFail();
+                    $kelas->update(['guru_id' => $lockedUser->id]);
+                }
             } else {
-                $lockedUser->kelas()->detach();
+                // Release any kelas if not guru
+                if ($lockedUser->kelas) {
+                    Kelas::where('guru_id', $lockedUser->id)->update(['guru_id' => null]);
+                }
             }
 
             // Log activity menggunakan trait
@@ -235,7 +262,11 @@ class GuruController extends Controller
             $userName = $user->nama;
             $userId = $user->id;
 
-            $user->kelas()->detach();
+            // Release any kelas assignment
+            if ($user->kelas) {
+                Kelas::where('guru_id', $user->id)->update(['guru_id' => null]);
+            }
+
             $user->delete();
 
             // Log activity menggunakan trait
@@ -252,22 +283,5 @@ class GuruController extends Controller
         }
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil dihapus.');
-    }
-
-    private function syncKelasDiampu(User $user, array $kelasIds): void
-    {
-        $waliKelasIds = $user->kelas()
-            ->wherePivot('is_wali_kelas', true)
-            ->pluck('kelas.id')
-            ->all();
-
-        $syncData = [];
-        foreach (array_unique($kelasIds) as $kelasId) {
-            $syncData[$kelasId] = [
-                'is_wali_kelas' => in_array((int) $kelasId, array_map('intval', $waliKelasIds), true),
-            ];
-        }
-
-        $user->kelas()->sync($syncData);
     }
 }

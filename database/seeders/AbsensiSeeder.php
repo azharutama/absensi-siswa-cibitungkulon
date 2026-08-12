@@ -20,13 +20,10 @@ class AbsensiSeeder extends Seeder
             ->orderByDesc('tanggal_mulai')
             ->first();
         $students = Siswa::query()
-            ->with('kelas:id,nama_kelas')
+            ->with('kelas:id,nama_kelas,guru_id')
             ->whereBetween('nis', [SiswaSeeder::FIRST_NIS, SiswaSeeder::LAST_NIS])
             ->orderBy('nis')
             ->get();
-        $waliByClass = DB::table('kelas_user')
-            ->where('is_wali_kelas', true)
-            ->pluck('user_id', 'kelas_id');
 
         if (! $activePeriod || $students->count() !== SiswaSeeder::TOTAL_SISWA) {
             throw new RuntimeException('Seeder absensi memerlukan satu periode aktif dan '.SiswaSeeder::TOTAL_SISWA.' siswa.');
@@ -42,7 +39,7 @@ class AbsensiSeeder extends Seeder
 
         foreach ($students as $studentIndex => $student) {
             $class = $student->kelas;
-            $teacherId = $class ? $waliByClass->get($class->id) : null;
+            $teacherId = $class?->guru_id;
 
             if (! $class || ! $teacherId) {
                 throw new RuntimeException('Kelas atau wali kelas siswa untuk data absensi tidak valid.');

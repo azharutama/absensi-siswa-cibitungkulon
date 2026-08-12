@@ -58,22 +58,21 @@
             </div>
 
             <div id="kelas-section" data-kelas-section aria-hidden="true" class="hidden bg-gray-50 p-4 rounded-md border border-gray-200">
-                <h3 class="text-sm font-medium text-gray-700 mb-2 font-semibold">Pilih Kelas Yang Diampu (Opsional):</h3>
-                @if($kelas->isNotEmpty())
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        @foreach($kelas as $k)
-                            <label class="inline-flex items-center text-sm text-gray-600 cursor-pointer">
-                                <input type="checkbox" name="kelas[]" value="{{ $k->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" {{ is_array(old('kelas')) && in_array($k->id, old('kelas')) ? 'checked' : '' }}>
-                                <span class="ms-2">{{ $k->nama_kelas }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="text-sm text-gray-500">
-                        Belum ada data kelas. Guru tetap bisa disimpan, lalu kelas diampu dapat dilengkapi setelah kelas dibuat.
+                <x-input-label for="kelas_id" :value="__('Kelas yang Diampu (Opsional)')" />
+                <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
+                    <option value="" selected>-- Belum ditentukan --</option>
+                    @foreach($kelas as $k)
+                        <option value="{{ $k->id }}" {{ old('kelas_id') == $k->id ? 'selected' : '' }}>
+                            {{ $k->nama_kelas }}
+                        </option>
+                    @endforeach
+                </select>
+                @if($kelas->isEmpty())
+                    <p class="mt-2 text-xs text-gray-500">
+                        Belum ada kelas yang tersedia. Kelas dapat ditambahkan setelah data guru dibuat.
                     </p>
                 @endif
-                <x-input-error class="mt-2" :messages="$errors->get('kelas')" />
+                <x-input-error class="mt-2" :messages="$errors->get('kelas_id')" />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">

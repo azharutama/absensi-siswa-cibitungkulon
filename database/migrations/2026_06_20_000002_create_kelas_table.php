@@ -12,11 +12,13 @@ return new class extends Migration
             $table->id();
             $table->string('nama_kelas');
             $table->string('status')->default('aktif');
+            $table->foreignId('guru_id')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
 
             $table->unique('nama_kelas');
             $table->index('nama_kelas');
             $table->index('status');
+            $table->index('guru_id');
         });
     }
 

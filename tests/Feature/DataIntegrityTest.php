@@ -38,7 +38,7 @@ class DataIntegrityTest extends TestCase
         ]);
         $kelas = Kelas::factory()->for($periode)->create();
         $guru = User::factory()->guru()->create();
-        $kelas->gurus()->attach($guru, ['is_wali_kelas' => true]);
+        $kelas->update(['guru_id' => $guru->id]);
         $siswa = Siswa::factory()->create([
             'kelas_id' => $kelas->id,
             'periode_id' => $periode->id,
@@ -73,7 +73,7 @@ class DataIntegrityTest extends TestCase
         ]);
         $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '1-A']);
         $guru = User::factory()->guru()->create();
-        $kelas->gurus()->attach($guru, ['is_wali_kelas' => true]);
+        $kelas->update(['guru_id' => $guru->id]);
         $siswa = Siswa::factory()->create([
             'kelas_id' => $kelas->id,
             'periode_id' => $periode->id,
@@ -98,7 +98,7 @@ class DataIntegrityTest extends TestCase
         ]);
         $kelas = Kelas::factory()->for($periode)->create(['nama_kelas' => '1-A']);
         $guru = User::factory()->guru()->create();
-        $kelas->gurus()->attach($guru, ['is_wali_kelas' => true]);
+        $kelas->update(['guru_id' => $guru->id]);
         $siswa = Siswa::factory()->create([
             'kelas_id' => $kelas->id,
             'periode_id' => $periode->id,
