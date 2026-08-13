@@ -569,7 +569,7 @@ class AbsensiController extends Controller
 
     /**
      * Mengembalikan daftar kontak orang tua yang unik (berdasarkan nomor
-     * WhatsApp yang sudah dinormalisasi), dengan urutan prioritas ayah lalu ibu.
+     * WhatsApp yang sudah dinormalisasi), dengan urutan prioritas ibu lalu ayah.
      *
      * @return array<int, array{0: ?string, 1: string}>
      */

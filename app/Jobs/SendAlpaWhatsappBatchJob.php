@@ -145,7 +145,7 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
 
     private function extractFallback(string $message): ?array
     {
-        if (! preg_match('/\[Fallback: ([^-\]]+) - ([^\]]+)\]/', $message, $matches)) {
+        if (! preg_match('/\[Fallback: ([^\]]+) - ([^\]]+)\]/', $message, $matches)) {
             return null;
         }
 
@@ -157,8 +157,8 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
 
     private function createFallbackNotification(WhatsappNotification $original, array $fallback): WhatsappNotification
     {
-        $message = preg_replace('/\n\n\[Fallback: [^\]]+\]/', '', $original->message);
-        $message = str_replace($original->parent_name ?? 'Bapak/Ibu Orang Tua/Wali', $fallback['name'], $message);
+        $cleanMessage = preg_replace('/\n\n\[Fallback: [^\]]+\]/', '', $original->message);
+        $message = $this->buildFallbackMessage($cleanMessage, $fallback['name'], $original);
 
         return WhatsappNotification::create([
             'absensi_id' => $original->absensi_id,
@@ -172,6 +172,27 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
             'last_error' => null,
             'sent_at' => null,
         ]);
+    }
+
+    private function buildFallbackMessage(string $originalMessage, string $fallbackName, WhatsappNotification $original): string
+    {
+        $siswa = $original->siswa;
+        $absensiId = $original->absensi_id;
+
+        if (! $siswa || ! $absensiId) {
+            return str_replace(
+                $original->parent_name ?? 'Bapak/Ibu Orang Tua/Wali',
+                $fallbackName,
+                $originalMessage
+            );
+        }
+
+        return preg_replace(
+            '/Assalamu\'alaikum [^,\n]+,/',
+            "Assalamu'alaikum {$fallbackName},",
+            $originalMessage,
+            1
+        );
     }
 
     private function stringValue(mixed $value): ?string
