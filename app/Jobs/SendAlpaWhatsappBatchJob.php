@@ -70,7 +70,9 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
             return;
         }
 
-        foreach ($fonnteService->sendMessages($items) as $id => $result) {
+        $results = $fonnteService->sendMessages($items);
+
+        foreach ($results as $id => $result) {
             $notification = $notifications->get((int) $id);
 
             if (! $notification) {
@@ -79,12 +81,53 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
 
             $data = $result['data'] ?? [];
 
+            if ($result['success']) {
+                $notification->update([
+                    'status' => 'sent',
+                    'provider_message_id' => $this->stringValue(data_get($data, 'id.0')),
+                    'provider_request_id' => $this->stringValue(data_get($data, 'requestid')),
+                    'last_error' => null,
+                    'sent_at' => now(),
+                ]);
+                continue;
+            }
+
+            $fallback = $this->extractFallback($notification->message);
+
+            if ($fallback) {
+                $fallbackNotification = $this->createFallbackNotification($notification, $fallback);
+                $fallbackResult = $fonnteService->sendMessage($fallback['phone'], $fallbackNotification->message);
+
+                if ($fallbackResult['success']) {
+                    $fallbackNotification->update([
+                        'status' => 'sent',
+                        'provider_message_id' => $this->stringValue(data_get($fallbackResult['data'], 'id.0')),
+                        'provider_request_id' => $this->stringValue(data_get($fallbackResult['data'], 'requestid')),
+                        'last_error' => null,
+                        'sent_at' => now(),
+                    ]);
+                    $notification->update([
+                        'status' => 'cancelled',
+                        'last_error' => 'Dikirim ke nomor cadangan ('.$fallback['name'].').',
+                    ]);
+                    continue;
+                }
+
+                $fallbackNotification->update([
+                    'status' => 'failed',
+                    'provider_message_id' => $this->stringValue(data_get($fallbackResult['data'], 'id.0')),
+                    'provider_request_id' => $this->stringValue(data_get($fallbackResult['data'], 'requestid')),
+                    'last_error' => $fallbackResult['message'],
+                    'sent_at' => null,
+                ]);
+            }
+
             $notification->update([
-                'status' => $result['success'] ? 'sent' : 'failed',
+                'status' => 'failed',
                 'provider_message_id' => $this->stringValue(data_get($data, 'id.0')),
                 'provider_request_id' => $this->stringValue(data_get($data, 'requestid')),
-                'last_error' => $result['success'] ? null : $result['message'],
-                'sent_at' => $result['success'] ? now() : null,
+                'last_error' => $result['message'],
+                'sent_at' => null,
             ]);
         }
 
@@ -98,6 +141,37 @@ class SendAlpaWhatsappBatchJob implements ShouldQueue
         if ($unresolved) {
             throw new RuntimeException('Masih ada notifikasi WhatsApp yang belum terkirim. Akan dicoba kembali secara otomatis.');
         }
+    }
+
+    private function extractFallback(string $message): ?array
+    {
+        if (! preg_match('/\[Fallback: ([^-\]]+) - ([^\]]+)\]/', $message, $matches)) {
+            return null;
+        }
+
+        return [
+            'name' => trim($matches[1]),
+            'phone' => trim($matches[2]),
+        ];
+    }
+
+    private function createFallbackNotification(WhatsappNotification $original, array $fallback): WhatsappNotification
+    {
+        $message = preg_replace('/\n\n\[Fallback: [^\]]+\]/', '', $original->message);
+        $message = str_replace($original->parent_name ?? 'Bapak/Ibu Orang Tua/Wali', $fallback['name'], $message);
+
+        return WhatsappNotification::create([
+            'absensi_id' => $original->absensi_id,
+            'siswa_id' => $original->siswa_id,
+            'parent_name' => $fallback['name'],
+            'parent_phone' => $fallback['phone'],
+            'message' => $message,
+            'status' => 'processing',
+            'provider' => $original->provider,
+            'attempts' => 1,
+            'last_error' => null,
+            'sent_at' => null,
+        ]);
     }
 
     private function stringValue(mixed $value): ?string

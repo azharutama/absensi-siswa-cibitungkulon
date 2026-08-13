@@ -508,36 +508,37 @@ class AbsensiController extends Controller
             return [];
         }
 
-        $notificationIds = [];
+        $primary = $contacts[0];
+        $fallback = $contacts[1] ?? null;
 
-        foreach ($contacts as [$parentName, $parentPhone]) {
-            $notification = WhatsappNotification::query()
-                ->firstOrNew([
-                    'absensi_id' => $absensi->id,
-                    'provider' => 'fonnte',
-                    'parent_phone' => $parentPhone,
-                ]);
+        $notification = WhatsappNotification::query()
+            ->firstOrNew([
+                'absensi_id' => $absensi->id,
+                'provider' => 'fonnte',
+                'parent_phone' => $primary[1],
+            ]);
 
-            if ($notification->status === 'sent') {
-                $notificationIds[] = (int) $notification->id;
-
-                continue;
-            }
-
-            $notification->fill([
-                'siswa_id' => $absensi->siswa_id,
-                'parent_name' => $parentName,
-                'parent_phone' => $parentPhone,
-                'message' => $this->buildAlpaWhatsappMessage($absensi, $parentName),
-                'status' => 'pending',
-                'last_error' => null,
-                'sent_at' => null,
-            ])->save();
-
-            $notificationIds[] = (int) $notification->id;
+        if ($notification->status === 'sent') {
+            return [(int) $notification->id];
         }
 
-        return $notificationIds;
+        $message = $this->buildAlpaWhatsappMessage($absensi, $primary[0]);
+
+        if ($fallback) {
+            $message .= "\n\n[Fallback: {$fallback[0]} - {$fallback[1]}]";
+        }
+
+        $notification->fill([
+            'siswa_id' => $absensi->siswa_id,
+            'parent_name' => $primary[0],
+            'parent_phone' => $primary[1],
+            'message' => $message,
+            'status' => 'pending',
+            'last_error' => null,
+            'sent_at' => null,
+        ])->save();
+
+        return [(int) $notification->id];
     }
 
     private function unsentParentNotification(Absensi $absensi): void
@@ -578,8 +579,8 @@ class AbsensiController extends Controller
         $seen = [];
 
         foreach ([
-            [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
             [$siswa->nama_ibu, $siswa->no_whatsapp_ibu],
+            [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
         ] as [$name, $phone]) {
             $normalized = $this->normalizeWhatsappNumber($phone);
 

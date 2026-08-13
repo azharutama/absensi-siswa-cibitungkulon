@@ -34,7 +34,7 @@ class ResolveParentContactsTest extends TestCase
             'no_whatsapp_ibu' => '081234567890',
         ]));
 
-        $this->assertSame([['Ayah', '6281234567890']], $contacts);
+        $this->assertSame([['Ibu', '6281234567890']], $contacts);
     }
 
     public function test_it_normalizes_local_to_international_format(): void
@@ -47,8 +47,8 @@ class ResolveParentContactsTest extends TestCase
         ]));
 
         $this->assertSame([
-            ['Ayah', '6281234567890'],
             ['Ibu', '6281298765432'],
+            ['Ayah', '6281234567890'],
         ], $contacts);
     }
 
@@ -57,7 +57,7 @@ class ResolveParentContactsTest extends TestCase
         $this->assertSame([], $this->resolve($this->siswa()));
     }
 
-    public function test_priority_is_ayah_then_ibu(): void
+    public function test_priority_is_ibu_then_ayah(): void
     {
         $contacts = $this->resolve($this->siswa([
             'nama_ayah' => 'Ayah',
@@ -67,8 +67,8 @@ class ResolveParentContactsTest extends TestCase
         ]));
 
         $this->assertSame([
-            ['Ayah', '628122222222'],
             ['Ibu', '628133333333'],
+            ['Ayah', '628122222222'],
         ], $contacts);
     }
 }
