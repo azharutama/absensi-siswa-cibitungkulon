@@ -26,7 +26,7 @@ class GuruController extends Controller
 
         $query = User::query()
             ->select(['id', 'nip', 'nama', 'no_telepon', 'role', 'email', 'address'])
-            ->with('kelas:id,nama_kelas');
+            ->with('kelas:id,guru_id,nama_kelas');
 
         // Cari berdasarkan nama, wa, atau nip
         if ($search !== '') {
@@ -116,7 +116,7 @@ class GuruController extends Controller
     {
         $guru = User::query()
             ->select(['id', 'nip', 'nama', 'email', 'no_telepon', 'address', 'role', 'jenis_kelamin'])
-            ->with('kelas:id,nama_kelas')
+            ->with('kelas:id,guru_id,nama_kelas')
             ->findOrFail($id);
 
         $kelas = Kelas::query()

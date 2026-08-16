@@ -26,7 +26,11 @@
             </div>
         @endif
 
-        <x-absensi-filter :action="route('absensi.create')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" />
+        @if(auth()->user()->role === 'guru')
+            <x-absensi-filter :action="route('absensi.create')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :hideKelas="true" />
+        @else
+            <x-absensi-filter :action="route('absensi.create')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" />
+        @endif
 
         @if($holidayMessage && !$periodeWarning)
             <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm">

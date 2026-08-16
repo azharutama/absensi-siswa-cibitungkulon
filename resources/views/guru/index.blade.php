@@ -62,8 +62,8 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-500 border-b">
-                                    @if($guru->kelas->isNotEmpty())
-                                        {{ $guru->kelas->pluck('nama_kelas')->implode(', ') }}
+                                    @if($guru->kelas)
+                                        {{ $guru->kelas->nama_kelas }}
                                     @else
                                         -
                                     @endif

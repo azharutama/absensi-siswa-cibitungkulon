@@ -5,7 +5,7 @@
 
             <div>
                 <x-input-label for="nama_kelas" :value="__('Nama Kelas *')" />
-                <x-text-input id="nama_kelas" name="nama_kelas" type="text" class="mt-1 block w-full" :value="old('nama_kelas')" placeholder="Contoh: Kelas 1-A, XII RPL 2" required autofocus />
+                <x-text-input id="nama_kelas" name="nama_kelas" type="text" class="mt-1 block w-full" :value="old('nama_kelas')" placeholder="Contoh: Kelas 1-A" required autofocus />
                 <x-input-error class="mt-2" :messages="$errors->get('nama_kelas')" />
             </div>
 
