@@ -204,31 +204,23 @@
             </div>
         </form>
 
-        <div class="mt-6 pt-4 border-t border-red-200" x-data="{ showConfirm: false }">
+        <div class="mt-6 pt-4 border-t border-red-200">
             <form method="POST" action="{{ route('periode.reset') }}" class="flex items-center justify-between">
                 @csrf
                 <div>
                     <h4 class="text-sm font-bold text-red-700">Reset Periode</h4>
                     <p class="text-xs text-red-500 mt-1">Hapus semua data periode, absensi, dan rekap.</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <template x-if="!showConfirm">
-                        <button type="button" @click="showConfirm = true" class="inline-flex items-center px-3 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 transition">
-                            Reset Periode
-                        </button>
-                    </template>
-                    <template x-if="showConfirm">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-red-600">Yakin ingin mereset? Semua data akan terhapus.</span>
-                            <button type="submit" class="inline-flex items-center px-3 py-2 bg-red-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-800 transition">
-                                Ya, Reset
-                            </button>
-                            <button type="button" @click="showConfirm = false" class="inline-flex items-center px-3 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400 transition">
-                                Batal
-                            </button>
-                        </div>
-                    </template>
-                </div>
+                <button 
+                    type="submit"
+                    data-confirm-message="Apakah Anda benar-benar yakin ingin mereset periode? Semua data periode, absensi, dan rekap akan terhapus secara permanen dan tidak dapat dikembalikan."
+                    data-confirm-title="Konfirmasi Reset Periode"
+                    data-confirm-text="Ya, Reset Semua"
+                    data-confirm-color="red"
+                    class="inline-flex items-center px-3 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 transition"
+                >
+                    Reset Periode
+                </button>
             </form>
         </div>
     </x-form-card>

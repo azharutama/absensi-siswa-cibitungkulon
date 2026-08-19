@@ -3,7 +3,7 @@
         
         <!-- Header Utama -->
         <div class="flex justify-between items-center pb-2">
-            <h2 class="text-xl font-bold text-gray-800">Pencatatan Absensi</h2>
+            <h2 class="text-xl font-bold text-gray-800">Rekap Absensi</h2>
         </div>
 
         @if($kelasId)
@@ -207,9 +207,9 @@
                 @endif
             </div>
         @else
-            <!-- State Kosong / Belum Memilih Parameter -->
+            <!-- State Kosong / Belum Memilih Filter -->
             <div class="bg-white border border-dashed border-gray-200 p-16 text-center rounded-2xl text-gray-400">
-                Silakan tentukan parameter filter kelas terlebih dahulu untuk memuat rangkuman rekap absensi harian siswa.
+                Silakan pilih kelas terlebih dahulu untuk melihat rekap absensi siswa.
             </div>
         @endif
 
