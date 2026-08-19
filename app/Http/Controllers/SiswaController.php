@@ -165,24 +165,25 @@ class SiswaController extends Controller
         }
 
         DB::transaction(function () use ($kelasAsal, $kelasTujuan): void {
-            Siswa::query()
+            $siswaIds = Siswa::query()
                 ->where('kelas_id', $kelasAsal->id)
-                ->update(['kelas_id' => $kelasTujuan->id]);
+                ->pluck('id');
 
             Siswa::query()
-                ->where('kelas_id', $kelasTujuan->id)
-                ->where('status', 'aktif')
-                ->chunkById(200, function ($siswas) use ($kelasAsal, $kelasTujuan): void {
-                    foreach ($siswas as $siswa) {
-                        RiwayatKelasSiswa::create([
-                            'siswa_id' => $siswa->id,
-                            'kelas_asal_id' => $kelasAsal->id,
-                            'kelas_tujuan_id' => $kelasTujuan->id,
-                            'tanggal_kenaikan' => today(),
-                            'status' => 'aktif',
-                        ]);
-                    }
-                });
+                ->whereIn('id', $siswaIds)
+                ->update(['kelas_id' => $kelasTujuan->id]);
+
+            foreach ($siswaIds->chunk(200) as $chunk) {
+                foreach ($chunk as $siswaId) {
+                    RiwayatKelasSiswa::create([
+                        'siswa_id' => $siswaId,
+                        'kelas_asal_id' => $kelasAsal->id,
+                        'kelas_tujuan_id' => $kelasTujuan->id,
+                        'tanggal_kenaikan' => today(),
+                        'status' => 'aktif',
+                    ]);
+                }
+            }
         });
 
         return to_route('siswa.index')
