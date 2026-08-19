@@ -161,6 +161,11 @@ class RekapController extends Controller
                 ->count('tanggal');
 
             $totalPersentaseSemuaSiswa = 0;
+            $totalHadir = 0;
+            $totalSakit = 0;
+            $totalIzin = 0;
+            $totalAlpa = 0;
+            $totalHariMasuk = 0;
             $namaKelas = $selectedKelas->nama_kelas;
 
             foreach ($siswas as $siswa) {
@@ -189,12 +194,30 @@ class RekapController extends Controller
                 $stats['total_izin'] += $izin;
                 $stats['total_alpa'] += $alpa;
                 $totalPersentaseSemuaSiswa += $persentase;
+
+                // Akumulasi untuk Total Keseluruhan
+                $totalHadir += $hadir;
+                $totalSakit += $sakit;
+                $totalIzin += $izin;
+                $totalAlpa += $alpa;
+                $totalHariMasuk += $totalHariMasuk;
             }
 
             // Hitung rata-rata kehadiran kelas keseluruhan
             if ($siswas->count() > 0) {
                 $stats['rata_hadir'] = round($totalPersentaseSemuaSiswa / $siswas->count(), 1);
             }
+
+            // Hitung total dan persentase keseluruhan
+            $stats['total_hadir'] = $totalHadir;
+            $stats['total_sakit'] = $totalSakit;
+            $stats['total_izin'] = $totalIzin;
+            $stats['total_alpa'] = $totalAlpa;
+            $stats['total_hari_masuk'] = $totalHariMasuk;
+            $stats['persentase_hadir'] = $totalHariMasuk > 0 ? round(($totalHadir / $totalHariMasuk) * 100, 1) : 0;
+            $stats['persentase_sakit'] = $totalHariMasuk > 0 ? round(($totalSakit / $totalHariMasuk) * 100, 1) : 0;
+            $stats['persentase_izin'] = $totalHariMasuk > 0 ? round(($totalIzin / $totalHariMasuk) * 100, 1) : 0;
+            $stats['persentase_alpa'] = $totalHariMasuk > 0 ? round(($totalAlpa / $totalHariMasuk) * 100, 1) : 0;
         }
 
         if ($kelasId && $totalHariAbsensi === 0) {

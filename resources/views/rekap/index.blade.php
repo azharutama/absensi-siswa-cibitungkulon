@@ -175,6 +175,7 @@
                                 <th class="px-6 py-4 border-r border-gray-200 text-left" rowspan="2">Nama Siswa</th>
                                 <th class="px-4 py-4 border-r border-gray-200 w-24" rowspan="2">Kelas</th>
                                 <th class="px-4 py-2 border-b border-gray-200" colspan="4">Status Kehadiran</th>
+                                <th class="px-4 py-4 border-r border-gray-200 w-24" rowspan="2">Total</th>
                                 <th class="px-4 py-4 border-l border-gray-200 w-36" rowspan="2">Persentase</th>
                             </tr>
                             <tr class="bg-gray-50/50 text-gray-500 font-medium text-xs border-b border-gray-200">
@@ -194,13 +195,34 @@
                                     <td class="px-2 py-3.5 border-r border-gray-100 text-amber-600 font-semibold">{{ $data['sakit'] }}</td>
                                     <td class="px-2 py-3.5 border-r border-gray-100 text-indigo-600 font-semibold">{{ $data['izin'] }}</td>
                                     <td class="px-2 py-3.5 border-r border-gray-100 text-red-600 font-semibold">{{ $data['alpa'] }}</td>
+                                    <td class="px-4 py-3.5 border-r border-gray-100 font-semibold text-gray-800">{{ $data['total_hari_masuk'] }}</td>
                                     <td class="px-4 py-3.5 font-bold text-blue-600">{{ $data['persentase'] }}%</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-10 text-center text-gray-400">Tidak ada rekam data siswa pada rentang kelas ini.</td>
+                                    <td colspan="9" class="px-6 py-10 text-center text-gray-400">Tidak ada rekam data siswa pada rentang kelas ini.</td>
                                 </tr>
                             @endforelse
+                            @if($rekapSiswa && count($rekapSiswa) > 0)
+                                <tr class="bg-blue-50 font-bold border-t-2 border-blue-200">
+                                    <td class="px-4 py-3 border-r border-gray-200" colspan="3">TOTAL</td>
+                                    <td class="px-2 py-3 border-r border-gray-200 text-green-700">{{ $stats['total_hadir'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200 text-amber-600">{{ $stats['total_sakit'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200 text-indigo-600">{{ $stats['total_izin'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200 text-red-600">{{ $stats['total_alpa'] ?? 0 }}</td>
+                                    <td class="px-4 py-3 border-r border-gray-200 text-gray-800">{{ $stats['total_hari_masuk'] ?? 0 }}</td>
+                                    <td class="px-4 py-3 text-blue-600">-</td>
+                                </tr>
+                                <tr class="bg-gray-50 font-medium text-sm text-gray-600">
+                                    <td class="px-4 py-2 border-r border-gray-200" colspan="3">PERSENTASE (%)</td>
+                                    <td class="px-2 py-2 border-r border-gray-200 text-green-700">{{ $stats['persentase_hadir'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200 text-amber-600">{{ $stats['persentase_sakit'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200 text-indigo-600">{{ $stats['persentase_izin'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200 text-red-600">{{ $stats['persentase_alpa'] ?? 0 }}%</td>
+                                    <td class="px-4 py-2 border-r border-gray-200 text-gray-600">100%</td>
+                                    <td class="px-4 py-2 text-blue-600">-</td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>

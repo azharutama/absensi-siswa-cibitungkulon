@@ -30,12 +30,31 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
      */
     public function array(): array
     {
+        $totalHadir = 0;
+        $totalSakit = 0;
+        $totalIzin = 0;
+        $totalAlpa = 0;
+        $totalHariMasuk = 0;
+
+        foreach ($this->rekapSiswa as $rekap) {
+            $totalHadir += $rekap['hadir'];
+            $totalSakit += $rekap['sakit'];
+            $totalIzin += $rekap['izin'];
+            $totalAlpa += $rekap['alpa'];
+            $totalHariMasuk += $rekap['total_hari_masuk'];
+        }
+
+        $persentaseHadir = $totalHariMasuk > 0 ? round(($totalHadir / $totalHariMasuk) * 100, 1) : 0;
+        $persentaseSakit = $totalHariMasuk > 0 ? round(($totalSakit / $totalHariMasuk) * 100, 1) : 0;
+        $persentaseIzin = $totalHariMasuk > 0 ? round(($totalIzin / $totalHariMasuk) * 100, 1) : 0;
+        $persentaseAlpa = $totalHariMasuk > 0 ? round(($totalAlpa / $totalHariMasuk) * 100, 1) : 0;
+
         $rows = [
             ['REKAP ABSENSI SISWA'],
             ['Kelas', $this->namaKelas],
             ['Periode', $this->periodeLabel()],
             [],
-            ['No', 'Nama Siswa', 'Kelas', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Persentase'],
+            ['No', 'Nama Siswa', 'Kelas', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Total', 'Persentase'],
         ];
 
         foreach ($this->rekapSiswa as $index => $rekap) {
@@ -51,6 +70,32 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
                 $rekap['persentase'].'%',
             ];
         }
+
+        // Baris Total
+        $rows[] = [
+            '',
+            'TOTAL',
+            '',
+            $totalHadir,
+            $totalSakit,
+            $totalIzin,
+            $totalAlpa,
+            $totalHariMasuk,
+            '',
+        ];
+
+        // Baris Persentase Total
+        $rows[] = [
+            '',
+            'PERSENTASE (%)',
+            '',
+            $persentaseHadir.'%',
+            $persentaseSakit.'%',
+            $persentaseIzin.'%',
+            $persentaseAlpa.'%',
+            '100%',
+            '',
+        ];
 
         return $rows;
     }
@@ -68,7 +113,8 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
             'E' => 12,
             'F' => 12,
             'G' => 12,
-            'H' => 16,
+            'H' => 12,
+            'I' => 16,
         ];
     }
 
@@ -77,18 +123,20 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
      */
     public function styles(Worksheet $sheet): array
     {
-        $lastRow = max(5, count($this->rekapSiswa) + 5);
+        $lastDataRow = count($this->rekapSiswa) + 5;
+        $totalRow = $lastDataRow + 1;
+        $persentaseRow = $lastDataRow + 2;
 
-        $sheet->mergeCells('A1:H1');
-        $sheet->getStyle("A5:H{$lastRow}")
+        $sheet->mergeCells('A1:I1');
+        $sheet->getStyle("A5:I{$persentaseRow}")
             ->getBorders()
             ->getAllBorders()
             ->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle("A5:H{$lastRow}")
+        $sheet->getStyle("A5:I{$persentaseRow}")
             ->getAlignment()
             ->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getStyle("A5:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle("D5:H{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("A5:A{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("D5:I{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         return [
             1 => [
@@ -98,6 +146,16 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
             5 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '2563EB']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ],
+            $totalRow => [
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'EFF6FF']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ],
+            $persentaseRow => [
+                'font' => ['bold' => true, 'italic' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F3F4F6']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
         ];
