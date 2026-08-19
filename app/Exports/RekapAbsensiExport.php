@@ -138,6 +138,17 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
         $sheet->getStyle("A5:A{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle("D5:I{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
+        // Style total row: apply blue fill to all columns except G (Alpa)
+        $sheet->getStyle("A{$totalRow}:F{$totalRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EFF6FF');
+        $sheet->getStyle("H{$totalRow}:I{$totalRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EFF6FF');
+        $sheet->getStyle("A{$totalRow}:I{$totalRow}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$totalRow}:I{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Style percentage row
+        $sheet->getStyle("A{$persentaseRow}:I{$persentaseRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('F3F4F6');
+        $sheet->getStyle("A{$persentaseRow}:I{$persentaseRow}")->getFont()->setBold(true)->setItalic(true);
+        $sheet->getStyle("A{$persentaseRow}:I{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
         return [
             1 => [
                 'font' => ['bold' => true, 'size' => 14],
@@ -146,16 +157,6 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
             5 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '2563EB']],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ],
-            $totalRow => [
-                'font' => ['bold' => true],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'EFF6FF']],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ],
-            $persentaseRow => [
-                'font' => ['bold' => true, 'italic' => true],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F3F4F6']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
         ];
