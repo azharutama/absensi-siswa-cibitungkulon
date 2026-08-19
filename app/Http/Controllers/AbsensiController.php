@@ -25,8 +25,12 @@ class AbsensiController extends Controller
     public function create(Request $request): View|RedirectResponse
     {
         $filters = $request->validate([
-            'tanggal' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'tanggal' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
+
+        $tanggalInput = $filters['tanggal'] ?? today()->format('d/m/Y');
+        $tanggal = $this->parseDate($tanggalInput)->format('Y-m-d');
+        $tanggalDisplay = $this->parseDate($tanggalInput)->format('d/m/Y');
 
         $user = $request->user();
         $userKelas = $user->kelas; // HasOne relasi ke Kelas
@@ -38,8 +42,11 @@ class AbsensiController extends Controller
                     'kelas' => collect(),
                     'siswas' => [],
                     'absensiSiswa' => [],
+                    'kelas' => collect(),
+                    'siswas' => [],
+                    'absensiSiswa' => [],
                     'kelasId' => null,
-                    'tanggal' => $filters['tanggal'] ?? today()->toDateString(),
+                    'tanggal' => $tanggalDisplay,
                     'stats' => ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
                     'isLocked' => false,
                     'holidayMessage' => null,
@@ -59,9 +66,6 @@ class AbsensiController extends Controller
             $kelasId = $this->getKelasIdWithAutoSelect($request->get('kelas_id'), $kelas);
         }
 
-        $tanggal = $filters['tanggal'] ?? today()->toDateString();
-
-        // Auto-redirect menggunakan trait (hanya untuk non-guru)
         if ($user->role !== 'guru') {
             if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.create', ['tanggal' => $tanggal])) {
                 return $redirect;
@@ -143,20 +147,20 @@ class AbsensiController extends Controller
             $kelasId = $userKelas->id;
             
             $data = $request->validate([
-                'tanggal' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
                 'absensi' => ['required', 'array'],
                 'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
             ]);
-            $tanggal = $data['tanggal'];
+            $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         } else {
             $data = $request->validate([
                 'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-                'tanggal' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
                 'absensi' => ['required', 'array'],
                 'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
             ]);
             $kelasId = (int) $data['kelas_id'];
-            $tanggal = $data['tanggal'];
+            $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         }
 
         $userId = $user->getKey();
@@ -252,7 +256,7 @@ class AbsensiController extends Controller
     public function edit(Request $request): View|RedirectResponse
     {
         $filters = $request->validate([
-            'tanggal' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'tanggal' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $user = $request->user();
@@ -260,12 +264,13 @@ class AbsensiController extends Controller
 
         if ($user->role === 'guru') {
             if (! $userKelas) {
+                $tanggalDisplay = $filters['tanggal'] ?? today()->format('d/m/Y');
                 return view('absensi.edit', [
                     'kelas' => collect(),
                     'siswas' => [],
                     'absensiSiswa' => [],
                     'kelasId' => null,
-                    'tanggal' => $filters['tanggal'] ?? today()->toDateString(),
+                    'tanggal' => $tanggalDisplay,
                     'stats' => ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
                     'isLocked' => false,
                     'holidayMessage' => null,
@@ -284,7 +289,8 @@ class AbsensiController extends Controller
             $kelasId = $this->getKelasIdWithAutoSelect($request->get('kelas_id'), $kelas);
         }
 
-        $tanggal = $filters['tanggal'] ?? today()->toDateString();
+        $tanggalInput = $filters['tanggal'] ?? today()->format('d/m/Y');
+        $tanggal = $this->parseDate($tanggalInput)->format('Y-m-d');
 
         if ($user->role !== 'guru') {
             if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.edit', ['tanggal' => $tanggal])) {
@@ -356,20 +362,20 @@ class AbsensiController extends Controller
             $kelasId = $userKelas->id;
 
             $data = $request->validate([
-                'tanggal' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
                 'absensi' => ['required', 'array'],
                 'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
             ]);
-            $tanggal = $data['tanggal'];
+            $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         } else {
             $data = $request->validate([
                 'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-                'tanggal' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
                 'absensi' => ['required', 'array'],
                 'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
             ]);
             $kelasId = (int) $data['kelas_id'];
-            $tanggal = $data['tanggal'];
+            $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         }
 
         $userId = $user->getKey();
@@ -720,5 +726,16 @@ class AbsensiController extends Controller
         return "Assalamu'alaikum {$sapaan},\n\n"
             ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
             .'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
+    }
+
+    /**
+     * Parse date string supporting both d/m/Y and Y-m-d formats
+     */
+    private function parseDate(string $date): Carbon
+    {
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+            return Carbon::createFromFormat('d/m/Y', $date);
+        }
+        return Carbon::parse($date);
     }
 }

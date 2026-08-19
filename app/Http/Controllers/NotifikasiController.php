@@ -14,9 +14,12 @@ class NotifikasiController extends Controller
     {
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
-            'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
         ]);
+
+        $tanggalMulai = $filters['tanggal_mulai'] ? $this->parseDate($filters['tanggal_mulai'])->format('Y-m-d') : null;
+        $tanggalBerakhir = $filters['tanggal_berakhir'] ? $this->parseDate($filters['tanggal_berakhir'])->format('Y-m-d') : null;
 
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
@@ -45,16 +48,27 @@ class NotifikasiController extends Controller
             ->when($kelasId !== null, function ($query) use ($kelasId): void {
                 $query->whereHas('absensi', fn ($query) => $query->where('kelas_id', $kelasId));
             })
-            ->when($filters['tanggal_mulai'] ?? null, function ($query, string $date): void {
-                $query->where('created_at', '>=', Carbon::parse($date)->startOfDay());
+            ->when($tanggalMulai, function ($query) use ($tanggalMulai): void {
+                $query->where('created_at', '>=', $tanggalMulai . ' 00:00:00');
             })
-            ->when($filters['tanggal_berakhir'] ?? null, function ($query, string $date): void {
-                $query->where('created_at', '<=', Carbon::parse($date)->endOfDay());
+            ->when($tanggalBerakhir, function ($query) use ($tanggalBerakhir): void {
+                $query->where('created_at', '<=', $tanggalBerakhir . ' 23:59:59');
             })
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return view('notifikasi.index', compact('kelas', 'notifikasi'));
+    }
+
+    /**
+     * Parse date string supporting both d/m/Y and Y-m-d formats
+     */
+    private function parseDate(string $date): Carbon
+    {
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+            return Carbon::createFromFormat('d/m/Y', $date);
+        }
+        return Carbon::parse($date);
     }
 }

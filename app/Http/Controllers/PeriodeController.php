@@ -27,10 +27,18 @@ class PeriodeController extends Controller
 
         $periodeData = [
             'tahun_ajaran' => $semester1?->tahun_ajaran ?? $semester2?->tahun_ajaran ?? old('tahun_ajaran', ''),
-            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->toDateString() ?? old('semester_1_tanggal_mulai', ''),
-            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString() ?? old('semester_1_tanggal_selesai', ''),
-            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString() ?? old('semester_2_tanggal_mulai', ''),
-            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString() ?? old('semester_2_tanggal_selesai', ''),
+            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('Y-m-d') ?? old('semester_1_tanggal_mulai', ''),
+            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('Y-m-d') ?? old('semester_1_tanggal_selesai', ''),
+            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('Y-m-d') ?? old('semester_2_tanggal_mulai', ''),
+            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('Y-m-d') ?? old('semester_2_tanggal_selesai', ''),
+        ];
+
+        // Display format for views
+        $periodeDataDisplay = [
+            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('d/m/Y'),
+            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('d/m/Y'),
+            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('d/m/Y'),
+            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('d/m/Y'),
         ];
 
         $liburMingguan = collect();
@@ -50,12 +58,12 @@ class PeriodeController extends Controller
             $liburNasional = $periode->hariLiburs
                 ->where('tipe', 'nasional')
                 ->map(fn ($item) => [
-                    'tanggal' => $item->tanggal?->format('Y-m-d') ?? '',
+                    'tanggal' => $item->tanggal?->format('Y-m-d') ?? '', // Keep Y-m-d for HTML5 date input
                     'nama_libur' => $item->keterangan,
                 ]);
         }
 
-        return view('periode.index', compact('periode', 'periodeData', 'liburMingguan', 'liburNasional'));
+        return view('periode.index', compact('periode', 'periodeData', 'periodeDataDisplay', 'liburMingguan', 'liburNasional'));
     }
 
     public function store(Request $request)
@@ -116,13 +124,21 @@ class PeriodeController extends Controller
 
         $periodeData = [
             'tahun_ajaran' => $tahunAjaran,
-            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->toDateString(),
-            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->toDateString(),
-            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->toDateString(),
-            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->toDateString(),
+            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('Y-m-d'),
+            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('Y-m-d'),
+            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('Y-m-d'),
+            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('Y-m-d'),
         ];
 
-        return view('periode.edit', compact('periode', 'periodeData'));
+        // Display format for views
+        $periodeDataDisplay = [
+            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('d/m/Y'),
+            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('d/m/Y'),
+            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('d/m/Y'),
+            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('d/m/Y'),
+        ];
+
+        return view('periode.edit', compact('periode', 'periodeData', 'periodeDataDisplay'));
     }
 
     public function update(Request $request, $id)
@@ -224,10 +240,9 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Semua data periode, absensi, dan rekap berhasil direset.');
     }
 
-    /** @return array<string, mixed> */
     private function validatePeriode(Request $request, ?Periode $periode = null): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'tahun_ajaran' => [
                 'required',
                 'string',
@@ -265,27 +280,39 @@ class PeriodeController extends Controller
             'tahun_ajaran.max' => 'Tahun ajaran maksimal 20 karakter.',
             'tahun_ajaran.unique' => 'Tahun ajaran ini sudah terdaftar.',
             'semester_1_tanggal_mulai.required' => 'Tanggal mulai Semester 1 wajib diisi.',
-            'semester_1_tanggal_mulai.date' => 'Tanggal mulai Semester 1 harus berupa tanggal yang valid.',
+            'semester_1_tanggal_mulai.date_format' => 'Tanggal mulai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
             'semester_1_tanggal_selesai.required' => 'Tanggal selesai Semester 1 wajib diisi.',
-            'semester_1_tanggal_selesai.date' => 'Tanggal selesai Semester 1 harus berupa tanggal yang valid.',
+            'semester_1_tanggal_selesai.date_format' => 'Tanggal selesai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
             'semester_1_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 1 harus setelah atau sama dengan tanggal mulai Semester 1.',
             'semester_2_tanggal_mulai.required' => 'Tanggal mulai Semester 2 wajib diisi.',
-            'semester_2_tanggal_mulai.date' => 'Tanggal mulai Semester 2 harus berupa tanggal yang valid.',
+            'semester_2_tanggal_mulai.date_format' => 'Tanggal mulai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
             'semester_2_tanggal_mulai.after_or_equal' => 'Tanggal mulai Semester 2 harus setelah atau sama dengan tanggal selesai Semester 1.',
             'semester_2_tanggal_selesai.required' => 'Tanggal selesai Semester 2 wajib diisi.',
-            'semester_2_tanggal_selesai.date' => 'Tanggal selesai Semester 2 harus berupa tanggal yang valid.',
+            'semester_2_tanggal_selesai.date_format' => 'Tanggal selesai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
             'semester_2_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 2 harus setelah atau sama dengan tanggal mulai Semester 2.',
             'libur_mingguan.*.hari.required' => 'Hari libur mingguan wajib dipilih.',
             'libur_mingguan.*.hari.in' => 'Hari yang dipilih tidak valid.',
             'libur_mingguan.*.keterangan.required' => 'Keterangan hari libur mingguan wajib diisi.',
             'libur_mingguan.*.keterangan.max' => 'Keterangan hari libur mingguan maksimal 255 karakter.',
             'libur_nasional.*.tanggal.required' => 'Tanggal libur nasional wajib diisi.',
-            'libur_nasional.*.tanggal.date' => 'Tanggal libur nasional harus berupa tanggal yang valid.',
+            'libur_nasional.*.tanggal.date_format' => 'Tanggal libur nasional harus berupa tanggal yang valid (format: dd/mm/yyyy).',
             'libur_nasional.*.nama_libur.required' => 'Nama hari libur nasional wajib diisi.',
             'libur_nasional.*.nama_libur.max' => 'Nama hari libur nasional maksimal 255 karakter.',
             'libur_nasional.*.tanggal.after_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
             'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
         ]);
+
+        // Convert d/m/Y to Y-m-d for database storage
+        $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
+        $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
+        $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
+        $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
+        
+        foreach ($validated['libur_nasional'] ?? [] as &$libur) {
+            $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
+        }
+
+        return $validated;
     }
 
     /** @param array<string, mixed> $validated */
@@ -342,5 +369,16 @@ class PeriodeController extends Controller
                 'keterangan' => $keterangan,
             ]);
         }
+    }
+
+    /**
+     * Parse date string supporting both d/m/Y and Y-m-d formats
+     */
+    private function parseDate(string $date): Carbon
+    {
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+            return Carbon::createFromFormat('d/m/Y', $date);
+        }
+        return Carbon::parse($date);
     }
 }

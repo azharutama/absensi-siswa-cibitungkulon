@@ -27,8 +27,8 @@ class RekapController extends Controller
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
-            'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
-            'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
         ]);
 
         $kelas = Kelas::query()
@@ -80,8 +80,8 @@ class RekapController extends Controller
         $filters = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
-            'tanggal_mulai' => ['nullable', 'date_format:Y-m-d'],
-            'tanggal_berakhir' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
         ]);
 
         $kelas = Kelas::query()
@@ -97,8 +97,10 @@ class RekapController extends Controller
         
         // Jika preset custom, gunakan tanggal manual
         if ($preset === 'custom') {
-            $tanggalMulai = $filters['tanggal_mulai'] ?? today()->startOfMonth()->toDateString();
-            $tanggalBerakhir = $filters['tanggal_berakhir'] ?? today()->toDateString();
+            $tanggalMulaiInput = $filters['tanggal_mulai'] ?? today()->startOfMonth()->format('d/m/Y');
+            $tanggalBerakhirInput = $filters['tanggal_berakhir'] ?? today()->format('d/m/Y');
+            $tanggalMulai = $this->parseDate($tanggalMulaiInput)->format('Y-m-d');
+            $tanggalBerakhir = $this->parseDate($tanggalBerakhirInput)->format('Y-m-d');
         } else {
             // Gunakan preset
             [$tanggalMulai, $tanggalBerakhir] = $this->getPresetDateRange($preset);
@@ -195,7 +197,11 @@ class RekapController extends Controller
             $hideRekapTabel = true;
         }
 
-        return compact('kelas', 'rekapSiswa', 'totalHariAktif', 'totalHariAbsensi', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'stats', 'namaKelas', 'preset', 'hideRekapTabel');
+        // Convert dates to d/m/Y for display in view
+        $tanggalMulaiDisplay = Carbon::parse($tanggalMulai)->format('d/m/Y');
+        $tanggalBerakhirDisplay = Carbon::parse($tanggalBerakhir)->format('d/m/Y');
+
+        return compact('kelas', 'rekapSiswa', 'totalHariAktif', 'totalHariAbsensi', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'tanggalMulaiDisplay', 'tanggalBerakhirDisplay', 'stats', 'namaKelas', 'preset', 'hideRekapTabel');
     }
 
     /**
@@ -369,5 +375,16 @@ private function getSemesterDateRange(int $semester): array
         }
 
         return $hariAktif;
+    }
+
+    /**
+     * Parse date string supporting both d/m/Y and Y-m-d formats
+     */
+    private function parseDate(string $date): Carbon
+    {
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+            return Carbon::createFromFormat('d/m/Y', $date);
+        }
+        return Carbon::parse($date);
     }
 }

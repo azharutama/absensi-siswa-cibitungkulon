@@ -142,9 +142,9 @@
                     <div>
                         <h3 class="font-bold text-gray-800 text-lg">Data Kehadiran Siswa</h3>
                         <p class="text-sm text-gray-500 mt-0.5">
-                            {{ \Carbon\Carbon::parse($tanggalMulai)->format('d M Y') }}
+                            {{ $tanggalMulaiDisplay }}
                             s/d
-                            {{ \Carbon\Carbon::parse($tanggalBerakhir)->format('d M Y') }}
+                            {{ $tanggalBerakhirDisplay }}
                         </p>
                     </div>
                     <a href="{{ route('rekap.export', ['kelas_id' => $kelasId, 'preset' => 'custom', 'tanggal_mulai' => $tanggalMulai, 'tanggal_berakhir' => $tanggalBerakhir]) }}" download class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">

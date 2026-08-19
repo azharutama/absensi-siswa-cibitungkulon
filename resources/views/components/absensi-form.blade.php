@@ -29,7 +29,7 @@
             <div>
                 <h4 class="text-sm font-bold text-amber-800">Absensi Sudah Terisi!</h4>
                 <p class="text-xs text-amber-600 mt-0.5">
-                    Kelas ini sudah melakukan pengisian absensi pada tanggal {{ date('d-m-Y', strtotime($tanggal)) }}. 
+                    Kelas ini sudah melakukan pengisian absensi pada tanggal {{ \Carbon\Carbon::parse($tanggal)->format('d/m/Y') }}. 
                     Untuk melakukan perubahan atau perbaikan data kehadiran, silakan gunakan menu <a href="{{ route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal]) }}" class="font-bold underline hover:text-amber-900">Edit Absensi</a>.
                 </p>
             </div>
@@ -61,7 +61,7 @@
             </div>
             <div class="text-right">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal</p>
-                <p class="text-lg font-bold text-gray-800">{{ date('d M Y', strtotime($tanggal)) }}</p>
+                <p class="text-lg font-bold text-gray-800">{{ \Carbon\Carbon::parse($tanggal)->format('d/m/Y') }}</p>
             </div>
         </div>
 
