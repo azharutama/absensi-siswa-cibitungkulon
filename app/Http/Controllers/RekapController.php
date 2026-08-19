@@ -139,7 +139,6 @@ class RekapController extends Controller
                 ->selectRaw("SUM(CASE WHEN status = 'sakit' THEN 1 ELSE 0 END) AS sakit")
                 ->selectRaw("SUM(CASE WHEN status = 'izin' THEN 1 ELSE 0 END) AS izin")
                 ->selectRaw("SUM(CASE WHEN status = 'alpa' THEN 1 ELSE 0 END) AS alpa")
-                ->where('kelas_id', $kelasId)
                 ->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])
                 ->whereIn('siswa_id', $siswas->pluck('id'))
                 ->groupBy('siswa_id')
