@@ -123,6 +123,9 @@ class RekapController extends Controller
 
             abort_if($selectedKelas === null, 404);
 
+            // Get active dates for the date range (only count active school days)
+            $activeDates = $this->getActiveDatesForRange($tanggalMulai, $tanggalBerakhir);
+
             $siswas = Siswa::query()
                 ->select(['id', 'nama_siswa'])
                 ->where(function ($query) use ($kelasId, $tanggalBerakhir, $tanggalMulai): void {
@@ -142,6 +145,7 @@ class RekapController extends Controller
                 ->selectRaw("SUM(CASE WHEN status = 'izin' THEN 1 ELSE 0 END) AS izin")
                 ->selectRaw("SUM(CASE WHEN status = 'alpa' THEN 1 ELSE 0 END) AS alpa")
                 ->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])
+                ->whereIn('tanggal', $activeDates)
                 ->whereIn('siswa_id', $siswas->pluck('id'))
                 ->groupBy('siswa_id')
                 ->get()
@@ -386,5 +390,65 @@ private function getSemesterDateRange(int $semester): array
             return Carbon::createFromFormat('d/m/Y', $date);
         }
         return Carbon::parse($date);
+    }
+
+    /**
+     * Get active dates (non-holiday weekdays) for a date range across all relevant periodes
+     * @return array<string> Y-m-d format dates
+     */
+    private function getActiveDatesForRange(string $tanggalMulai, string $tanggalBerakhir): array
+    {
+        $mulai = Carbon::parse($tanggalMulai);
+        $akhir = Carbon::parse($tanggalBerakhir);
+
+        // Get all periodes that overlap with the date range
+        $periodes = Periode::query()
+            ->where(function ($query) use ($mulai, $akhir) {
+                $query->whereBetween('tanggal_mulai', [$mulai->toDateString(), $akhir->toDateString()])
+                    ->orWhereBetween('tanggal_selesai', [$mulai->toDateString(), $akhir->toDateString()])
+                    ->orWhere(function ($q) use ($mulai, $akhir) {
+                        $q->where('tanggal_mulai', '<=', $mulai->toDateString())
+                          ->where('tanggal_selesai', '>=', $akhir->toDateString());
+                    });
+            })
+            ->get();
+
+        // Collect all national holidays from relevant periodes
+        $periodeIds = $periodes->pluck('id');
+        $hariLiburNasional = HariLibur::whereIn('periode_id', $periodeIds)
+            ->where('tipe', 'nasional')
+            ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
+            ->pluck('tanggal')
+            ->map(fn ($t) => Carbon::parse($t)->toDateString())
+            ->unique()
+            ->values();
+
+        // Collect all weekly holidays from relevant periodes
+        $hariLiburMingguan = HariLibur::whereIn('periode_id', $periodeIds)
+            ->where('tipe', 'mingguan')
+            ->pluck('hari')
+            ->unique()
+            ->values();
+
+        $namaHari = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+
+        $activeDates = [];
+        $hari = $mulai->copy();
+
+        while ($hari->lte($akhir)) {
+            $tanggalStr = $hari->toDateString();
+            $namaHariIni = $namaHari[$hari->dayOfWeek];
+
+            $isHariLibur = $hariLiburNasional->contains($tanggalStr)
+                || $hariLiburMingguan->contains($namaHariIni);
+
+            if (! $isHariLibur) {
+                $activeDates[] = $tanggalStr;
+            }
+
+            $hari->addDay();
+        }
+
+        return $activeDates;
     }
 }

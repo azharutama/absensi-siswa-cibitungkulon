@@ -27,9 +27,9 @@
         @endif
 
         @if(auth()->user()->role === 'guru')
-            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :hideKelas="true" />
+            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :hideKelas="true" :activeDates="$activeDates ?? []" />
         @else
-            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" />
+            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :activeDates="$activeDates ?? []" />
         @endif
 
         @if($holidayMessage && !$periodeWarning)

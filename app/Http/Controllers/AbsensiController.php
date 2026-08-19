@@ -79,8 +79,36 @@ class AbsensiController extends Controller
             ->first();
 
         $periodeWarning = null;
+        $activeDates = [];
+        
         if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan input absensi.';
+        } else {
+            $activeDates = $this->getActiveDatesForPeriode($activePeriode);
+            
+            // Validasi: tanggal tidak boleh besok atau hari libur/weekend
+            $today = today()->toDateString();
+            $tomorrow = today()->addDay()->toDateString();
+            
+            if (! in_array($tanggal, $activeDates)) {
+                // Cari tanggal aktif terdekat (prioritas: hari ini, lalu hari sebelumnya, lalu hari sesudahnya)
+                $nearestDate = $this->findNearestActiveDate($tanggal, $activeDates, $today);
+                
+                if ($nearestDate !== $tanggal) {
+                    return redirect()->route('absensi.create', array_merge(
+                        $request->except('tanggal'),
+                        ['tanggal' => $nearestDate]
+                    ))->with('warning', "Tanggal {$tanggal} bukan hari aktif sekolah. Otomatis diarahkan ke tanggal aktif terdekat: " . Carbon::parse($nearestDate)->format('d/m/Y'));
+                }
+            }
+            
+            // Cek apakah tanggal di masa depan
+            if ($tanggal > $today) {
+                return redirect()->route('absensi.create', array_merge(
+                    $request->except('tanggal'),
+                    ['tanggal' => $today]
+                ))->with('warning', 'Tidak bisa memilih tanggal di masa depan. Otomatis diarahkan ke hari ini: ' . Carbon::parse($today)->format('d/m/Y'));
+            }
         }
 
         $siswas = [];
@@ -130,7 +158,7 @@ class AbsensiController extends Controller
             }
         }
 
-        return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage', 'periodeWarning'));
+        return view('absensi.create', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage', 'periodeWarning', 'activeDates'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -275,6 +303,7 @@ class AbsensiController extends Controller
                     'isLocked' => false,
                     'holidayMessage' => null,
                     'periodeWarning' => 'Anda belum ditugaskan ke kelas manapun. Silakan hubungi operator.',
+                    'activeDates' => [],
                 ]);
             }
             $kelasId = $userKelas->id;
@@ -304,8 +333,35 @@ class AbsensiController extends Controller
             ->first();
 
         $periodeWarning = null;
+        $activeDates = [];
+        
         if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan edit absensi.';
+        } else {
+            $activeDates = $this->getActiveDatesForPeriode($activePeriode);
+            
+            // Validasi: tanggal tidak boleh besok atau hari libur/weekend
+            $today = today()->toDateString();
+            
+            if (! in_array($tanggal, $activeDates)) {
+                // Cari tanggal aktif terdekat
+                $nearestDate = $this->findNearestActiveDate($tanggal, $activeDates, $today);
+                
+                if ($nearestDate !== $tanggal) {
+                    return redirect()->route('absensi.edit', array_merge(
+                        $request->except('tanggal'),
+                        ['tanggal' => $nearestDate]
+                    ))->with('warning', "Tanggal {$tanggal} bukan hari aktif sekolah. Otomatis diarahkan ke tanggal aktif terdekat: " . Carbon::parse($nearestDate)->format('d/m/Y'));
+                }
+            }
+            
+            // Cek apakah tanggal di masa depan
+            if ($tanggal > $today) {
+                return redirect()->route('absensi.edit', array_merge(
+                    $request->except('tanggal'),
+                    ['tanggal' => $today]
+                ))->with('warning', 'Tidak bisa memilih tanggal di masa depan. Otomatis diarahkan ke hari ini: ' . Carbon::parse($today)->format('d/m/Y'));
+            }
         }
 
         $siswas = [];
@@ -346,7 +402,7 @@ class AbsensiController extends Controller
             }
         }
 
-        return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage', 'periodeWarning'));
+        return view('absensi.edit', compact('kelas', 'siswas', 'absensiSiswa', 'kelasId', 'tanggal', 'stats', 'isLocked', 'holidayMessage', 'periodeWarning', 'activeDates'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -564,6 +620,88 @@ class AbsensiController extends Controller
             5 => 'Jumat',
             6 => 'Sabtu',
         ][$dayOfWeek];
+    }
+
+    /**
+     * Get list of active dates (non-holiday weekdays) for a periode
+     * @return array<string> Y-m-d format dates
+     */
+    private function getActiveDatesForPeriode(Periode $periode): array
+    {
+        $mulai = Carbon::parse($periode->tanggal_mulai);
+        $akhir = Carbon::parse($periode->tanggal_selesai);
+
+        $hariLiburNasional = HariLibur::where('periode_id', $periode->id)
+            ->where('tipe', 'nasional')
+            ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
+            ->pluck('tanggal')
+            ->map(fn ($t) => Carbon::parse($t)->toDateString())
+            ->unique()
+            ->values();
+
+        $hariLiburMingguan = HariLibur::where('periode_id', $periode->id)
+            ->where('tipe', 'mingguan')
+            ->pluck('hari')
+            ->unique()
+            ->values();
+
+        $namaHari = [0 => 'Minggu', 1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
+
+        $activeDates = [];
+        $hari = $mulai->copy();
+
+        while ($hari->lte($akhir)) {
+            $tanggalStr = $hari->toDateString();
+            $namaHariIni = $namaHari[$hari->dayOfWeek];
+
+            $isHariLibur = $hariLiburNasional->contains($tanggalStr)
+                || $hariLiburMingguan->contains($namaHariIni);
+
+            if (! $isHariLibur) {
+                $activeDates[] = $tanggalStr;
+            }
+
+            $hari->addDay();
+        }
+
+        return $activeDates;
+    }
+
+    /**
+     * Find nearest active date from a given date
+     */
+    private function findNearestActiveDate(string $targetDate, array $activeDates, string $today): string
+    {
+        if (in_array($targetDate, $activeDates)) {
+            return $targetDate;
+        }
+
+        $targetCarbon = Carbon::parse($targetDate);
+        $todayCarbon = Carbon::parse($today);
+
+        // If target is in future, return today if today is active, else nearest past active date
+        if ($targetCarbon->gt($todayCarbon)) {
+            if (in_array($today, $activeDates)) {
+                return $today;
+            }
+            // Find latest active date before today
+            $pastDates = array_filter($activeDates, fn ($d) => $d <= $today);
+            return $pastDates ? max($pastDates) : ($activeDates ? $activeDates[0] : $today);
+        }
+
+        // Target is in past - find nearest active date
+        $closest = null;
+        $minDiff = PHP_INT_MAX;
+
+        foreach ($activeDates as $activeDate) {
+            $diff = abs(Carbon::parse($activeDate)->diffInDays($targetCarbon));
+            if ($diff < $minDiff) {
+                $minDiff = $diff;
+                $closest = $activeDate;
+            }
+        }
+
+        return $closest ?? $targetDate;
     }
 
     /**
