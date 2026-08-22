@@ -18,8 +18,8 @@ class NotifikasiController extends Controller
             'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
         ]);
 
-        $tanggalMulai = $filters['tanggal_mulai'] ?? null ? $this->parseDate($filters['tanggal_mulai'])->format('Y-m-d') : null;
-        $tanggalBerakhir = $filters['tanggal_berakhir'] ?? null ? $this->parseDate($filters['tanggal_berakhir'])->format('Y-m-d') : null;
+        $tanggalMulai = ($filters['tanggal_mulai'] ?? null) ? $this->parseDate($filters['tanggal_mulai'])->format('Y-m-d') : null;
+        $tanggalBerakhir = ($filters['tanggal_berakhir'] ?? null) ? $this->parseDate($filters['tanggal_berakhir'])->format('Y-m-d') : null;
 
         $kelas = Kelas::query()
             ->accessibleBy($request->user())
