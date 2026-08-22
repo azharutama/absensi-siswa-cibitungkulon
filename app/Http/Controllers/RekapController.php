@@ -200,7 +200,7 @@ class RekapController extends Controller
                 $totalSakit += $sakit;
                 $totalIzin += $izin;
                 $totalAlpa += $alpa;
-                $totalHariMasuk += $totalHariMasuk;
+                $totalHariMasuk += $hadir + $sakit + $izin + $alpa;
             }
 
             // Hitung rata-rata kehadiran kelas keseluruhan
