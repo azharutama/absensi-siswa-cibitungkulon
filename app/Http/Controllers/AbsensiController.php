@@ -238,7 +238,7 @@ class AbsensiController extends Controller
 
         $now = now();
         $rows = [];
-        $alpaSiswaIds = [];
+        $notifSiswaIds = [];
 
         foreach ($siswaIds as $siswaId) {
             $status = $data['absensi'][$siswaId];
@@ -252,8 +252,8 @@ class AbsensiController extends Controller
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
-            if ($status === 'alpa') {
-                $alpaSiswaIds[] = $siswaId;
+            if (in_array($status, ['alpa', 'sakit', 'izin'])) {
+                $notifSiswaIds[] = $siswaId;
             }
         }
 
@@ -275,7 +275,7 @@ class AbsensiController extends Controller
                 ->with('error', 'Absensi pada tanggal tersebut sudah disimpan oleh proses lain. Muat ulang halaman.');
         }
 
-        $this->queueAlpaNotificationsFor($alpaSiswaIds, $tanggal);
+        $this->queueAbsensiNotificationsFor($notifSiswaIds, $tanggal);
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data absensi baru berhasil disimpan.');
@@ -477,7 +477,7 @@ class AbsensiController extends Controller
 
         $now = now();
         $upsertRows = [];
-        $alpaSiswaIds = [];
+        $notifSiswaIds = [];
         $hasChanges = false;
 
         foreach ($siswaIds as $siswaId) {
@@ -502,8 +502,8 @@ class AbsensiController extends Controller
                 'updated_at' => $now,
             ];
 
-            if ($status === 'alpa' && $oldStatus !== 'alpa') {
-                $alpaSiswaIds[] = $siswaId;
+            if (in_array($status, ['alpa', 'sakit', 'izin']) && $oldStatus !== $status) {
+                $notifSiswaIds[] = $siswaId;
             }
         }
 
@@ -520,7 +520,7 @@ class AbsensiController extends Controller
             );
         });
 
-        $this->queueAlpaNotificationsFor($alpaSiswaIds, $tanggal);
+        $this->queueAbsensiNotificationsFor($notifSiswaIds, $tanggal);
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data riwayat absensi berhasil diperbarui.');
@@ -707,7 +707,7 @@ class AbsensiController extends Controller
     /**
      * @param  array<int, int>  $siswaIds
      */
-    private function queueAlpaNotificationsFor(array $siswaIds, string $tanggal): void
+    private function queueAbsensiNotificationsFor(array $siswaIds, string $tanggal): void
     {
         if ($siswaIds === []) {
             return;
@@ -717,9 +717,9 @@ class AbsensiController extends Controller
             ->with(['siswa', 'kelas'])
             ->where('tanggal', $tanggal)
             ->whereIn('siswa_id', array_unique($siswaIds))
-            ->where('status', 'alpa')
+            ->whereIn('status', ['alpa', 'sakit', 'izin'])
             ->get()
-            ->flatMap(fn (Absensi $absensi) => $this->upsertAlpaWhatsappNotifications($absensi))
+            ->flatMap(fn (Absensi $absensi) => $this->upsertAbsensiWhatsappNotifications($absensi))
             ->filter(fn (?int $id) => $id !== null)
             ->values()
             ->all();
@@ -732,7 +732,7 @@ class AbsensiController extends Controller
     /**
      * @return array<int, int>
      */
-    private function upsertAlpaWhatsappNotifications(Absensi $absensi): array
+    private function upsertAbsensiWhatsappNotifications(Absensi $absensi): array
     {
         $siswa = $absensi->siswa;
 
@@ -762,7 +762,7 @@ class AbsensiController extends Controller
             return [(int) $notification->id];
         }
 
-        $message = $this->buildAlpaWhatsappMessage($absensi, $primary[0]);
+        $message = $this->buildAbsensiWhatsappMessage($absensi, $primary[0]);
 
         if ($fallback) {
             $message .= "\n\n[Fallback: {$fallback[0]} - {$fallback[1]}]";
@@ -800,7 +800,7 @@ class AbsensiController extends Controller
             'siswa_id' => $absensi->siswa_id,
             'parent_name' => null,
             'parent_phone' => null,
-            'message' => $this->buildAlpaWhatsappMessage($absensi, null),
+            'message' => $this->buildAbsensiWhatsappMessage($absensi, null),
             'status' => 'failed',
             'last_error' => 'Nomor WhatsApp orang tua/wali tidak tersedia.',
             'sent_at' => null,
@@ -854,16 +854,22 @@ class AbsensiController extends Controller
         return $number ?: null;
     }
 
-    private function buildAlpaWhatsappMessage(Absensi $absensi, ?string $parentName): string
+    private function buildAbsensiWhatsappMessage(Absensi $absensi, ?string $parentName): string
     {
         $siswa = $absensi->siswa;
         $tanggal = Carbon::parse($absensi->tanggal)->format('d-m-Y');
         $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
         $kelas = $absensi->kelas?->nama_kelas ? " kelas {$absensi->kelas->nama_kelas}" : '';
+        $status = strtolower($absensi->status);
+
+        $keterangan = match ($status) {
+            'sakit' => "tercatat tidak hadir karena sakit pada tanggal {$tanggal}.\n\nSemoga ananda lekas sembuh. Mohon informasikan perkembangan kondisi ananda kepada wali kelas/sekolah.",
+            'izin' => "tercatat tidak hadir karena izin pada tanggal {$tanggal}.\n\nMohon konfirmasi alasan izin kepada wali kelas/sekolah.",
+            default => "tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\nMohon konfirmasi kepada wali kelas/sekolah.",
+        };
 
         return "Assalamu'alaikum {$sapaan},\n\n"
-            ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\n"
-            .'Mohon konfirmasi kepada wali kelas/sekolah. Terima kasih.';
+            ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} {$keterangan} Terima kasih.";
     }
 
     /**

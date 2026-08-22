@@ -15,17 +15,12 @@ use Throwable;
 
 class PasswordResetLinkController extends Controller
 {
-    /**
-     * Display the password reset link request form.
-     */
+   
     public function create(): View
     {
         return view('auth.forgot-password');
     }
 
-    /**
-     * Send a password reset link to the registered WhatsApp number.
-     */
     public function store(Request $request, FonnteService $fonnteService): RedirectResponse
     {
         $validated = $request->validate([
