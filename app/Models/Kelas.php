@@ -61,4 +61,9 @@ class Kelas extends Model
     {
         return $this->belongsTo(User::class, 'guru_id');
     }
+
+    public function hasRekapData(): bool
+    {
+        return $this->absensis()->whereHas('rekaps')->exists();
+    }
 }

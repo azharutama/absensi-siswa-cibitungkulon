@@ -146,10 +146,21 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id);
 
-        if ($kelas->siswas()->exists() || Absensi::query()->where('kelas_id', $kelas->id)->exists()) {
+        if ($kelas->siswas()->exists() || $kelas->absensis()->exists() || $kelas->hasRekapData()) {
+            $messages = [];
+            if ($kelas->siswas()->exists()) {
+                $messages[] = 'data siswa';
+            }
+            if ($kelas->absensis()->exists()) {
+                $messages[] = 'riwayat absensi';
+            }
+            if ($kelas->hasRekapData()) {
+                $messages[] = 'data rekap';
+            }
+
             return redirect()->route('kelas.index')->with(
                 'error',
-                'Kelas tidak bisa dihapus karena masih memiliki data siswa atau riwayat absensi.'
+                'Kelas tidak bisa dihapus karena masih memiliki ' . implode(', ', $messages) . '.'
             );
         }
 

@@ -75,4 +75,9 @@ class Siswa extends Model
             'status' => 'aktif',
         ]);
     }
+
+    public function hasAbsensi(): bool
+    {
+        return $this->absensis()->exists();
+    }
 }

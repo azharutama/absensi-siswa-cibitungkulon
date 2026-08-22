@@ -104,6 +104,13 @@ class SiswaController extends Controller
         $data = $this->validatedData($request, $siswa);
 
         $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
+
+        if ($siswa->kelas_id !== $kelasSelected->id && $siswa->hasAbsensi()) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['kelas_id' => 'Siswa tidak bisa dipindahkan kelas karena sudah memiliki data absensi.']);
+        }
+
         $data['kelas_id'] = $kelasSelected->id;
 
         $oldData = $siswa->toArray();
@@ -155,20 +162,30 @@ class SiswaController extends Controller
         $kelasAsal = Kelas::findOrFail((int) $data['kelas_asal_id']);
         $kelasTujuan = Kelas::findOrFail((int) $data['kelas_tujuan_id']);
 
-        $count = Siswa::query()
+        $siswaWithAbsensi = Siswa::query()
             ->where('kelas_id', $kelasAsal->id)
-            ->count();
+            ->whereHas('absensis')
+            ->pluck('nama_siswa')
+            ->toArray();
 
-        if ($count === 0) {
-            return redirect()->back()
-                ->with('error', 'Tidak ada siswa di kelas asal.');
+        $siswaIds = Siswa::query()
+            ->where('kelas_id', $kelasAsal->id)
+            ->whereDoesntHave('absensis')
+            ->pluck('id');
+
+        if ($siswaIds->isEmpty()) {
+            $message = 'Tidak ada siswa yang bisa dipindahkan.';
+
+            if (!empty($siswaWithAbsensi)) {
+                $message .= ' Semua siswa di kelas asal sudah memiliki data absensi.';
+            } else {
+                $message .= ' Tidak ada siswa di kelas asal.';
+            }
+
+            return redirect()->back()->with('error', $message);
         }
 
-        DB::transaction(function () use ($kelasAsal, $kelasTujuan): void {
-            $siswaIds = Siswa::query()
-                ->where('kelas_id', $kelasAsal->id)
-                ->pluck('id');
-
+        DB::transaction(function () use ($kelasAsal, $kelasTujuan, $siswaIds): void {
             Siswa::query()
                 ->whereIn('id', $siswaIds)
                 ->update(['kelas_id' => $kelasTujuan->id]);
@@ -186,8 +203,15 @@ class SiswaController extends Controller
             }
         });
 
+        $movedCount = $siswaIds->count();
+        $message = "{$movedCount} siswa berhasil dipindahkan ke kelas baru.";
+
+        if (!empty($siswaWithAbsensi)) {
+            $message .= " " . count($siswaWithAbsensi) . " siswa tidak dipindahkan karena sudah memiliki data absensi.";
+        }
+
         return to_route('siswa.index')
-            ->with('success', "{$count} siswa berhasil dipindahkan ke kelas baru.");
+            ->with('success', $message);
     }
 
     /** @return array<string, mixed> */
