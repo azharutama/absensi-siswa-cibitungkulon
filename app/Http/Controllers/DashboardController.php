@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $user = $request->user();
         $totalKelas = Kelas::query()->accessibleBy($user)->count();
@@ -20,7 +21,6 @@ class DashboardController extends Controller
             ? User::query()->where('role', 'guru')->count()
             : 0;
 
-        // Kirim data ke view dashboard
         return view('dashboard', compact('totalKelas', 'totalSiswa', 'totalGuru'));
     }
 }

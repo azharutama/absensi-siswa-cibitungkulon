@@ -9,6 +9,7 @@ use App\Models\HariLibur;
 use App\Models\Kelas;
 use App\Models\Periode;
 use App\Models\Siswa;
+use App\Models\User;
 use App\Models\WhatsappNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
@@ -29,8 +30,9 @@ class AbsensiController extends Controller
         ]);
 
         $tanggalInput = $filters['tanggal'] ?? today()->format('d/m/Y');
-        $tanggal = $this->parseDate($tanggalInput)->format('Y-m-d');
-        $tanggalDisplay = $this->parseDate($tanggalInput)->format('d/m/Y');
+        $date = $this->parseDate($tanggalInput);
+        $tanggal = $date->toDateString();
+        $tanggalDisplay = $date->format('d/m/Y');
 
         $user = $request->user();
         $userKelas = $user->kelas; // HasOne relasi ke Kelas
@@ -39,9 +41,6 @@ class AbsensiController extends Controller
         if ($user->role === 'guru') {
             if (! $userKelas) {
                 return view('absensi.create', [
-                    'kelas' => collect(),
-                    'siswas' => [],
-                    'absensiSiswa' => [],
                     'kelas' => collect(),
                     'siswas' => [],
                     'absensiSiswa' => [],
@@ -86,9 +85,8 @@ class AbsensiController extends Controller
         } else {
             $activeDates = $this->getActiveDatesForPeriode($activePeriode);
             
-            // Validasi: tanggal tidak boleh besok atau hari libur/weekend
+            // Validasi: tanggal tidak boleh hari libur atau akhir pekan
             $today = today()->toDateString();
-            $tomorrow = today()->addDay()->toDateString();
             
             if (! in_array($tanggal, $activeDates)) {
                 // Cari tanggal aktif terdekat (prioritas: hari ini, lalu hari sebelumnya, lalu hari sesudahnya)
@@ -118,9 +116,7 @@ class AbsensiController extends Controller
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId && $activePeriode) {
-            $kelasModel = $user->role === 'guru' 
-                ? $userKelas 
-                : Kelas::query()->accessibleBy($user)->findOrFail($kelasId);
+            $this->ensureKelasAccessibleTo($user, (int) $kelasId);
 
             $holidayMessage = $this->attendanceDateError($activePeriode, $tanggal);
             $holiday = $holidayMessage === null
@@ -174,19 +170,10 @@ class AbsensiController extends Controller
             }
             $kelasId = $userKelas->id;
             
-            $data = $request->validate([
-                'tanggal' => ['required', 'date', 'before_or_equal:today'],
-                'absensi' => ['required', 'array'],
-                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
-            ]);
+            $data = $this->validateAttendanceRequest($request);
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         } else {
-            $data = $request->validate([
-                'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-                'tanggal' => ['required', 'date', 'before_or_equal:today'],
-                'absensi' => ['required', 'array'],
-                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
-            ]);
+            $data = $this->validateAttendanceRequest($request, true);
             $kelasId = (int) $data['kelas_id'];
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         }
@@ -195,17 +182,7 @@ class AbsensiController extends Controller
 
         $activePeriode = $this->activePeriodeOrFail($tanggal);
         
-        // Validasi akses ke kelas
-        if ($user->role === 'guru') {
-            $kelas = $user->kelas;
-            if ($kelas->id !== $kelasId) {
-                abort(403, 'Anda tidak memiliki akses ke kelas ini.');
-            }
-        } else {
-            $kelas = Kelas::query()
-                ->accessibleBy($user)
-                ->findOrFail($kelasId);
-        }
+        $this->ensureKelasAccessibleTo($user, $kelasId);
 
         if ($dateError = $this->attendanceDateError($activePeriode, $tanggal)) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
@@ -340,7 +317,7 @@ class AbsensiController extends Controller
         } else {
             $activeDates = $this->getActiveDatesForPeriode($activePeriode);
             
-            // Validasi: tanggal tidak boleh besok atau hari libur/weekend
+            // Validasi: tanggal tidak boleh hari libur atau akhir pekan
             $today = today()->toDateString();
             
             if (! in_array($tanggal, $activeDates)) {
@@ -371,9 +348,7 @@ class AbsensiController extends Controller
         $stats = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
 
         if ($kelasId && $activePeriode) {
-            $kelasModel = $user->role === 'guru'
-                ? $userKelas
-                : Kelas::query()->accessibleBy($user)->findOrFail($kelasId);
+            $this->ensureKelasAccessibleTo($user, (int) $kelasId);
 
             $holidayMessage = $this->attendanceDateError($activePeriode, $tanggal);
             $holiday = $holidayMessage === null
@@ -417,19 +392,10 @@ class AbsensiController extends Controller
             }
             $kelasId = $userKelas->id;
 
-            $data = $request->validate([
-                'tanggal' => ['required', 'date', 'before_or_equal:today'],
-                'absensi' => ['required', 'array'],
-                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
-            ]);
+            $data = $this->validateAttendanceRequest($request);
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         } else {
-            $data = $request->validate([
-                'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-                'tanggal' => ['required', 'date', 'before_or_equal:today'],
-                'absensi' => ['required', 'array'],
-                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
-            ]);
+            $data = $this->validateAttendanceRequest($request, true);
             $kelasId = (int) $data['kelas_id'];
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         }
@@ -438,16 +404,7 @@ class AbsensiController extends Controller
 
         $activePeriode = $this->activePeriodeOrFail($tanggal);
 
-        if ($user->role === 'guru') {
-            $kelas = $user->kelas;
-            if ($kelas->id !== $kelasId) {
-                abort(403, 'Anda tidak memiliki akses ke kelas ini.');
-            }
-        } else {
-            $kelas = Kelas::query()
-                ->accessibleBy($user)
-                ->findOrFail($kelasId);
-        }
+        $this->ensureKelasAccessibleTo($user, $kelasId);
 
         if ($dateError = $this->attendanceDateError($activePeriode, $tanggal)) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
@@ -558,6 +515,42 @@ class AbsensiController extends Controller
                 'absensi' => 'Absensi harus memuat seluruh siswa aktif dari kelas yang dipilih.',
             ]);
         }
+    }
+
+    /**
+     * @return array{tanggal: string, absensi: array<int|string, string>, kelas_id?: int}
+     */
+    private function validateAttendanceRequest(Request $request, bool $requiresKelas = false): array
+    {
+        $rules = [
+            'tanggal' => ['required', 'date', 'before_or_equal:today'],
+            'absensi' => ['required', 'array'],
+            'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
+        ];
+
+        if ($requiresKelas) {
+            $rules = [
+                'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+                ...$rules,
+            ];
+        }
+
+        return $request->validate($rules);
+    }
+
+    private function ensureKelasAccessibleTo(User $user, int $kelasId): void
+    {
+        if ($user->role === 'guru') {
+            if ($user->kelas?->id !== $kelasId) {
+                abort(403, 'Anda tidak memiliki akses ke kelas ini.');
+            }
+
+            return;
+        }
+
+        Kelas::query()
+            ->accessibleBy($user)
+            ->findOrFail($kelasId);
     }
 
     private function activePeriodeOrFail(string $tanggal): Periode

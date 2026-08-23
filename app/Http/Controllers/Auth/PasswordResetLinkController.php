@@ -15,7 +15,12 @@ use Throwable;
 
 class PasswordResetLinkController extends Controller
 {
-   
+    private const RESET_LINK_SENT_MESSAGE = 'Jika nomor WhatsApp terdaftar, tautan pengaturan ulang kata sandi akan dikirimkan.';
+
+    private const UNREGISTERED_PHONE_MESSAGE = 'Tautan pengaturan ulang kata sandi gagal dikirim karena nomor WhatsApp tidak terdaftar.';
+
+    private const SEND_FAILURE_MESSAGE = 'Tautan pengaturan ulang kata sandi belum dapat dikirim melalui WhatsApp.';
+
     public function create(): View
     {
         return view('auth.forgot-password');
@@ -27,19 +32,17 @@ class PasswordResetLinkController extends Controller
             'no_telepon' => ['required', 'numeric', 'max_digits:25'],
         ]);
 
-        $phoneNumber = trim($validated['no_telepon']);
+        $phoneNumber = trim((string) $validated['no_telepon']);
         $user = User::query()->where('no_telepon', $phoneNumber)->first();
-        $successMessage = 'Jika nomor WhatsApp terdaftar, tautan pengaturan ulang kata sandi akan dikirimkan.';
 
         if (! $user) {
-            return back()->withInput($request->only('no_telepon'))
-                ->withErrors(['no_telepon' => 'Tautan pengaturan ulang kata sandi gagal dikirim karena nomor WhatsApp tidak terdaftar.']);
+            return $this->resetLinkFailure($request, self::UNREGISTERED_PHONE_MESSAGE);
         }
 
         $rateLimitKey = 'password-reset-whatsapp:'.hash('sha256', Str::lower($phoneNumber));
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
-            return back()->with('status', $successMessage);
+            return back()->with('status', self::RESET_LINK_SENT_MESSAGE);
         }
 
         $token = Password::createToken($user);
@@ -58,16 +61,20 @@ class PasswordResetLinkController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->withInput($request->only('no_telepon'))
-                ->withErrors(['no_telepon' => 'Tautan pengaturan ulang kata sandi belum dapat dikirim melalui WhatsApp.']);
+            return $this->resetLinkFailure($request, self::SEND_FAILURE_MESSAGE);
         }
 
-        if (! $result['success']) {
-            return back()->withInput($request->only('no_telepon'))
-                ->withErrors(['no_telepon' => 'Tautan pengaturan ulang kata sandi belum dapat dikirim melalui WhatsApp.']);
+        if (! ($result['success'] ?? false)) {
+            return $this->resetLinkFailure($request, self::SEND_FAILURE_MESSAGE);
         }
 
-        return back()->with('status', $successMessage);
+        return back()->with('status', self::RESET_LINK_SENT_MESSAGE);
+    }
+
+    private function resetLinkFailure(Request $request, string $message): RedirectResponse
+    {
+        return back()->withInput($request->only('no_telepon'))
+            ->withErrors(['no_telepon' => $message]);
     }
 
     /**

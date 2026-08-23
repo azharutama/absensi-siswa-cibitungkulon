@@ -24,24 +24,14 @@ class RekapController extends Controller
 
     public function index(Request $request): View|RedirectResponse
     {
-        $filters = $request->validate([
-            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
-            'tanggal_mulai' => ['nullable', 'date'],
-            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
-        ]);
+        $filters = $this->validateFilters($request);
+        $kelas = $this->accessibleKelas($request);
 
-        $kelas = Kelas::query()
-            ->accessibleBy($request->user())
-            ->select(['id'])
-            ->get();
-
-        // Auto-redirect menggunakan trait
         if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'rekap.index', ['preset' => $filters['preset'] ?? 'this_month'])) {
             return $redirect;
         }
 
-        return view('rekap.index', $this->rekapData($request));
+        return view('rekap.index', $this->rekapData($request, $filters, $kelas));
     }
 
     /**
@@ -75,20 +65,10 @@ class RekapController extends Controller
     /**
      * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_hari_masuk: int}>, totalHariAktif: int, totalHariAbsensi: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null, hideRekapTabel: bool}
      */
-    private function rekapData(Request $request): array
+    private function rekapData(Request $request, ?array $filters = null, ?Collection $kelas = null): array
     {
-        $filters = $request->validate([
-            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
-            'tanggal_mulai' => ['nullable', 'date'],
-            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
-        ]);
-
-        $kelas = Kelas::query()
-            ->accessibleBy($request->user())
-            ->select(['id', 'nama_kelas'])
-            ->orderBy('nama_kelas')
-            ->get();
+        $filters ??= $this->validateFilters($request);
+        $kelas ??= $this->accessibleKelas($request);
 
         $preset = $filters['preset'] ?? 'this_month';
         
@@ -189,10 +169,6 @@ class RekapController extends Controller
                     'persentase' => $persentase,
                 ];
 
-                // Akumulasi untuk Widget Card Atas
-                $stats['total_sakit'] += $sakit;
-                $stats['total_izin'] += $izin;
-                $stats['total_alpa'] += $alpa;
                 $totalPersentaseSemuaSiswa += $persentase;
 
                 // Akumulasi untuk Total Keseluruhan
@@ -232,6 +208,29 @@ class RekapController extends Controller
     }
 
     /**
+     * @return array{kelas_id?: int, preset?: string, tanggal_mulai?: string, tanggal_berakhir?: string}
+     */
+    private function validateFilters(Request $request): array
+    {
+        return $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+        ]);
+    }
+
+    /** @return Collection<int, Kelas> */
+    private function accessibleKelas(Request $request): Collection
+    {
+        return Kelas::query()
+            ->accessibleBy($request->user())
+            ->select(['id', 'nama_kelas'])
+            ->orderBy('nama_kelas')
+            ->get();
+    }
+
+    /**
      * Get date range based on preset filter
      * 
      * @return array{0: string, 1: string}
@@ -240,7 +239,7 @@ class RekapController extends Controller
     {
         $today = today();
         
-        return match($preset) {
+        return match ($preset) {
             'today' => [
                 $today->toDateString(),
                 $today->toDateString()
@@ -258,7 +257,7 @@ class RekapController extends Controller
             default => [
                 $today->copy()->startOfMonth()->toDateString(),
                 $today->toDateString()
-            ]
+            ],
         };
     }
 
@@ -267,7 +266,7 @@ class RekapController extends Controller
      * 
      * @return array{0: string, 1: string}
      */
-private function getSemesterDateRange(int $semester): array
+    private function getSemesterDateRange(int $semester): array
     {
         $periode = Periode::query()
             ->where('semester', $semester)
@@ -280,7 +279,7 @@ private function getSemesterDateRange(int $semester): array
 
         return [
             $periode->tanggal_mulai->toDateString(),
-            $periode->tanggal_selesai->toDateString()
+            $periode->tanggal_selesai->toDateString(),
         ];
     }
 

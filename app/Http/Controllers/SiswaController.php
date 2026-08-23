@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -56,13 +57,10 @@ class SiswaController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $kelas = Kelas::query()
-            ->accessibleBy($request->user())
-            ->select('id', 'nama_kelas')
-            ->orderBy('nama_kelas')
-            ->get();
-
-        return view('siswa.index', compact('siswas', 'kelas'));
+        return view('siswa.index', [
+            'siswas' => $siswas,
+            ...$this->formOptions($request->user()),
+        ]);
     }
 
     public function create(Request $request): View
@@ -74,9 +72,7 @@ class SiswaController extends Controller
     {
         $data = $this->validatedData($request);
 
-        $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
-
-        $data['kelas_id'] = $kelasSelected->id;
+        $data['kelas_id'] = $this->findKelas((int) $data['kelas_id'], $request->user())->id;
 
         $siswa = Siswa::create($data);
 
@@ -162,11 +158,10 @@ class SiswaController extends Controller
         $kelasAsal = Kelas::findOrFail((int) $data['kelas_asal_id']);
         $kelasTujuan = Kelas::findOrFail((int) $data['kelas_tujuan_id']);
 
-        $siswaWithAbsensi = Siswa::query()
+        $siswaWithAbsensiCount = Siswa::query()
             ->where('kelas_id', $kelasAsal->id)
             ->whereHas('absensis')
-            ->pluck('nama_siswa')
-            ->toArray();
+            ->count();
 
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasAsal->id)
@@ -176,7 +171,7 @@ class SiswaController extends Controller
         if ($siswaIds->isEmpty()) {
             $message = 'Tidak ada siswa yang bisa dipindahkan.';
 
-            if (!empty($siswaWithAbsensi)) {
+            if ($siswaWithAbsensiCount > 0) {
                 $message .= ' Semua siswa di kelas asal sudah memiliki data absensi.';
             } else {
                 $message .= ' Tidak ada siswa di kelas asal.';
@@ -190,24 +185,14 @@ class SiswaController extends Controller
                 ->whereIn('id', $siswaIds)
                 ->update(['kelas_id' => $kelasTujuan->id]);
 
-            foreach ($siswaIds->chunk(200) as $chunk) {
-                foreach ($chunk as $siswaId) {
-                    RiwayatKelasSiswa::create([
-                        'siswa_id' => $siswaId,
-                        'kelas_asal_id' => $kelasAsal->id,
-                        'kelas_tujuan_id' => $kelasTujuan->id,
-                        'tanggal_kenaikan' => today(),
-                        'status' => 'aktif',
-                    ]);
-                }
-            }
+            $this->storeRiwayatKelas($siswaIds, $kelasAsal, $kelasTujuan);
         });
 
         $movedCount = $siswaIds->count();
         $message = "{$movedCount} siswa berhasil dipindahkan ke kelas baru.";
 
-        if (!empty($siswaWithAbsensi)) {
-            $message .= " " . count($siswaWithAbsensi) . " siswa tidak dipindahkan karena sudah memiliki data absensi.";
+        if ($siswaWithAbsensiCount > 0) {
+            $message .= " {$siswaWithAbsensiCount} siswa tidak dipindahkan karena sudah memiliki data absensi.";
         }
 
         return to_route('siswa.index')
@@ -274,6 +259,25 @@ class SiswaController extends Controller
         }
 
         return $kelas;
+    }
+
+    private function storeRiwayatKelas(SupportCollection $siswaIds, Kelas $kelasAsal, Kelas $kelasTujuan): void
+    {
+        $movedAt = now();
+
+        foreach ($siswaIds->chunk(200) as $chunk) {
+            RiwayatKelasSiswa::query()->insert(
+                $chunk->map(fn (int $siswaId): array => [
+                    'siswa_id' => $siswaId,
+                    'kelas_asal_id' => $kelasAsal->id,
+                    'kelas_tujuan_id' => $kelasTujuan->id,
+                    'tanggal_kenaikan' => $movedAt->toDateString(),
+                    'status' => 'aktif',
+                    'created_at' => $movedAt,
+                    'updated_at' => $movedAt,
+                ])->all(),
+            );
+        }
     }
 
     /**

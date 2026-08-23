@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Kelas;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +19,7 @@ class GuruController extends Controller
     /**
      * Ambil data user beserta filter pencarian jika ada
      */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
@@ -48,7 +50,7 @@ class GuruController extends Controller
     /**
      * Buka form input user baru
      */
-    public function create()
+    public function create(): View
     {
         $kelas = Kelas::query()
             ->select(['id', 'nama_kelas'])
@@ -63,31 +65,12 @@ class GuruController extends Controller
     /**
      * Validasi dan simpan user baru
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'nip' => 'required|numeric|unique:users,nip',
-            'nama' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'no_telepon' => 'required|numeric|unique:users,no_telepon',
-            'alamat' => 'required|string|max:255',
-            'role' => 'required|string|in:operator,guru,kepala_sekolah',
-            'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
-            'password' => 'required|string|min:8|confirmed',
-            'kelas_id' => 'nullable|exists:kelas,id',
-        ]);
+        $data = $this->validatedUserData($request);
 
-        DB::transaction(function () use ($request): void {
-            $user = User::create([
-                'nip' => $request->nip,
-                'nama' => $request->nama,
-                'email' => $request->email,
-                'no_telepon' => $request->no_telepon,
-                'address' => $request->alamat,
-                'role' => $request->role,
-                'jenis_kelamin' => $request->jenis_kelamin,
-                'password' => Hash::make($request->password),
-            ]);
+        DB::transaction(function () use ($data, $request): void {
+            $user = User::create($data);
 
             if ($user->role === 'guru' && $request->filled('kelas_id')) {
                 $kelas = Kelas::where('id', $request->kelas_id)
@@ -112,7 +95,7 @@ class GuruController extends Controller
     /**
      * Buka form edit user
      */
-    public function edit($id)
+    public function edit($id): View
     {
         $guru = User::query()
             ->select(['id', 'nip', 'nama', 'email', 'no_telepon', 'address', 'role', 'jenis_kelamin'])
@@ -135,36 +118,11 @@ class GuruController extends Controller
     /**
      * Validasi dan simpan perubahan data user
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): RedirectResponse
     {
         $user = User::findOrFail($id);
 
-        $request->validate([
-            'nip' => 'required|numeric|unique:users,nip,'.$user->id,
-            'nama' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
-            'no_telepon' => 'required|numeric|unique:users,no_telepon,'.$user->id,
-            'alamat' => 'required|string|max:255',
-            'role' => 'required|string|in:operator,guru,kepala_sekolah',
-            'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
-            'password' => 'nullable|string|min:8|confirmed',
-            'kelas_id' => 'nullable|exists:kelas,id',
-        ]);
-
-        $data = [
-            'nip' => $request->nip,
-            'nama' => $request->nama,
-            'email' => $request->email,
-            'no_telepon' => $request->no_telepon,
-            'address' => $request->alamat,
-            'role' => $request->role,
-            'jenis_kelamin' => $request->jenis_kelamin,
-        ];
-
-        // Update password hanya kalau kolomnya diisi di form
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
+        $data = $this->validatedUserData($request, $user);
 
         DB::transaction(function () use ($request, $user, $data): void {
             $operatorIds = User::query()
@@ -216,9 +174,7 @@ class GuruController extends Controller
                 }
             } else {
                 // Release any kelas if not guru
-                if ($lockedUser->kelas) {
-                    Kelas::where('guru_id', $lockedUser->id)->update(['guru_id' => null]);
-                }
+                Kelas::query()->where('guru_id', $lockedUser->id)->update(['guru_id' => null]);
             }
 
             // Log activity menggunakan trait
@@ -236,7 +192,7 @@ class GuruController extends Controller
     /**
      * Hapus data user dari database
      */
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, $id): RedirectResponse
     {
         if ((int) $request->user()->getKey() === (int) $id) {
             return redirect()->route('guru.index')->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
@@ -258,14 +214,11 @@ class GuruController extends Controller
                 return 'Pengguna tidak dapat dihapus karena memiliki riwayat absensi atau rekap.';
             }
 
-            $userData = $user->makeHidden('password')->toArray();
             $userName = $user->nama;
             $userId = $user->id;
 
             // Release any kelas assignment
-            if ($user->kelas) {
-                Kelas::where('guru_id', $user->id)->update(['guru_id' => null]);
-            }
+            Kelas::query()->where('guru_id', $user->id)->update(['guru_id' => null]);
 
             $user->delete();
 
@@ -283,5 +236,33 @@ class GuruController extends Controller
         }
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil dihapus.');
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedUserData(Request $request, ?User $user = null): array
+    {
+        $uniqueSuffix = $user ? ",{$user->id}" : '';
+        $data = $request->validate([
+            'nip' => "required|numeric|unique:users,nip{$uniqueSuffix}",
+            'nama' => 'required|string|max:255',
+            'email' => "required|string|email|max:255|unique:users,email{$uniqueSuffix}",
+            'no_telepon' => "required|numeric|unique:users,no_telepon{$uniqueSuffix}",
+            'alamat' => 'required|string|max:255',
+            'role' => 'required|string|in:operator,guru,kepala_sekolah',
+            'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
+            'password' => $user ? 'nullable|string|min:8|confirmed' : 'required|string|min:8|confirmed',
+            'kelas_id' => 'nullable|exists:kelas,id',
+        ]);
+
+        $data['address'] = $data['alamat'];
+        unset($data['alamat'], $data['kelas_id']);
+
+        if (filled($data['password'] ?? null)) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        return $data;
     }
 }
