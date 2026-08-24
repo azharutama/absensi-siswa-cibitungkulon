@@ -26,8 +26,8 @@ class UserFactory extends Factory
         return [
             'nama' => fake()->name(),
             'nip' => fake()->unique()->numerify('###############'),
+            'username' => fake()->unique()->userName(),
             'address' => fake()->address(),
-            'email' => fake()->unique()->safeEmail(),
             'no_telepon' => '08'.fake()->unique()->numerify('##########'),
             'password' => static::$password ??= Hash::make('password'),
             'role' => fake()->randomElement(['operator', 'guru', 'kepala_sekolah']),

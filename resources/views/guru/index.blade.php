@@ -35,7 +35,7 @@
                 </div>
 
                 @if($gurus->isNotEmpty())
-                    <x-table :headers="['No', 'NIP', 'Nama Lengkap', 'Alamat', 'Email', 'No. Telepon', 'Role Akses', 'Kelas Diampu', 'Aksi']">
+                    <x-table :headers="['No', 'NIP', 'Username', 'Nama Lengkap', 'Alamat', 'No. Telepon', 'Role Akses', 'Kelas Diampu', 'Aksi']">
                         @foreach ($gurus as $index => $guru)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
@@ -45,13 +45,13 @@
                                     {{ $guru->nip ?? '-' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">
+                                    {{ $guru->username }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b">
                                     {{ $guru->nama }}
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-500 border-b">
                                     {{ $guru->alamat ?: '-' }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
-                                    {{ $guru->email }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b">
                                     {{ $guru->no_telepon }}

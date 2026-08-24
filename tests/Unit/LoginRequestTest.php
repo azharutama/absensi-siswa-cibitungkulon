@@ -9,8 +9,8 @@ class LoginRequestTest extends TestCase
 {
     public function test_throttle_key_normalizes_case_and_surrounding_whitespace(): void
     {
-        $spaced = LoginRequest::create('/login', 'POST', ['login' => ' User@Example.com ']);
-        $normalized = LoginRequest::create('/login', 'POST', ['login' => 'user@example.com']);
+        $spaced = LoginRequest::create('/login', 'POST', ['login' => ' UserName ']);
+        $normalized = LoginRequest::create('/login', 'POST', ['login' => 'username']);
 
         $this->assertSame($normalized->throttleKey(), $spaced->throttleKey());
     }

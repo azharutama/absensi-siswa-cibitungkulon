@@ -30,10 +30,10 @@
                 <form method="POST" action="{{ route('login') }}" class="space-y-4">
                     @csrf
 
-                    <!-- Email or NIP -->
+                    <!-- Username -->
                     <div>
                         <label for="login" class="block text-sm font-medium text-gray-700 mb-1">
-                            Email atau NIP
+                            Username
                         </label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
@@ -46,7 +46,7 @@
                                 name="login" 
                                 type="text" 
                                 autocomplete="username"
-                                placeholder="Masukkan email atau NIP"
+                                placeholder="Masukkan username"
                                 value="{{ old('login') }}"
                                 required
                                 autofocus

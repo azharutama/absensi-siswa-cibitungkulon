@@ -21,7 +21,7 @@ class GuruSeederTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame(GuruSeeder::PRIMARY_TEACHER_NAME, $primaryTeacher->nama);
-        $this->assertSame(GuruSeeder::PRIMARY_TEACHER_EMAIL, $primaryTeacher->email);
+        $this->assertSame(GuruSeeder::PRIMARY_TEACHER_USERNAME, $primaryTeacher->username);
         $this->assertSame('guru', $primaryTeacher->role);
         $this->assertTrue(Hash::check(GuruSeeder::DEFAULT_PASSWORD, $primaryTeacher->password));
 

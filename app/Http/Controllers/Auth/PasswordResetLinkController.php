@@ -48,7 +48,7 @@ class PasswordResetLinkController extends Controller
         $token = Password::createToken($user);
         $resetUrl = url(route('password.reset', [
             'token' => $token,
-            'email' => $user->email,
+            'username' => $user->username,
         ], false));
 
         RateLimiter::hit($rateLimitKey, 60);

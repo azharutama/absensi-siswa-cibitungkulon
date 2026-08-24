@@ -258,12 +258,14 @@ class DataIntegrityTest extends TestCase
 
     public function test_active_operator_cannot_demote_own_account(): void
     {
-        $operator = User::factory()->operator()->create();
+        $operator = User::factory()->operator()->create([
+            'username' => 'operator123',
+        ]);
 
         $response = $this->actingAs($operator)->put(route('guru.update', $operator), [
             'nip' => $operator->nip,
+            'username' => 'operator123',
             'nama' => $operator->nama,
-            'email' => $operator->email,
             'no_telepon' => $operator->no_telepon,
             'alamat' => $operator->address,
             'role' => 'guru',

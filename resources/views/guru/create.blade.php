@@ -12,15 +12,15 @@
                 </div>
 
                 <div>
-                    <x-input-label for="nama" :value="__('Nama Lengkap *')" />
-                    <x-text-input id="nama" name="nama" type="text" class="mt-1 block w-full" :value="old('nama')" placeholder="Contoh: Ahmad Fauzi" required />
-                    <x-input-error class="mt-2" :messages="$errors->get('nama')" />
+                    <x-input-label for="username" :value="__('Username *')" />
+                    <x-text-input id="username" name="username" type="text" class="mt-1 block w-full" :value="old('username')" placeholder="Contoh: ahmadfauzi" required />
+                    <x-input-error class="mt-2" :messages="$errors->get('username')" />
                 </div>
 
                 <div>
-                    <x-input-label for="email" :value="__('Alamat Email *')" />
-                    <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" placeholder="Contoh: guru@sekolah.sch.id" required />
-                    <x-input-error class="mt-2" :messages="$errors->get('email')" />
+                    <x-input-label for="nama" :value="__('Nama Lengkap *')" />
+                    <x-text-input id="nama" name="nama" type="text" class="mt-1 block w-full" :value="old('nama')" placeholder="Contoh: Ahmad Fauzi" required />
+                    <x-input-error class="mt-2" :messages="$errors->get('nama')" />
                 </div>
 
                 <div>

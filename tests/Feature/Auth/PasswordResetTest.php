@@ -41,7 +41,7 @@ class PasswordResetTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertSessionHas('status');
 
-        $this->assertDatabaseHas('password_reset_tokens', ['email' => $user->email]);
+        $this->assertDatabaseHas('password_reset_tokens', ['email' => $user->username]);
     }
 
     public function test_reset_link_request_fails_when_whatsapp_number_is_not_registered(): void
@@ -60,7 +60,7 @@ class PasswordResetTest extends TestCase
 
         $this->post('/reset-password', [
             'token' => $token,
-            'email' => $user->email,
+            'username' => $user->username,
             'password' => 'new-password-123',
             'password_confirmation' => 'new-password-123',
         ])->assertRedirect('/login')

@@ -29,7 +29,7 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->patch('/profile', [
                 'nama' => 'Test User',
-                'email' => 'test@example.com',
+                'username' => 'testuser',
             ]);
 
         $response
@@ -39,7 +39,7 @@ class ProfileTest extends TestCase
         $user->refresh();
 
         $this->assertSame('Test User', $user->nama);
-        $this->assertSame('test@example.com', $user->email);
+        $this->assertSame('testuser', $user->username);
     }
 
     public function test_users_cannot_delete_school_managed_accounts_from_profile(): void

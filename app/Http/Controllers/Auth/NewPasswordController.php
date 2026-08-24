@@ -30,12 +30,12 @@ class NewPasswordController extends Controller
     {
         $request->validate([
             'token' => ['required'],
-            'email' => ['required', 'string', 'email'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            $request->only('username', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password): void {
                 $user->forceFill([
                     'password' => Hash::make($password),
@@ -50,7 +50,7 @@ class NewPasswordController extends Controller
             return redirect()->route('login')->with('status', 'Kata sandi berhasil diperbarui. Silakan masuk dengan kata sandi baru Anda.');
         }
 
-        return back()->withInput($request->only('email'))
-            ->withErrors(['email' => 'Tautan pengaturan ulang kata sandi tidak valid atau telah kedaluwarsa.']);
+        return back()->withInput($request->only('username'))
+            ->withErrors(['username' => 'Tautan pengaturan ulang kata sandi tidak valid atau telah kedaluwarsa.']);
     }
 }

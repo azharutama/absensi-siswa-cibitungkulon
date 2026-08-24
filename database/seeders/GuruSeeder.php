@@ -12,7 +12,7 @@ class GuruSeeder extends Seeder
 
     public const DEFAULT_PASSWORD = 'password';
 
-    public const PRIMARY_TEACHER_EMAIL = 'azhar@gmail.com';
+    public const PRIMARY_TEACHER_USERNAME = 'azhar';
 
     public const PRIMARY_TEACHER_NAME = 'Muhammad Azhar Utama';
 
@@ -30,8 +30,8 @@ class GuruSeeder extends Seeder
         $this->saveUser([
             'nama' => 'Operator SD',
             'nip' => '197001012005011001',
+            'username' => 'operator',
             'address' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
-            'email' => 'operator@gmail.com',
             'no_telepon' => '081200000001',
             'role' => 'operator',
             'jenis_kelamin' => 'laki-laki',
@@ -46,10 +46,10 @@ class GuruSeeder extends Seeder
                     ? self::PRIMARY_TEACHER_NAME
                     : $faker->unique()->name($isFemale ? 'female' : 'male'),
                 'nip' => self::nipFor($number),
+                'username' => $number === 1
+                    ? self::PRIMARY_TEACHER_USERNAME
+                    : "guru{$number}",
                 'address' => $faker->address(),
-                'email' => $number === 1
-                    ? self::PRIMARY_TEACHER_EMAIL
-                    : "guru{$number}@gmail.com",
                 'no_telepon' => sprintf('08121%07d', $number),
                 'role' => 'guru',
                 'jenis_kelamin' => $isFemale ? 'perempuan' : 'laki-laki',
@@ -60,8 +60,8 @@ class GuruSeeder extends Seeder
         $this->saveUser([
             'nama' => 'Kepala Sekolah',
             'nip' => '196001012005011001',
+            'username' => 'kepsek',
             'address' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
-            'email' => 'kepala.sekolah@gmail.com',
             'no_telepon' => '081299999999',
             'role' => 'kepala_sekolah',
             'jenis_kelamin' => 'laki-laki',

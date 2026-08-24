@@ -44,10 +44,12 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         $login = $this->normalizedLogin();
-        $loginField = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'nip';
 
         $user = User::query()
-            ->where($loginField, $login)
+            ->where(function ($query) use ($login) {
+                $query->where('username', $login)
+                    ->orWhere('nip', $login);
+            })
             ->first();
 
         if (! $user) {
@@ -57,6 +59,8 @@ class LoginRequest extends FormRequest
                 'login' => trans('auth.failed'),
             ]);
         }
+
+        $loginField = $user->username === $login ? 'username' : 'nip';
 
         if (! Auth::attempt([
             $loginField => $login,

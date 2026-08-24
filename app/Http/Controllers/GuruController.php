@@ -27,7 +27,7 @@ class GuruController extends Controller
         $search = trim($filters['search'] ?? '');
 
         $query = User::query()
-            ->select(['id', 'nip', 'nama', 'no_telepon', 'role', 'email', 'address'])
+            ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'role', 'address'])
             ->with('kelas:id,guru_id,nama_kelas');
 
         // Cari berdasarkan nama, wa, atau nip
@@ -35,7 +35,8 @@ class GuruController extends Controller
             $query->where(function ($query) use ($search): void {
                 $query->where('nama', 'like', "%{$search}%")
                     ->orWhere('no_telepon', 'like', "%{$search}%")
-                    ->orWhere('nip', 'like', "%{$search}%");
+                    ->orWhere('nip', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%");
             });
         }
 
@@ -98,7 +99,7 @@ class GuruController extends Controller
     public function edit($id): View
     {
         $guru = User::query()
-            ->select(['id', 'nip', 'nama', 'email', 'no_telepon', 'address', 'role', 'jenis_kelamin'])
+            ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'address', 'role', 'jenis_kelamin'])
             ->with('kelas:id,guru_id,nama_kelas')
             ->findOrFail($id);
 
@@ -244,8 +245,8 @@ class GuruController extends Controller
         $uniqueSuffix = $user ? ",{$user->id}" : '';
         $data = $request->validate([
             'nip' => "required|numeric|unique:users,nip{$uniqueSuffix}",
+            'username' => "required|string|alpha_dash|max:50|unique:users,username{$uniqueSuffix}",
             'nama' => 'required|string|max:255',
-            'email' => "required|string|email|max:255|unique:users,email{$uniqueSuffix}",
             'no_telepon' => "required|numeric|unique:users,no_telepon{$uniqueSuffix}",
             'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',

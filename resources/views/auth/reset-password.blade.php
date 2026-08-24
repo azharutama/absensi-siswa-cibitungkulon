@@ -7,9 +7,9 @@
         @csrf
 
         <input type="hidden" name="token" value="{{ $request->route('token') }}">
-        <input type="hidden" name="email" value="{{ old('email', $request->email) }}">
+        <input type="hidden" name="username" value="{{ old('username', $request->username) }}">
 
-        <x-input-error :messages="$errors->get('email')" class="mb-4" />
+        <x-input-error :messages="$errors->get('username')" class="mb-4" />
 
         <div>
             <x-input-label for="password" :value="__('Kata Sandi Baru')" />

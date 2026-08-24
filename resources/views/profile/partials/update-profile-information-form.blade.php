@@ -5,7 +5,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            Perbarui nama dan alamat email akun Anda.
+            Perbarui nama dan username akun Anda.
         </p>
     </header>
 
@@ -20,9 +20,9 @@
         </div>
 
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
-            <x-input-error class="mt-2" :messages="$errors->get('email')" />
+            <x-input-label for="username" :value="__('Username')" />
+            <x-text-input id="username" name="username" type="text" class="mt-1 block w-full" :value="old('username', $user->username)" required autofocus autocomplete="username" />
+            <x-input-error class="mt-2" :messages="$errors->get('username')" />
         </div>
 
         <div class="flex items-center gap-4">
