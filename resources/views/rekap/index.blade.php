@@ -39,18 +39,20 @@
         <!-- 2. BLOK FILTER CEPAT DAN MANUAL -->
         <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
             
-            {{-- Pilih Kelas (Selalu Tampil) --}}
-            <div>
-                <label for="kelas_id_preset" class="block text-sm font-semibold text-gray-700 mb-2">Pilih Kelas</label>
-                <select id="kelas_id_preset" onchange="window.location.href = this.value" class="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="{{ route('rekap.index', ['preset' => $preset ?? 'this_month']) }}">-- Pilih Kelas --</option>
-                    @foreach($kelas as $k)
-                        <option value="{{ route('rekap.index', ['preset' => $preset ?? 'this_month', 'kelas_id' => $k->id]) }}" {{ $kelasId == $k->id ? 'selected' : '' }}>
-                            {{ $k->nama_kelas }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            {{-- Pilih Kelas (Untuk operator & kepala sekolah) --}}
+            @if(auth()->user()->role !== 'guru')
+                <div>
+                    <label for="kelas_id_preset" class="block text-sm font-semibold text-gray-700 mb-2">Pilih Kelas</label>
+                    <select id="kelas_id_preset" onchange="window.location.href = this.value" class="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="{{ route('rekap.index', ['preset' => $preset ?? 'this_month']) }}">-- Pilih Kelas --</option>
+                        @foreach($kelas as $k)
+                            <option value="{{ route('rekap.index', ['preset' => $preset ?? 'this_month', 'kelas_id' => $k->id]) }}" {{ $kelasId == $k->id ? 'selected' : '' }}>
+                                {{ $k->nama_kelas }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
 
             @if($kelasId)
                 {{-- Filter Cepat --}}

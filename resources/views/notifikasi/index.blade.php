@@ -2,6 +2,7 @@
     <div class="p-6 space-y-6">
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <form method="GET" action="{{ route('notifikasi.index') }}" class="flex flex-wrap items-end gap-4">
+                @if(auth()->user()->role !== 'guru')
                 <div class="w-full sm:w-44">
                     <label for="kelas_id" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Kelas</label>
                     <select id="kelas_id" name="kelas_id" onchange="this.form.submit()" class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500">
@@ -13,6 +14,9 @@
                         @endforeach
                     </select>
                 </div>
+                @else
+                    <input type="hidden" name="kelas_id" value="{{ $kelas->first()->id ?? '' }}">
+                @endif
 
                 <div class="w-full sm:w-56">
                     <label for="tanggal_mulai" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Tanggal Mulai</label>

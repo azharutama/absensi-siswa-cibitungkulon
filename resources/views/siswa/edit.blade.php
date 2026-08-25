@@ -29,7 +29,12 @@
 
                     <div>
                         <x-input-label for="kelas_id" :value="__('Kelas *')" />
-                        @if($siswa->hasAbsensi())
+                        @if(auth()->user()->role === 'guru')
+                            <input type="hidden" name="kelas_id" value="{{ $siswa->kelas_id }}">
+                            <div class="mt-1 block w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+                                {{ $kelas->firstWhere('id', $siswa->kelas_id)->nama_kelas ?? $siswa->kelas->nama_kelas }}
+                            </div>
+                        @elseif($siswa->hasAbsensi())
                             <div class="mt-1">
                                 <input type="hidden" name="kelas_id" value="{{ $siswa->kelas_id }}">
                                 <select id="kelas_id" name="kelas_id_disabled" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm bg-gray-100 cursor-not-allowed" disabled>

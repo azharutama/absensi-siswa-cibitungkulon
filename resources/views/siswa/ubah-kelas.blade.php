@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-form-card :title="__('Ubah Kelas')" :backUrl="route('siswa.index')">
+    <x-form-card :title="__('Pindah Kelas')" :backUrl="route('siswa.index')">
 
         @if(session('success'))
             <div class="mb-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm">

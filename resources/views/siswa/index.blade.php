@@ -37,7 +37,7 @@
 
                         @if(auth()->user()->role === 'operator')
                             <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
-                                Ubah Kelas
+                                Pindah Kelas
                             </a>
                         @endif
 
@@ -47,17 +47,19 @@
                     </div>
                  </div>
 
-                 <x-filter-form 
-                     :action="route('siswa.index')"
-                     :filters="[
-                         [
-                             'name' => 'kelas_id',
-                             'label' => 'Kelas',
-                             'placeholder' => 'Semua kelas',
-                             'options' => $kelas->pluck('nama_kelas', 'id')->toArray()
-                         ]
-                     ]"
-                 />
+@if(auth()->user()->role !== 'guru')
+                  <x-filter-form 
+                      :action="route('siswa.index')"
+                      :filters="[
+                          [
+                              'name' => 'kelas_id',
+                              'label' => 'Kelas',
+                              'placeholder' => 'Semua kelas',
+                              'options' => $kelas->pluck('nama_kelas', 'id')->toArray()
+                          ]
+                      ]"
+                  />
+                  @endif
 
                  @if($siswas->isNotEmpty())
                     <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Alamat', 'Nama Ayah', 'No. WA Ayah', 'Nama Ibu', 'No. WA Ibu', 'Aksi']">

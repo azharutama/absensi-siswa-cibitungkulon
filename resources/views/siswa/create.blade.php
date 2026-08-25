@@ -35,14 +35,21 @@
 
                     <div>
                         <x-input-label for="kelas_id" :value="__('Kelas *')" />
-                        <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
-                            <option value="" disabled selected>-- Pilih Kelas --</option>
-                            @foreach($kelas as $k)
-                                <option value="{{ $k->id }}" {{ old('kelas_id') == $k->id ? 'selected' : '' }}>
-                                    {{ $k->nama_kelas }}
-                                </option>
-                            @endforeach
-                        </select>
+                        @if(auth()->user()->role === 'guru')
+                            <input type="hidden" name="kelas_id" value="{{ $kelas->first()->id }}">
+                            <div class="mt-1 block w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+                                {{ $kelas->first()->nama_kelas }}
+                            </div>
+                        @else
+                            <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
+                                <option value="" disabled selected>-- Pilih Kelas --</option>
+                                @foreach($kelas as $k)
+                                    <option value="{{ $k->id }}" {{ old('kelas_id') == $k->id ? 'selected' : '' }}>
+                                        {{ $k->nama_kelas }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        @endif
                         <x-input-error class="mt-2" :messages="$errors->get('kelas_id')" />
                     </div>
 
