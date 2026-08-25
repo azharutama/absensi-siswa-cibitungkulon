@@ -29,15 +29,32 @@
 
                     <div>
                         <x-input-label for="kelas_id" :value="__('Kelas *')" />
-                        <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
-                            <option value="" disabled>-- Pilih Kelas --</option>
-                            @foreach($kelas as $k)
-                                <option value="{{ $k->id }}" {{ old('kelas_id', $siswa->kelas_id) == $k->id ? 'selected' : '' }}>
-                                    {{ $k->nama_kelas }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <x-input-error class="mt-2" :messages="$errors->get('kelas_id')" />
+                        @if($siswa->hasAbsensi())
+                            <div class="mt-1">
+                                <input type="hidden" name="kelas_id" value="{{ $siswa->kelas_id }}">
+                                <select id="kelas_id" name="kelas_id_disabled" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm bg-gray-100 cursor-not-allowed" disabled>
+                                    @foreach($kelas as $k)
+                                        <option value="{{ $k->id }}" {{ $siswa->kelas_id == $k->id ? 'selected' : '' }}>
+                                            {{ $k->nama_kelas }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-xs text-red-600">
+                                    <svg class="inline h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    Kelas tidak bisa diubah karena siswa sudah memiliki data absensi.
+                                </p>
+                            </div>
+                        @else
+                            <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" required>
+                                <option value="" disabled>-- Pilih Kelas --</option>
+                                @foreach($kelas as $k)
+                                    <option value="{{ $k->id }}" {{ old('kelas_id', $siswa->kelas_id) == $k->id ? 'selected' : '' }}>
+                                        {{ $k->nama_kelas }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error class="mt-2" :messages="$errors->get('kelas_id')" />
+                        @endif
                     </div>
 
                     <div>
