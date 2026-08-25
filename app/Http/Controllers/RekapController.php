@@ -56,14 +56,14 @@ class RekapController extends Controller
                 $data['namaKelas'],
                 $data['tanggalMulai'],
                 $data['tanggalBerakhir'],
-                $data['totalHariAktif'],
+                count($this->getActiveDatesForRange($data['tanggalMulai'], $data['tanggalBerakhir'])),
             ),
             $filename,
         );
     }
 
     /**
-     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_hari_masuk: int}>, totalHariAktif: int, totalHariAbsensi: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_sakit: int, total_izin: int, total_alpa: int}, namaKelas: string|null, preset: string|null, hideRekapTabel: bool}
+     * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_tidak_masuk: int, persentase: float}>, totalHariAktif: int, totalHariAbsensi: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_hadir: int, total_sakit: int, total_izin: int, total_alpa: int, total_tidak_masuk: int, persentase_hadir: float|int, persentase_sakit: float|int, persentase_izin: float|int, persentase_alpa: float|int}, namaKelas: string|null, preset: string|null, hideRekapTabel: bool}
      */
     private function rekapData(Request $request, ?array $filters = null, ?Collection $kelas = null): array
     {
@@ -131,6 +131,9 @@ class RekapController extends Controller
                 ->get()
                 ->keyBy('siswa_id');
 
+            // Total hari aktif dalam rentang filter (untuk perhitungan persentase kehadiran)
+            $totalHariAktifFilter = count($activeDates);
+
             // Hitung total hari aktif dari seluruh periode aktif (tidak terpengaruh filter)
             $totalHariAktif = $this->hitungHariAktifPeriode();
 
@@ -145,8 +148,9 @@ class RekapController extends Controller
             $totalSakit = 0;
             $totalIzin = 0;
             $totalAlpa = 0;
-            $totalHariMasuk = 0;
+            $totalTidakMasuk = 0;
             $namaKelas = $selectedKelas->nama_kelas;
+            $jumlahSiswa = $siswas->count();
 
             foreach ($siswas as $siswa) {
                 $totals = $absensiTotals->get($siswa->id);
@@ -155,8 +159,9 @@ class RekapController extends Controller
                 $izin = $totals->izin ?? 0;
                 $alpa = $totals->alpa ?? 0;
 
-                $totalHariMasuk = $hadir + $sakit + $izin + $alpa;
-                $persentase = $totalHariMasuk > 0 ? round(($hadir / $totalHariMasuk) * 100, 1) : 0;
+                $tidakMasuk = $sakit + $izin + $alpa;
+                $persentase = $totalHariAktifFilter > 0 ? round(($hadir / $totalHariAktifFilter) * 100, 1) : 0;
+                $persentase = min($persentase, 100);
 
                 $rekapSiswa[] = [
                     'nama_siswa' => $siswa->nama_siswa,
@@ -165,7 +170,7 @@ class RekapController extends Controller
                     'sakit' => $sakit,
                     'izin' => $izin,
                     'alpa' => $alpa,
-                    'total_hari_masuk' => $totalHariMasuk,
+                    'total_tidak_masuk' => $tidakMasuk,
                     'persentase' => $persentase,
                 ];
 
@@ -176,24 +181,27 @@ class RekapController extends Controller
                 $totalSakit += $sakit;
                 $totalIzin += $izin;
                 $totalAlpa += $alpa;
-                $totalHariMasuk += $hadir + $sakit + $izin + $alpa;
+                $totalTidakMasuk += $tidakMasuk;
             }
+
+            // Total hari kerja untuk seluruh kelas = hari aktif * jumlah siswa
+            $totalHariKerjaKelas = $totalHariAktifFilter * $jumlahSiswa;
 
             // Hitung rata-rata kehadiran kelas keseluruhan
-            if ($siswas->count() > 0) {
-                $stats['rata_hadir'] = round($totalPersentaseSemuaSiswa / $siswas->count(), 1);
+            if ($jumlahSiswa > 0) {
+                $stats['rata_hadir'] = round($totalPersentaseSemuaSiswa / $jumlahSiswa, 1);
             }
 
-            // Hitung total dan persentase keseluruhan
+            // Hitung total dan persentase keseluruhan (denominator = total hari kerja kelas)
             $stats['total_hadir'] = $totalHadir;
             $stats['total_sakit'] = $totalSakit;
             $stats['total_izin'] = $totalIzin;
             $stats['total_alpa'] = $totalAlpa;
-            $stats['total_hari_masuk'] = $totalHariMasuk;
-            $stats['persentase_hadir'] = $totalHariMasuk > 0 ? round(($totalHadir / $totalHariMasuk) * 100, 1) : 0;
-            $stats['persentase_sakit'] = $totalHariMasuk > 0 ? round(($totalSakit / $totalHariMasuk) * 100, 1) : 0;
-            $stats['persentase_izin'] = $totalHariMasuk > 0 ? round(($totalIzin / $totalHariMasuk) * 100, 1) : 0;
-            $stats['persentase_alpa'] = $totalHariMasuk > 0 ? round(($totalAlpa / $totalHariMasuk) * 100, 1) : 0;
+            $stats['total_tidak_masuk'] = $totalTidakMasuk;
+            $stats['persentase_hadir'] = $totalHariKerjaKelas > 0 ? min(round(($totalHadir / $totalHariKerjaKelas) * 100, 1), 100) : 0;
+            $stats['persentase_sakit'] = $totalHariKerjaKelas > 0 ? min(round(($totalSakit / $totalHariKerjaKelas) * 100, 1), 100) : 0;
+            $stats['persentase_izin'] = $totalHariKerjaKelas > 0 ? min(round(($totalIzin / $totalHariKerjaKelas) * 100, 1), 100) : 0;
+            $stats['persentase_alpa'] = $totalHariKerjaKelas > 0 ? min(round(($totalAlpa / $totalHariKerjaKelas) * 100, 1), 100) : 0;
         }
 
         if ($kelasId && $totalHariAbsensi === 0) {
@@ -422,6 +430,16 @@ class RekapController extends Controller
     {
         $mulai = Carbon::parse($tanggalMulai);
         $akhir = Carbon::parse($tanggalBerakhir);
+
+        // Cap end date at today if it's in the future
+        $today = today();
+        if ($akhir->gt($today)) {
+            $akhir = $today->copy();
+        }
+        // If start date is also in the future, return empty
+        if ($mulai->gt($today)) {
+            return [];
+        }
 
         // Get all periodes that overlap with the date range
         $periodes = Periode::query()

@@ -7,51 +7,31 @@
         </div>
 
         @if($kelasId)
-            <!-- 1. WIDGET CARDS STATISTIK KELAS (Sesuai Desain image_618dc9.png) -->
+            <!-- 1. WIDGET CARDS STATISTIK KELAS -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <!-- Hari Aktif -->
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-                    <div class="p-2 bg-blue-50 text-blue-600 rounded-full mb-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hari Aktif</p>
-                    <p class="text-3xl font-bold text-blue-600 mt-1">{{ $totalHariAktif }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalHariAktif }}</p>
                     <p class="text-xs text-gray-400 mt-1">hari</p>
                 </div>
 
                 <!-- Total Sakit -->
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-                    <div class="p-2 bg-amber-50 text-amber-500 rounded-full mb-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Sakit</p>
-                    <p class="text-3xl font-bold text-gray-800 mt-1">{{ $stats['total_sakit'] }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $stats['total_sakit'] }}</p>
                 </div>
 
                 <!-- Total Izin -->
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-                    <div class="p-2 bg-indigo-50 text-indigo-500 rounded-full mb-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Izin</p>
-                    <p class="text-3xl font-bold text-gray-800 mt-1">{{ $stats['total_izin'] }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $stats['total_izin'] }}</p>
                 </div>
 
                 <!-- Total Alpa -->
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-                    <div class="p-2 bg-red-50 text-red-500 rounded-full mb-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                        </svg>
-                    </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Alpa</p>
-                    <p class="text-3xl font-bold text-red-500 mt-1">{{ $stats['total_alpa'] }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $stats['total_alpa'] }}</p>
                 </div>
             </div>
         @endif
@@ -175,7 +155,6 @@
                                 <th class="px-6 py-4 border-r border-gray-200 text-left" rowspan="2">Nama Siswa</th>
                                 <th class="px-4 py-4 border-r border-gray-200 w-24" rowspan="2">Kelas</th>
                                 <th class="px-4 py-2 border-b border-gray-200" colspan="4">Status Kehadiran</th>
-                                <th class="px-4 py-4 border-r border-gray-200 w-24" rowspan="2">Total</th>
                                 <th class="px-4 py-4 border-l border-gray-200 w-36" rowspan="2">Persentase</th>
                             </tr>
                             <tr class="bg-gray-50/50 text-gray-500 font-medium text-xs border-b border-gray-200">
@@ -185,18 +164,17 @@
                                 <th class="px-2 py-2 bg-red-50/30 text-red-600 w-20">Alpa</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 bg-white text-gray-700">
+                        <tbody class="divide-y divide-gray-100 bg-white text-gray-900">
                             @forelse($rekapSiswa as $index => $data)
                                 <tr class="hover:bg-gray-50/50 transition">
-                                    <td class="px-4 py-3.5 border-r border-gray-100 font-medium text-gray-400">{{ $index + 1 }}</td>
-                                    <td class="px-6 py-3.5 border-r border-gray-100 text-left font-bold text-gray-800">{{ $data['nama_siswa'] }}</td>
-                                    <td class="px-4 py-3.5 border-r border-gray-100">{{ $data['nama_kelas'] }}</td>
-                                    <td class="px-2 py-3.5 border-r border-gray-100 text-green-700 font-semibold">{{ $data['hadir'] }}</td>
-                                    <td class="px-2 py-3.5 border-r border-gray-100 text-amber-600 font-semibold">{{ $data['sakit'] }}</td>
-                                    <td class="px-2 py-3.5 border-r border-gray-100 text-indigo-600 font-semibold">{{ $data['izin'] }}</td>
-                                    <td class="px-2 py-3.5 border-r border-gray-100 text-red-600 font-semibold">{{ $data['alpa'] }}</td>
-                                    <td class="px-4 py-3.5 border-r border-gray-100 font-semibold text-gray-800">{{ $data['total_hari_masuk'] }}</td>
-                                    <td class="px-4 py-3.5 font-bold text-blue-600">{{ $data['persentase'] }}%</td>
+                                    <td class="px-4 py-3.5 border-r border-gray-100 font-medium text-gray-900">{{ $index + 1 }}</td>
+                                    <td class="px-6 py-3.5 border-r border-gray-100 text-left font-bold text-gray-900">{{ $data['nama_siswa'] }}</td>
+                                    <td class="px-4 py-3.5 border-r border-gray-100 text-gray-900">{{ $data['nama_kelas'] }}</td>
+                                    <td class="px-2 py-3.5 border-r border-gray-100 font-semibold text-gray-900">{{ $data['hadir'] }}</td>
+                                    <td class="px-2 py-3.5 border-r border-gray-100 font-semibold text-gray-900">{{ $data['sakit'] }}</td>
+                                    <td class="px-2 py-3.5 border-r border-gray-100 font-semibold text-gray-900">{{ $data['izin'] }}</td>
+                                    <td class="px-2 py-3.5 border-r border-gray-100 font-semibold text-gray-900">{{ $data['alpa'] }}</td>
+                                    <td class="px-4 py-3.5 font-bold text-gray-900">{{ $data['persentase'] }}%</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -204,23 +182,21 @@
                                 </tr>
                             @endforelse
                             @if($rekapSiswa && count($rekapSiswa) > 0)
-                                <tr class="bg-blue-50 font-bold border-t-2 border-blue-200">
+                                <tr class="bg-blue-50 font-bold border-t-2 border-blue-200 text-gray-900">
                                     <td class="px-4 py-3 border-r border-gray-200" colspan="3">TOTAL</td>
-                                    <td class="px-2 py-3 border-r border-gray-200 text-green-700">{{ $stats['total_hadir'] ?? 0 }}</td>
-                                    <td class="px-2 py-3 border-r border-gray-200 text-amber-600">{{ $stats['total_sakit'] ?? 0 }}</td>
-                                    <td class="px-2 py-3 border-r border-gray-200 text-indigo-600">{{ $stats['total_izin'] ?? 0 }}</td>
-                                    <td class="px-2 py-3 border-r border-gray-200 text-red-600">{{ $stats['total_alpa'] ?? 0 }}</td>
-                                    <td class="px-4 py-3 border-r border-gray-200 text-gray-800">{{ $stats['total_hari_masuk'] ?? 0 }}</td>
-                                    <td class="px-4 py-3 text-blue-600">-</td>
+                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_hadir'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_sakit'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_izin'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_alpa'] ?? 0 }}</td>
+                                    <td class="px-4 py-3">-</td>
                                 </tr>
-                                <tr class="bg-gray-50 font-medium text-sm text-gray-600">
+                                <tr class="bg-gray-50 font-medium text-sm text-gray-900">
                                     <td class="px-4 py-2 border-r border-gray-200" colspan="3">PERSENTASE (%)</td>
-                                    <td class="px-2 py-2 border-r border-gray-200 text-green-700">{{ $stats['persentase_hadir'] ?? 0 }}%</td>
-                                    <td class="px-2 py-2 border-r border-gray-200 text-amber-600">{{ $stats['persentase_sakit'] ?? 0 }}%</td>
-                                    <td class="px-2 py-2 border-r border-gray-200 text-indigo-600">{{ $stats['persentase_izin'] ?? 0 }}%</td>
-                                    <td class="px-2 py-2 border-r border-gray-200 text-red-600">{{ $stats['persentase_alpa'] ?? 0 }}%</td>
-                                    <td class="px-4 py-2 border-r border-gray-200 text-gray-600">100%</td>
-                                    <td class="px-4 py-2 text-blue-600">-</td>
+                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_hadir'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_sakit'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_izin'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_alpa'] ?? 0 }}%</td>
+                                    <td class="px-4 py-2">-</td>
                                 </tr>
                             @endif
                         </tbody>
