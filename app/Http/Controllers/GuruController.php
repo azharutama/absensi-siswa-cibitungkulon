@@ -68,13 +68,34 @@ class GuruController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validatedUserData($request);
+        $data = $request->validate([
+            'nip' => 'required|numeric|unique:users,nip',
+            'username' => 'required|string|alpha_dash|max:50|unique:users,username',
+            'nama' => 'required|string|max:255',
+            'no_telepon' => 'required|numeric|unique:users,no_telepon',
+            'alamat' => 'required|string|max:255',
+            'role' => 'required|string|in:operator,guru,kepala_sekolah',
+            'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
+            'password' => 'required|string|min:8|confirmed',
+            'kelas_id' => 'nullable|exists:kelas,id',
+        ]);
 
-        DB::transaction(function () use ($data, $request): void {
+        $data['address'] = $data['alamat'];
+        unset($data['alamat']);
+
+        if (filled($data['password'] ?? null)) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        $kelasId = $request->filled('kelas_id') ? $request->integer('kelas_id') : null;
+
+        DB::transaction(function () use ($data, $kelasId): void {
             $user = User::create($data);
 
-            if ($user->role === 'guru' && $request->filled('kelas_id')) {
-                $kelas = Kelas::where('id', $request->kelas_id)
+            if ($user->role === 'guru' && $kelasId) {
+                $kelas = Kelas::where('id', $kelasId)
                     ->whereNull('guru_id')
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -123,7 +144,27 @@ class GuruController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $data = $this->validatedUserData($request, $user);
+        $uniqueSuffix = $user ? ",{$user->id}" : '';
+        $data = $request->validate([
+            'nip' => "required|numeric|unique:users,nip{$uniqueSuffix}",
+            'username' => "required|string|alpha_dash|max:50|unique:users,username{$uniqueSuffix}",
+            'nama' => 'required|string|max:255',
+            'no_telepon' => "required|numeric|unique:users,no_telepon{$uniqueSuffix}",
+            'alamat' => 'required|string|max:255',
+            'role' => 'required|string|in:operator,guru,kepala_sekolah',
+            'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
+            'password' => $user ? 'nullable|string|min:8|confirmed' : 'required|string|min:8|confirmed',
+            'kelas_id' => 'nullable|exists:kelas,id',
+        ]);
+
+        $data['address'] = $data['alamat'];
+        unset($data['alamat']);
+
+        if (filled($data['password'] ?? null)) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
 
         DB::transaction(function () use ($request, $user, $data): void {
             $operatorIds = User::query()
@@ -237,33 +278,5 @@ class GuruController extends Controller
         }
 
         return redirect()->route('guru.index')->with('success', 'Data User berhasil dihapus.');
-    }
-
-    /** @return array<string, mixed> */
-    private function validatedUserData(Request $request, ?User $user = null): array
-    {
-        $uniqueSuffix = $user ? ",{$user->id}" : '';
-        $data = $request->validate([
-            'nip' => "required|numeric|unique:users,nip{$uniqueSuffix}",
-            'username' => "required|string|alpha_dash|max:50|unique:users,username{$uniqueSuffix}",
-            'nama' => 'required|string|max:255',
-            'no_telepon' => "required|numeric|unique:users,no_telepon{$uniqueSuffix}",
-            'alamat' => 'required|string|max:255',
-            'role' => 'required|string|in:operator,guru,kepala_sekolah',
-            'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
-            'password' => $user ? 'nullable|string|min:8|confirmed' : 'required|string|min:8|confirmed',
-            'kelas_id' => 'nullable|exists:kelas,id',
-        ]);
-
-        $data['address'] = $data['alamat'];
-        unset($data['alamat'], $data['kelas_id']);
-
-        if (filled($data['password'] ?? null)) {
-            $data['password'] = Hash::make($data['password']);
-        } else {
-            unset($data['password']);
-        }
-
-        return $data;
     }
 }

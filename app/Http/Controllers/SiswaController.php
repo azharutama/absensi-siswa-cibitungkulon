@@ -70,7 +70,34 @@ class SiswaController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validatedData($request);
+        $data = $request->validate([
+            'nis' => [
+                'required',
+                'numeric',
+                'max_digits:50',
+                Rule::unique('siswas', 'nis'),
+            ],
+            'nisn' => [
+                'required',
+                'numeric',
+                'max_digits:50',
+                Rule::unique('siswas', 'nisn'),
+            ],
+            'nama_siswa' => ['required', 'string', 'max:255'],
+            'jenis_kelamin' => ['required', Rule::in(['laki-laki', 'perempuan'])],
+            'nama_ayah' => ['required', 'string', 'max:255'],
+            'no_whatsapp_ayah' => ['nullable', 'numeric', 'max_digits:20'],
+            'nama_ibu' => ['required', 'string', 'max:255'],
+            'no_whatsapp_ibu' => ['nullable', 'numeric', 'max_digits:20'],
+            'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+            'alamat' => ['required', 'string'],
+        ]);
+
+        if (blank($data['no_whatsapp_ayah']) && blank($data['no_whatsapp_ibu'])) {
+            throw ValidationException::withMessages([
+                'no_whatsapp_ayah' => 'Minimal salah satu nomor WhatsApp orang tua (ayah atau ibu) wajib diisi.',
+            ]);
+        }
 
         $data['kelas_id'] = $this->findKelas((int) $data['kelas_id'], $request->user())->id;
 
@@ -97,7 +124,34 @@ class SiswaController extends Controller
     {
         $this->authorizeSiswaAccess($siswa, $request->user());
 
-        $data = $this->validatedData($request, $siswa);
+        $data = $request->validate([
+            'nis' => [
+                'required',
+                'numeric',
+                'max_digits:50',
+                Rule::unique('siswas', 'nis')->ignore($siswa),
+            ],
+            'nisn' => [
+                'required',
+                'numeric',
+                'max_digits:50',
+                Rule::unique('siswas', 'nisn')->ignore($siswa),
+            ],
+            'nama_siswa' => ['required', 'string', 'max:255'],
+            'jenis_kelamin' => ['required', Rule::in(['laki-laki', 'perempuan'])],
+            'nama_ayah' => ['required', 'string', 'max:255'],
+            'no_whatsapp_ayah' => ['nullable', 'numeric', 'max_digits:20'],
+            'nama_ibu' => ['required', 'string', 'max:255'],
+            'no_whatsapp_ibu' => ['nullable', 'numeric', 'max_digits:20'],
+            'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+            'alamat' => ['required', 'string'],
+        ]);
+
+        if (blank($data['no_whatsapp_ayah']) && blank($data['no_whatsapp_ibu'])) {
+            throw ValidationException::withMessages([
+                'no_whatsapp_ayah' => 'Minimal salah satu nomor WhatsApp orang tua (ayah atau ibu) wajib diisi.',
+            ]);
+        }
 
         $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
 
@@ -197,41 +251,6 @@ class SiswaController extends Controller
 
         return to_route('siswa.index')
             ->with('success', $message);
-    }
-
-    /** @return array<string, mixed> */
-    private function validatedData(Request $request, ?Siswa $siswa = null): array
-    {
-        $data = $request->validate([
-            'nis' => [
-                'required',
-                'numeric',
-                'max_digits:50',
-                Rule::unique('siswas', 'nis')->ignore($siswa),
-            ],
-            'nisn' => [
-                'required',
-                'numeric',
-                'max_digits:50',
-                Rule::unique('siswas', 'nisn')->ignore($siswa),
-            ],
-            'nama_siswa' => ['required', 'string', 'max:255'],
-            'jenis_kelamin' => ['required', Rule::in(['laki-laki', 'perempuan'])],
-            'nama_ayah' => ['required', 'string', 'max:255'],
-            'no_whatsapp_ayah' => ['nullable', 'numeric', 'max_digits:20'],
-            'nama_ibu' => ['required', 'string', 'max:255'],
-            'no_whatsapp_ibu' => ['nullable', 'numeric', 'max_digits:20'],
-            'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-            'alamat' => ['required', 'string'],
-        ]);
-
-        if (blank($data['no_whatsapp_ayah']) && blank($data['no_whatsapp_ibu'])) {
-            throw ValidationException::withMessages([
-                'no_whatsapp_ayah' => 'Minimal salah satu nomor WhatsApp orang tua (ayah atau ibu) wajib diisi.',
-            ]);
-        }
-
-        return $data;
     }
 
     /** @return array{kelas: Collection} */

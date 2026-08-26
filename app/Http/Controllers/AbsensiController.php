@@ -162,18 +162,27 @@ class AbsensiController extends Controller
         $user = $request->user();
         
         // Validasi berbeda untuk guru vs operator/kepala_sekolah
-        if ($user->role === 'guru') {
+if ($user->role === 'guru') {
             $userKelas = $user->kelas;
             if (! $userKelas) {
                 return redirect()->route('absensi.create')
                     ->with('error', 'Anda belum ditugaskan ke kelas manapun.');
             }
             $kelasId = $userKelas->id;
-            
-            $data = $this->validateAttendanceRequest($request);
+
+            $data = $request->validate([
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
+                'absensi' => ['required', 'array'],
+                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
+            ]);
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         } else {
-            $data = $this->validateAttendanceRequest($request, true);
+            $data = $request->validate([
+                'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
+                'absensi' => ['required', 'array'],
+                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
+            ]);
             $kelasId = (int) $data['kelas_id'];
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         }
@@ -392,10 +401,19 @@ class AbsensiController extends Controller
             }
             $kelasId = $userKelas->id;
 
-            $data = $this->validateAttendanceRequest($request);
+            $data = $request->validate([
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
+                'absensi' => ['required', 'array'],
+                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
+            ]);
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         } else {
-            $data = $this->validateAttendanceRequest($request, true);
+            $data = $request->validate([
+                'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
+                'tanggal' => ['required', 'date', 'before_or_equal:today'],
+                'absensi' => ['required', 'array'],
+                'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
+            ]);
             $kelasId = (int) $data['kelas_id'];
             $tanggal = $this->parseDate($data['tanggal'])->format('Y-m-d');
         }
@@ -515,27 +533,6 @@ class AbsensiController extends Controller
                 'absensi' => 'Absensi harus memuat seluruh siswa aktif dari kelas yang dipilih.',
             ]);
         }
-    }
-
-    /**
-     * @return array{tanggal: string, absensi: array<int|string, string>, kelas_id?: int}
-     */
-    private function validateAttendanceRequest(Request $request, bool $requiresKelas = false): array
-    {
-        $rules = [
-            'tanggal' => ['required', 'date', 'before_or_equal:today'],
-            'absensi' => ['required', 'array'],
-            'absensi.*' => ['required', 'in:hadir,izin,sakit,alpa'],
-        ];
-
-        if ($requiresKelas) {
-            $rules = [
-                'kelas_id' => ['required', 'integer', 'exists:kelas,id'],
-                ...$rules,
-            ];
-        }
-
-        return $request->validate($rules);
     }
 
     private function ensureKelasAccessibleTo(User $user, int $kelasId): void

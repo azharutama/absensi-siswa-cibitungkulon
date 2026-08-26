@@ -69,7 +69,74 @@ class PeriodeController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validatePeriode($request);
+        $validated = $request->validate([
+            'tahun_ajaran' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('periodes', 'tahun_ajaran')
+                    ->where(fn ($query) => $query->whereNull('semester')),
+            ],
+            'semester_1_tanggal_mulai' => ['required', 'date'],
+            'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
+            'semester_2_tanggal_mulai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_selesai'],
+            'semester_2_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_2_tanggal_mulai'],
+            'libur_mingguan' => ['nullable', 'array'],
+            'libur_mingguan.*' => ['array'],
+            'libur_mingguan.*.hari' => [
+                'required',
+                'string',
+                Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']),
+                'distinct',
+            ],
+            'libur_mingguan.*.keterangan' => ['required', 'string', 'max:255'],
+            'libur_nasional' => ['nullable', 'array'],
+            'libur_nasional.*' => ['array'],
+            'libur_nasional.*.tanggal' => [
+                'required',
+                'date',
+                'after_or_equal:semester_1_tanggal_mulai',
+                'before_or_equal:semester_2_tanggal_selesai',
+                'distinct',
+            ],
+            'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
+            'libur_nasional.*.keterangan' => ['nullable', 'string', 'max:255'],
+        ], [
+            'tahun_ajaran.required' => 'Tahun ajaran wajib diisi.',
+            'tahun_ajaran.max' => 'Tahun ajaran maksimal 20 karakter.',
+            'tahun_ajaran.unique' => 'Tahun ajaran ini sudah terdaftar.',
+            'semester_1_tanggal_mulai.required' => 'Tanggal mulai Semester 1 wajib diisi.',
+            'semester_1_tanggal_mulai.date_format' => 'Tanggal mulai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_1_tanggal_selesai.required' => 'Tanggal selesai Semester 1 wajib diisi.',
+            'semester_1_tanggal_selesai.date_format' => 'Tanggal selesai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_1_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 1 harus setelah atau sama dengan tanggal mulai Semester 1.',
+            'semester_2_tanggal_mulai.required' => 'Tanggal mulai Semester 2 wajib diisi.',
+            'semester_2_tanggal_mulai.date_format' => 'Tanggal mulai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_2_tanggal_mulai.after_or_equal' => 'Tanggal mulai Semester 2 harus setelah atau sama dengan tanggal selesai Semester 1.',
+            'semester_2_tanggal_selesai.required' => 'Tanggal selesai Semester 2 wajib diisi.',
+            'semester_2_tanggal_selesai.date_format' => 'Tanggal selesai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_2_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 2 harus setelah atau sama dengan tanggal mulai Semester 2.',
+            'libur_mingguan.*.hari.required' => 'Hari libur mingguan wajib dipilih.',
+            'libur_mingguan.*.hari.in' => 'Hari yang dipilih tidak valid.',
+            'libur_mingguan.*.keterangan.required' => 'Keterangan hari libur mingguan wajib diisi.',
+            'libur_mingguan.*.keterangan.max' => 'Keterangan hari libur mingguan maksimal 255 karakter.',
+            'libur_nasional.*.tanggal.required' => 'Tanggal libur nasional wajib diisi.',
+            'libur_nasional.*.tanggal.date_format' => 'Tanggal libur nasional harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'libur_nasional.*.nama_libur.required' => 'Nama hari libur nasional wajib diisi.',
+            'libur_nasional.*.nama_libur.max' => 'Nama hari libur nasional maksimal 255 karakter.',
+            'libur_nasional.*.tanggal.after_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
+            'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
+        ]);
+
+        // Convert d/m/Y to Y-m-d for database storage
+        $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
+        $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
+        $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
+        $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
+
+        foreach ($validated['libur_nasional'] ?? [] as &$libur) {
+            $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
+        }
 
         DB::transaction(function () use ($validated): void {
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
@@ -145,7 +212,75 @@ class PeriodeController extends Controller
     public function update(Request $request, $id)
     {
         $periode = Periode::findOrFail($id);
-        $validated = $this->validatePeriode($request, $periode);
+        $validated = $request->validate([
+            'tahun_ajaran' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('periodes', 'tahun_ajaran')
+                    ->where(fn ($query) => $query->whereNull('semester'))
+                    ->ignore($periode),
+            ],
+            'semester_1_tanggal_mulai' => ['required', 'date'],
+            'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
+            'semester_2_tanggal_mulai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_selesai'],
+            'semester_2_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_2_tanggal_mulai'],
+            'libur_mingguan' => ['nullable', 'array'],
+            'libur_mingguan.*' => ['array'],
+            'libur_mingguan.*.hari' => [
+                'required',
+                'string',
+                Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']),
+                'distinct',
+            ],
+            'libur_mingguan.*.keterangan' => ['required', 'string', 'max:255'],
+            'libur_nasional' => ['nullable', 'array'],
+            'libur_nasional.*' => ['array'],
+            'libur_nasional.*.tanggal' => [
+                'required',
+                'date',
+                'after_or_equal:semester_1_tanggal_mulai',
+                'before_or_equal:semester_2_tanggal_selesai',
+                'distinct',
+            ],
+            'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
+            'libur_nasional.*.keterangan' => ['nullable', 'string', 'max:255'],
+        ], [
+            'tahun_ajaran.required' => 'Tahun ajaran wajib diisi.',
+            'tahun_ajaran.max' => 'Tahun ajaran maksimal 20 karakter.',
+            'tahun_ajaran.unique' => 'Tahun ajaran ini sudah terdaftar.',
+            'semester_1_tanggal_mulai.required' => 'Tanggal mulai Semester 1 wajib diisi.',
+            'semester_1_tanggal_mulai.date_format' => 'Tanggal mulai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_1_tanggal_selesai.required' => 'Tanggal selesai Semester 1 wajib diisi.',
+            'semester_1_tanggal_selesai.date_format' => 'Tanggal selesai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_1_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 1 harus setelah atau sama dengan tanggal mulai Semester 1.',
+            'semester_2_tanggal_mulai.required' => 'Tanggal mulai Semester 2 wajib diisi.',
+            'semester_2_tanggal_mulai.date_format' => 'Tanggal mulai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_2_tanggal_mulai.after_or_equal' => 'Tanggal mulai Semester 2 harus setelah atau sama dengan tanggal selesai Semester 1.',
+            'semester_2_tanggal_selesai.required' => 'Tanggal selesai Semester 2 wajib diisi.',
+            'semester_2_tanggal_selesai.date_format' => 'Tanggal selesai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'semester_2_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 2 harus setelah atau sama dengan tanggal mulai Semester 2.',
+            'libur_mingguan.*.hari.required' => 'Hari libur mingguan wajib dipilih.',
+            'libur_mingguan.*.hari.in' => 'Hari yang dipilih tidak valid.',
+            'libur_mingguan.*.keterangan.required' => 'Keterangan hari libur mingguan wajib diisi.',
+            'libur_mingguan.*.keterangan.max' => 'Keterangan hari libur mingguan maksimal 255 karakter.',
+            'libur_nasional.*.tanggal.required' => 'Tanggal libur nasional wajib diisi.',
+            'libur_nasional.*.tanggal.date_format' => 'Tanggal libur nasional harus berupa tanggal yang valid (format: dd/mm/yyyy).',
+            'libur_nasional.*.nama_libur.required' => 'Nama hari libur nasional wajib diisi.',
+            'libur_nasional.*.nama_libur.max' => 'Nama hari libur nasional maksimal 255 karakter.',
+            'libur_nasional.*.tanggal.after_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
+            'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
+        ]);
+
+        // Convert d/m/Y to Y-m-d for database storage
+        $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
+        $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
+        $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
+        $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
+
+        foreach ($validated['libur_nasional'] ?? [] as &$libur) {
+            $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
+        }
 
         DB::transaction(function () use ($id, $validated): void {
             Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
@@ -238,82 +373,7 @@ class PeriodeController extends Controller
             Periode::query()->delete();
         });
 
-        return redirect()->route('periode.index')->with('success', 'Semua data periode, absensi, dan rekap berhasil direset.');
-    }
-
-    private function validatePeriode(Request $request, ?Periode $periode = null): array
-    {
-        $validated = $request->validate([
-            'tahun_ajaran' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('periodes', 'tahun_ajaran')
-                    ->where(fn ($query) => $query->whereNull('semester'))
-                    ->ignore($periode),
-            ],
-            'semester_1_tanggal_mulai' => ['required', 'date'],
-            'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
-            'semester_2_tanggal_mulai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_selesai'],
-            'semester_2_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_2_tanggal_mulai'],
-            'libur_mingguan' => ['nullable', 'array'],
-            'libur_mingguan.*' => ['array'],
-            'libur_mingguan.*.hari' => [
-                'required',
-                'string',
-                Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']),
-                'distinct',
-            ],
-            'libur_mingguan.*.keterangan' => ['required', 'string', 'max:255'],
-            'libur_nasional' => ['nullable', 'array'],
-            'libur_nasional.*' => ['array'],
-            'libur_nasional.*.tanggal' => [
-                'required',
-                'date',
-                'after_or_equal:semester_1_tanggal_mulai',
-                'before_or_equal:semester_2_tanggal_selesai',
-                'distinct',
-            ],
-            'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
-            'libur_nasional.*.keterangan' => ['nullable', 'string', 'max:255'],
-        ], [
-            'tahun_ajaran.required' => 'Tahun ajaran wajib diisi.',
-            'tahun_ajaran.max' => 'Tahun ajaran maksimal 20 karakter.',
-            'tahun_ajaran.unique' => 'Tahun ajaran ini sudah terdaftar.',
-            'semester_1_tanggal_mulai.required' => 'Tanggal mulai Semester 1 wajib diisi.',
-            'semester_1_tanggal_mulai.date_format' => 'Tanggal mulai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
-            'semester_1_tanggal_selesai.required' => 'Tanggal selesai Semester 1 wajib diisi.',
-            'semester_1_tanggal_selesai.date_format' => 'Tanggal selesai Semester 1 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
-            'semester_1_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 1 harus setelah atau sama dengan tanggal mulai Semester 1.',
-            'semester_2_tanggal_mulai.required' => 'Tanggal mulai Semester 2 wajib diisi.',
-            'semester_2_tanggal_mulai.date_format' => 'Tanggal mulai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
-            'semester_2_tanggal_mulai.after_or_equal' => 'Tanggal mulai Semester 2 harus setelah atau sama dengan tanggal selesai Semester 1.',
-            'semester_2_tanggal_selesai.required' => 'Tanggal selesai Semester 2 wajib diisi.',
-            'semester_2_tanggal_selesai.date_format' => 'Tanggal selesai Semester 2 harus berupa tanggal yang valid (format: dd/mm/yyyy).',
-            'semester_2_tanggal_selesai.after_or_equal' => 'Tanggal selesai Semester 2 harus setelah atau sama dengan tanggal mulai Semester 2.',
-            'libur_mingguan.*.hari.required' => 'Hari libur mingguan wajib dipilih.',
-            'libur_mingguan.*.hari.in' => 'Hari yang dipilih tidak valid.',
-            'libur_mingguan.*.keterangan.required' => 'Keterangan hari libur mingguan wajib diisi.',
-            'libur_mingguan.*.keterangan.max' => 'Keterangan hari libur mingguan maksimal 255 karakter.',
-            'libur_nasional.*.tanggal.required' => 'Tanggal libur nasional wajib diisi.',
-            'libur_nasional.*.tanggal.date_format' => 'Tanggal libur nasional harus berupa tanggal yang valid (format: dd/mm/yyyy).',
-            'libur_nasional.*.nama_libur.required' => 'Nama hari libur nasional wajib diisi.',
-            'libur_nasional.*.nama_libur.max' => 'Nama hari libur nasional maksimal 255 karakter.',
-            'libur_nasional.*.tanggal.after_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
-            'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
-        ]);
-
-        // Convert d/m/Y to Y-m-d for database storage
-        $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
-        $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
-        $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
-        $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
-        
-        foreach ($validated['libur_nasional'] ?? [] as &$libur) {
-            $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
-        }
-
-        return $validated;
+return redirect()->route('periode.index')->with('success', 'Semua data periode, absensi, dan rekap berhasil direset.');
     }
 
     /** @param array<string, mixed> $validated */

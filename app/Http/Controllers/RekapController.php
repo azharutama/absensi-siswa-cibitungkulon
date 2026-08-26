@@ -24,7 +24,12 @@ class RekapController extends Controller
 
     public function index(Request $request): View|RedirectResponse
     {
-        $filters = $this->validateFilters($request);
+        $filters = $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+        ]);
         $kelas = $this->accessibleKelas($request);
 
         if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'rekap.index', ['preset' => $filters['preset'] ?? 'this_month'])) {
@@ -67,7 +72,12 @@ class RekapController extends Controller
      */
     private function rekapData(Request $request, ?array $filters = null, ?Collection $kelas = null): array
     {
-        $filters ??= $this->validateFilters($request);
+        $filters ??= $request->validate([
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+        ]);
         $kelas ??= $this->accessibleKelas($request);
 
         $preset = $filters['preset'] ?? 'this_month';
@@ -213,19 +223,6 @@ class RekapController extends Controller
         $tanggalBerakhirDisplay = Carbon::parse($tanggalBerakhir)->format('d/m/Y');
 
         return compact('kelas', 'rekapSiswa', 'totalHariAktif', 'totalHariAbsensi', 'kelasId', 'tanggalMulai', 'tanggalBerakhir', 'tanggalMulaiDisplay', 'tanggalBerakhirDisplay', 'stats', 'namaKelas', 'preset', 'hideRekapTabel');
-    }
-
-    /**
-     * @return array{kelas_id?: int, preset?: string, tanggal_mulai?: string, tanggal_berakhir?: string}
-     */
-    private function validateFilters(Request $request): array
-    {
-        return $request->validate([
-            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'preset' => ['nullable', 'string', 'in:today,this_week,this_month,semester_1,semester_2,custom'],
-            'tanggal_mulai' => ['nullable', 'date'],
-            'tanggal_berakhir' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
-        ]);
     }
 
     /** @return Collection<int, Kelas> */
