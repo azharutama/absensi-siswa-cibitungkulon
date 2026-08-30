@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('rekap_absensis', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('absensi_id')->constrained('absensis');
+            $table->foreignId('absensi_id')->constrained('absensis')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users');
             $table->string('nomor_bulan');
             $table->string('id_pengun')->nullable();
