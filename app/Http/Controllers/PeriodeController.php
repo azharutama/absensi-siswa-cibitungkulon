@@ -14,7 +14,7 @@ class PeriodeController extends Controller
 {
     public function index(Request $request)
     {
-        // Optimasi: Ambil kedua semester sekaligus dalam 1 query
+        // Ambil kedua semester terbaru dalam 1 query untuk optimasi
         $periodes = Periode::query()
             ->with('hariLiburs')
             ->orderBy('tahun_ajaran', 'desc')
@@ -33,7 +33,7 @@ class PeriodeController extends Controller
             'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('Y-m-d') ?? old('semester_2_tanggal_selesai', ''),
         ];
 
-        // Display format for views
+        // Format untuk tampilan di view (d/m/Y)
         $periodeDataDisplay = [
             'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('d/m/Y'),
             'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('d/m/Y'),
@@ -44,7 +44,7 @@ class PeriodeController extends Controller
         $liburMingguan = collect();
         $liburNasional = collect();
 
-        // Ambil periode yang pertama ditemukan untuk menampilkan hari libur
+        // Ambil periode pertama untuk menampilkan hari libur
         $periode = $semester1 ?? $semester2;
 
         if ($periode) {
@@ -58,7 +58,7 @@ class PeriodeController extends Controller
             $liburNasional = $periode->hariLiburs
                 ->where('tipe', 'nasional')
                 ->map(fn ($item) => [
-                    'tanggal' => $item->tanggal?->format('Y-m-d') ?? '', // Keep Y-m-d for HTML5 date input
+                    'tanggal' => $item->tanggal?->format('Y-m-d') ?? '', // Format Y-m-d untuk input HTML5 date
                     'nama_libur' => $item->keterangan,
                 ]);
         }
@@ -127,7 +127,7 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
         ]);
 
-        // Convert d/m/Y to Y-m-d for database storage
+        // Konversi d/m/Y ke Y-m-d untuk database
         $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
         $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
@@ -197,7 +197,7 @@ class PeriodeController extends Controller
             'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('Y-m-d'),
         ];
 
-        // Display format for views
+        // Format untuk tampilan di view (d/m/Y)
         $periodeDataDisplay = [
             'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('d/m/Y'),
             'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('d/m/Y'),
@@ -271,7 +271,7 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
         ]);
 
-        // Convert d/m/Y to Y-m-d for database storage
+        // Konversi d/m/Y ke Y-m-d untuk database
         $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
         $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
@@ -364,7 +364,7 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
     }
 
-public function reset(Request $request)
+    public function reset(Request $request)
     {
         DB::transaction(function (): void {
             Absensi::query()->delete();
@@ -374,7 +374,11 @@ public function reset(Request $request)
         return redirect()->route('periode.index')->with('success', 'Semua data periode dan absensi berhasil direset.');
     }
 
-    /** @param array<string, mixed> $validated */
+    /**
+     * Validasi agar rentang tanggal semester tidak bertabrakan dengan periode lain
+     * 
+     * @param  array<string, mixed> $validated
+     */
     private function ensureSemesterDatesDoNotOverlap(string $tahunAjaran, array $validated): void
     {
         $s1Start = $validated['semester_1_tanggal_mulai'];
@@ -404,7 +408,11 @@ public function reset(Request $request)
         }
     }
 
-    /** @param array<string, mixed> $validated */
+    /**
+     * Simpan data hari libur (mingguan & nasional) untuk periode
+     * 
+     * @param  array<string, mixed> $validated
+     */
     private function storeHariLiburs(Periode $periode, array $validated): void
     {
         foreach ($validated['libur_mingguan'] ?? [] as $libur) {
@@ -431,7 +439,7 @@ public function reset(Request $request)
     }
 
     /**
-     * Parse date string supporting both d/m/Y and Y-m-d formats
+     * Parse string tanggal support format d/m/Y dan Y-m-d
      */
     private function parseDate(string $date): Carbon
     {

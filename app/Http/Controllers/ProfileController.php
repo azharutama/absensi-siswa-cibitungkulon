@@ -11,7 +11,7 @@ use Illuminate\View\View;
 class ProfileController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Tampilkan form edit profil user
      */
     public function edit(Request $request): View
     {
@@ -21,7 +21,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
+     * Update informasi profil user
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {

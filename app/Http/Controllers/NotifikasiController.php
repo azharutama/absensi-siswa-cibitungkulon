@@ -69,7 +69,7 @@ class NotifikasiController extends Controller
     }
 
     /**
-     * Parse date string supporting both d/m/Y and Y-m-d formats
+     * Parse string tanggal support format d/m/Y dan Y-m-d
      */
     private function parseDate(string $date): Carbon
     {

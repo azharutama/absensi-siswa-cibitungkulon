@@ -40,7 +40,7 @@ class RekapController extends Controller
     }
 
     /**
-     * Download the filtered attendance recap as an Excel workbook.
+     * Download rekap absensi yang sudah difilter sebagai file Excel.
      */
     public function export(Request $request): BinaryFileResponse
     {
@@ -68,6 +68,8 @@ class RekapController extends Controller
     }
 
     /**
+     * Proses data rekap absensi untuk ditampilkan di view.
+     * 
      * @return array{kelas: Collection<int, Kelas>, rekapSiswa: array<int, array{nama_siswa: string, nama_kelas: string, hadir: int, sakit: int, izin: int, alpa: int, total_tidak_masuk: int, persentase: float}>, totalHariAktif: int, totalHariAbsensi: int, kelasId: int|string|null, tanggalMulai: string, tanggalBerakhir: string, stats: array{rata_hadir: float|int, total_hadir: int, total_sakit: int, total_izin: int, total_alpa: int, total_tidak_masuk: int, persentase_hadir: float|int, persentase_sakit: float|int, persentase_izin: float|int, persentase_alpa: float|int}, namaKelas: string|null, preset: string|null, hideRekapTabel: bool}
      */
     private function rekapData(Request $request, ?array $filters = null, ?Collection $kelas = null): array
@@ -92,7 +94,7 @@ class RekapController extends Controller
             $tanggalMulai = $this->parseDate($tanggalMulaiInput)->format('Y-m-d');
             $tanggalBerakhir = $this->parseDate($tanggalBerakhirInput)->format('Y-m-d');
         } else {
-            // Gunakan preset
+            // Gunakan preset tanggal
             [$tanggalMulai, $tanggalBerakhir] = $this->getPresetDateRange($preset);
         }
 
@@ -113,7 +115,7 @@ class RekapController extends Controller
 
             abort_if($selectedKelas === null, 404);
 
-            // Get active dates for the date range (only count active school days)
+            // Ambil tanggal aktif (hari sekolah) untuk rentang filter
             $activeDates = $this->getActiveDatesForRange($tanggalMulai, $tanggalBerakhir);
 
             $siswas = Siswa::query()
@@ -128,6 +130,7 @@ class RekapController extends Controller
                 ->orderBy('nama_siswa')
                 ->get();
 
+            // Agregasi status absensi per siswa
             $absensiTotals = Absensi::query()
                 ->select('siswa_id')
                 ->selectRaw("SUM(CASE WHEN status = 'hadir' THEN 1 ELSE 0 END) AS hadir")
@@ -141,10 +144,10 @@ class RekapController extends Controller
                 ->get()
                 ->keyBy('siswa_id');
 
-            // Total hari aktif dalam rentang filter (untuk perhitungan persentase kehadiran)
+            // Total hari aktif dalam rentang filter (untuk hitung persentase kehadiran)
             $totalHariAktifFilter = count($activeDates);
 
-            // Hitung total hari aktif dari seluruh periode aktif (tidak terpengaruh filter)
+            // Total hari aktif dari seluruh periode (tidak terpengaruh filter)
             $totalHariAktif = $this->hitungHariAktifPeriode();
 
             $totalHariAbsensi = Absensi::query()
@@ -202,7 +205,7 @@ class RekapController extends Controller
                 $stats['rata_hadir'] = round($totalPersentaseSemuaSiswa / $jumlahSiswa, 1);
             }
 
-            // Hitung total dan persentase keseluruhan (denominator = total hari kerja kelas)
+            // Hitung total dan persentase keseluruhan (penyebut = total hari kerja kelas)
             $stats['total_hadir'] = $totalHadir;
             $stats['total_sakit'] = $totalSakit;
             $stats['total_izin'] = $totalIzin;
@@ -218,7 +221,7 @@ class RekapController extends Controller
             $hideRekapTabel = true;
         }
 
-        // Convert dates to d/m/Y for display in view
+        // Format tanggal untuk tampilan (d/m/Y)
         $tanggalMulaiDisplay = Carbon::parse($tanggalMulai)->format('d/m/Y');
         $tanggalBerakhirDisplay = Carbon::parse($tanggalBerakhir)->format('d/m/Y');
 
@@ -236,9 +239,9 @@ class RekapController extends Controller
     }
 
     /**
-     * Get date range based on preset filter
+     * Ambil rentang tanggal berdasarkan preset filter
      * 
-     * @return array{0: string, 1: string}
+     * @return array{0: string, 1: string} Format Y-m-d
      */
     private function getPresetDateRange(string $preset): array
     {
@@ -267,9 +270,9 @@ class RekapController extends Controller
     }
 
     /**
-     * Get semester date range from active periode
+     * Ambil rentang tanggal semester dari periode aktif
      * 
-     * @return array{0: string, 1: string}
+     * @return array{0: string, 1: string} Format Y-m-d
      */
     private function getSemesterDateRange(int $semester): array
     {
@@ -409,7 +412,7 @@ class RekapController extends Controller
     }
 
     /**
-     * Parse date string supporting both d/m/Y and Y-m-d formats
+     * Parse string tanggal support format d/m/Y dan Y-m-d
      */
     private function parseDate(string $date): Carbon
     {
@@ -420,25 +423,27 @@ class RekapController extends Controller
     }
 
     /**
-     * Get active dates (non-holiday weekdays) for a date range across all relevant periodes
-     * @return array<string> Y-m-d format dates
+     * Ambil tanggal aktif (bukan libur/akhir pekan) untuk rentang tanggal
+     * di seluruh periode yang relevan
+     * 
+     * @return array<string> Format Y-m-d
      */
     private function getActiveDatesForRange(string $tanggalMulai, string $tanggalBerakhir): array
     {
         $mulai = Carbon::parse($tanggalMulai);
         $akhir = Carbon::parse($tanggalBerakhir);
 
-        // Cap end date at today if it's in the future
+        // Batasi akhir di hari ini jika di masa depan
         $today = today();
         if ($akhir->gt($today)) {
             $akhir = $today->copy();
         }
-        // If start date is also in the future, return empty
+        // Jika mulai juga di masa depan, return kosong
         if ($mulai->gt($today)) {
             return [];
         }
 
-        // Get all periodes that overlap with the date range
+        // Ambil semua periode yang overlap dengan rentang tanggal
         $periodes = Periode::query()
             ->where(function ($query) use ($mulai, $akhir) {
                 $query->whereBetween('tanggal_mulai', [$mulai->toDateString(), $akhir->toDateString()])
@@ -450,7 +455,7 @@ class RekapController extends Controller
             })
             ->get();
 
-        // Collect all national holidays from relevant periodes
+        // Kumpulkan hari libur nasional dari periode relevan
         $periodeIds = $periodes->pluck('id');
         $hariLiburNasional = HariLibur::whereIn('periode_id', $periodeIds)
             ->where('tipe', 'nasional')
@@ -460,7 +465,7 @@ class RekapController extends Controller
             ->unique()
             ->values();
 
-        // Collect all weekly holidays from relevant periodes
+        // Kumpulkan hari libur mingguan dari periode relevan
         $hariLiburMingguan = HariLibur::whereIn('periode_id', $periodeIds)
             ->where('tipe', 'mingguan')
             ->pluck('hari')

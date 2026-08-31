@@ -169,6 +169,9 @@ class KelasController extends Controller
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil dihapus.');
     }
 
+    /**
+     * Query guru yang belum memiliki kelas (tersedia untuk ditugaskan)
+     */
     private function availableGuruQuery()
     {
         return User::query()
@@ -178,6 +181,9 @@ class KelasController extends Controller
             ->orderBy('nama');
     }
 
+    /**
+     * Query guru untuk dropdown edit: guru yang belum punya kelas ATAU guru yang sedang mengajar kelas ini
+     */
     private function guruOptionsQuery(?int $currentGuruId)
     {
         return User::query()

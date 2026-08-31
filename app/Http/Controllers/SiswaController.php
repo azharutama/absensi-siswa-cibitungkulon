@@ -93,6 +93,7 @@ class SiswaController extends Controller
             'alamat' => ['required', 'string'],
         ]);
 
+        // Minimal salah satu nomor WA orang tua wajib diisi
         if (blank($data['no_whatsapp_ayah']) && blank($data['no_whatsapp_ibu'])) {
             throw ValidationException::withMessages([
                 'no_whatsapp_ayah' => 'Minimal salah satu nomor WhatsApp orang tua (ayah atau ibu) wajib diisi.',
@@ -103,7 +104,7 @@ class SiswaController extends Controller
 
         $siswa = Siswa::create($data);
 
-        // Log activity menggunakan trait
+        // Log aktivitas menggunakan trait
         $this->logCreate('Siswa', $siswa, "Menambahkan siswa baru: {$siswa->nama_siswa}", ['siswa' => $siswa->toArray()]);
 
         return to_route('siswa.index')
@@ -147,6 +148,7 @@ class SiswaController extends Controller
             'alamat' => ['required', 'string'],
         ]);
 
+        // Minimal salah satu nomor WA orang tua wajib diisi
         if (blank($data['no_whatsapp_ayah']) && blank($data['no_whatsapp_ibu'])) {
             throw ValidationException::withMessages([
                 'no_whatsapp_ayah' => 'Minimal salah satu nomor WhatsApp orang tua (ayah atau ibu) wajib diisi.',
@@ -155,6 +157,7 @@ class SiswaController extends Controller
 
         $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
 
+        // Siswa tidak bisa pindah kelas jika sudah punya data absensi
         if ($siswa->kelas_id !== $kelasSelected->id && $siswa->hasAbsensi()) {
             return redirect()->back()
                 ->withInput()
@@ -166,7 +169,7 @@ class SiswaController extends Controller
         $oldData = $siswa->toArray();
         $siswa->update($data);
 
-        // Log activity menggunakan trait
+        // Log aktivitas menggunakan trait
         $this->logUpdate('Siswa', $siswa, ['old' => $oldData, 'new' => $siswa->fresh()->toArray()], "Memperbarui data siswa: {$siswa->nama_siswa}");
 
         return to_route('siswa.index')
@@ -185,7 +188,7 @@ class SiswaController extends Controller
             $siswa->delete();
         });
 
-        // Log activity menggunakan trait
+        // Log aktivitas menggunakan trait
         $this->logDelete('Siswa', $siswaId, $siswaName);
 
         return to_route('siswa.index')
@@ -265,6 +268,9 @@ class SiswaController extends Controller
         ];
     }
 
+    /**
+     * Cari kelas berdasarkan ID dan pastikan user punya akses
+     */
     private function findKelas(int $kelasId, User $user): Kelas
     {
         $kelas = Kelas::query()
@@ -280,6 +286,10 @@ class SiswaController extends Controller
         return $kelas;
     }
 
+    /**
+     * Simpan riwayat perpindahan kelas siswa ke tabel riwayat_kelas_siswa
+     * Dilakukan batch per 200 record untuk efisiensi
+     */
     private function storeRiwayatKelas(SupportCollection $siswaIds, Kelas $kelasAsal, Kelas $kelasTujuan): void
     {
         $movedAt = now();
@@ -301,6 +311,7 @@ class SiswaController extends Controller
 
     /**
      * Memastikan guru/operator berhak mengelola data siswa di kelas tersebut.
+     * Guru hanya bisa akses siswa di kelas yang diampunya.
      */
     private function authorizeSiswaAccess(Siswa $siswa, User $user): void
     {

@@ -17,7 +17,7 @@ class GuruController extends Controller
     use LogsActivity;
 
     /**
-     * Ambil data user beserta filter pencarian jika ada
+     * Tampilkan daftar user (guru/operator/kepala sekolah) dengan filter pencarian
      */
     public function index(Request $request): View
     {
@@ -30,7 +30,7 @@ class GuruController extends Controller
             ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'role', 'address'])
             ->with('kelas:id,guru_id,nama_kelas');
 
-        // Cari berdasarkan nama, wa, atau nip
+        // Cari berdasarkan nama, no telepon, NIP, atau username
         if ($search !== '') {
             $query->where(function ($query) use ($search): void {
                 $query->where('nama', 'like', "%{$search}%")
@@ -102,7 +102,7 @@ class GuruController extends Controller
                 $kelas->update(['guru_id' => $user->id]);
             }
 
-            // Log activity menggunakan trait
+            // Log aktivitas menggunakan trait
             $this->logCreate(
                 'Guru',
                 $user,
@@ -174,6 +174,7 @@ class GuruController extends Controller
                 ->pluck('id');
             $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
+            // Operator tidak boleh mengubah role akunnya sendiri
             if (
                 $lockedUser->role === 'operator'
                 && $data['role'] !== 'operator'
@@ -184,6 +185,7 @@ class GuruController extends Controller
                 ]);
             }
 
+            // Minimal 1 operator harus tersisa
             if ($lockedUser->role === 'operator' && $data['role'] !== 'operator' && $operatorIds->count() <= 1) {
                 throw ValidationException::withMessages([
                     'role' => 'Minimal satu akun operator harus tetap tersedia.',
@@ -193,18 +195,18 @@ class GuruController extends Controller
             $oldData = $lockedUser->makeHidden('password')->toArray();
             $lockedUser->update($data);
 
-            // Handle kelas assignment for guru role
+            // Handle penugasan kelas untuk role guru
             if ($lockedUser->role === 'guru') {
                 $currentKelasId = $lockedUser->kelas?->id;
                 $newKelasId = $request->filled('kelas_id') ? $request->integer('kelas_id') : null;
 
                 if ($currentKelasId && $currentKelasId !== $newKelasId) {
-                    // Release old kelas
+                    // Lepas kelas lama
                     Kelas::where('id', $currentKelasId)->update(['guru_id' => null]);
                 }
 
                 if ($newKelasId && $currentKelasId !== $newKelasId) {
-                    // Assign new kelas
+                    // Tugaskan kelas baru
                     $kelas = Kelas::where('id', $newKelasId)
                         ->where(function ($query) use ($lockedUser) {
                             $query->whereNull('guru_id')
@@ -215,11 +217,11 @@ class GuruController extends Controller
                     $kelas->update(['guru_id' => $lockedUser->id]);
                 }
             } else {
-                // Release any kelas if not guru
+                // Lepas kelas jika bukan guru
                 Kelas::query()->where('guru_id', $lockedUser->id)->update(['guru_id' => null]);
             }
 
-            // Log activity menggunakan trait
+            // Log aktivitas menggunakan trait
             $this->logUpdate(
                 'Guru',
                 $lockedUser,
@@ -236,6 +238,7 @@ class GuruController extends Controller
      */
     public function destroy(Request $request, $id): RedirectResponse
     {
+        // User tidak bisa menghapus akun sendiri
         if ((int) $request->user()->getKey() === (int) $id) {
             return redirect()->route('guru.index')->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
         }
@@ -248,10 +251,12 @@ class GuruController extends Controller
                 ->pluck('id');
             $user = User::query()->whereKey($id)->lockForUpdate()->firstOrFail();
 
+            // Operator terakhir tidak bisa dihapus
             if ($user->role === 'operator' && $operatorIds->count() <= 1) {
                 return 'Operator terakhir tidak dapat dihapus.';
             }
 
+            // User dengan riwayat absensi tidak bisa dihapus
             if ($user->absensis()->exists()) {
                 return 'Pengguna tidak dapat dihapus karena memiliki riwayat absensi.';
             }
@@ -259,12 +264,12 @@ class GuruController extends Controller
             $userName = $user->nama;
             $userId = $user->id;
 
-            // Release any kelas assignment
+            // Lepas penugasan kelas jika ada
             Kelas::query()->where('guru_id', $user->id)->update(['guru_id' => null]);
 
             $user->delete();
 
-            // Log activity menggunakan trait
+            // Log aktivitas menggunakan trait
             $this->logDelete('Guru', $userId, $userName);
 
             return null;

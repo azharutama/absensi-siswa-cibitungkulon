@@ -35,9 +35,9 @@ class AbsensiController extends Controller
         $tanggalDisplay = $date->format('d/m/Y');
 
         $user = $request->user();
-        $userKelas = $user->kelas; // HasOne relasi ke Kelas
+        $userKelas = $user->kelas; // Relasi HasOne ke model Kelas
 
-        // Jika guru, otomatis pakai kelas yang diampu
+        // Guru otomatis menggunakan kelas yang diampu
         if ($user->role === 'guru') {
             if (! $userKelas) {
                 return view('absensi.create', [
@@ -55,7 +55,7 @@ class AbsensiController extends Controller
             $kelasId = $userKelas->id;
             $kelas = collect([$userKelas]);
         } else {
-            // Operator/Kepala Sekolah - bisa pilih kelas
+            // Operator/Kepala Sekolah bisa memilih kelas
             $kelas = Kelas::query()
                 ->accessibleBy($user)
                 ->select(['id', 'nama_kelas'])
@@ -71,7 +71,7 @@ class AbsensiController extends Controller
             }
         }
 
-        // Cek apakah ada periode aktif
+        // Cek apakah ada periode aktif untuk tanggal yang dipilih
         $activePeriode = Periode::query()
             ->whereDate('tanggal_mulai', '<=', $tanggal)
             ->whereDate('tanggal_selesai', '>=', $tanggal)
@@ -83,9 +83,10 @@ class AbsensiController extends Controller
         if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan input absensi.';
         } else {
+            // Ambil daftar tanggal aktif (bukan hari libur/akhir pekan) untuk periode ini
             $activeDates = $this->getActiveDatesForPeriode($activePeriode);
             
-            // Validasi: tanggal tidak boleh hari libur atau akhir pekan
+            // Validasi: tanggal harus hari sekolah aktif (bukan libur/akhir pekan)
             $today = today()->toDateString();
             
             if (! in_array($tanggal, $activeDates)) {
@@ -100,7 +101,7 @@ class AbsensiController extends Controller
                 }
             }
             
-            // Cek apakah tanggal di masa depan
+            // Tidak boleh memilih tanggal di masa depan
             if ($tanggal > $today) {
                 return redirect()->route('absensi.create', array_merge(
                     $request->except('tanggal'),
@@ -161,8 +162,8 @@ class AbsensiController extends Controller
     {
         $user = $request->user();
         
-        // Validasi berbeda untuk guru vs operator/kepala_sekolah
-if ($user->role === 'guru') {
+        // Validasi berbeda untuk guru vs operator/kepala sekolah
+        if ($user->role === 'guru') {
             $userKelas = $user->kelas;
             if (! $userKelas) {
                 return redirect()->route('absensi.create')
@@ -189,29 +190,36 @@ if ($user->role === 'guru') {
 
         $userId = $user->getKey();
 
+        // Dapatkan periode aktif untuk tanggal ini (atau error 404)
         $activePeriode = $this->activePeriodeOrFail($tanggal);
         
+        // Pastikan user punya akses ke kelas ini
         $this->ensureKelasAccessibleTo($user, $kelasId);
 
+        // Cek apakah tanggal valid untuk absensi (dalam range periode)
         if ($dateError = $this->attendanceDateError($activePeriode, $tanggal)) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $dateError);
         }
 
+        // Cek apakah tanggal jatuh pada hari libur
         $holiday = $this->findHariLibur($activePeriode->id, $tanggal);
         if ($holiday) {
             return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
         }
 
+        // Ambil semua ID siswa di kelas ini
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasId)
             ->orderBy('id')
             ->pluck('id')
             ->all();
 
+        // Validasi payload absensi lengkap untuk semua siswa
         $this->ensureCompleteAttendancePayload($data['absensi'], $siswaIds);
 
+        // Cek apakah sudah ada absensi untuk kelas & tanggal ini
         $sudahAbsen = Absensi::query()
             ->where('kelas_id', $kelasId)
             ->where('tanggal', $tanggal)
@@ -226,6 +234,7 @@ if ($user->role === 'guru') {
         $rows = [];
         $notifSiswaIds = [];
 
+        // Siapkan data untuk insert batch
         foreach ($siswaIds as $siswaId) {
             $status = $data['absensi'][$siswaId];
             $rows[] = [
@@ -238,6 +247,7 @@ if ($user->role === 'guru') {
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+            // Kumpulkan ID siswa yang perlu notifikasi (sakit/izin/alpa)
             if (in_array($status, ['alpa', 'sakit', 'izin'])) {
                 $notifSiswaIds[] = $siswaId;
             }
@@ -253,6 +263,7 @@ if ($user->role === 'guru') {
                 Absensi::insert($rows);
             });
         } catch (QueryException $exception) {
+            // Handle race condition: duplicate entry (kode error 23000)
             if (($exception->errorInfo[0] ?? null) !== '23000') {
                 throw $exception;
             }
@@ -261,6 +272,7 @@ if ($user->role === 'guru') {
                 ->with('error', 'Absensi pada tanggal tersebut sudah disimpan oleh proses lain. Muat ulang halaman.');
         }
 
+        // Kirim notifikasi WhatsApp untuk siswa yang sakit/izin/alpa
         $this->queueAbsensiNotificationsFor($notifSiswaIds, $tanggal);
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
@@ -313,6 +325,7 @@ if ($user->role === 'guru') {
             }
         }
 
+        // Cari periode aktif untuk tanggal ini
         $activePeriode = Periode::query()
             ->whereDate('tanggal_mulai', '<=', $tanggal)
             ->whereDate('tanggal_selesai', '>=', $tanggal)
@@ -324,9 +337,10 @@ if ($user->role === 'guru') {
         if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan edit absensi.';
         } else {
+            // Ambil daftar tanggal aktif (bukan hari libur/akhir pekan) untuk periode ini
             $activeDates = $this->getActiveDatesForPeriode($activePeriode);
             
-            // Validasi: tanggal tidak boleh hari libur atau akhir pekan
+            // Validasi: tanggal harus hari sekolah aktif (bukan libur/akhir pekan)
             $today = today()->toDateString();
             
             if (! in_array($tanggal, $activeDates)) {
@@ -341,7 +355,7 @@ if ($user->role === 'guru') {
                 }
             }
             
-            // Cek apakah tanggal di masa depan
+            // Tidak boleh memilih tanggal di masa depan
             if ($tanggal > $today) {
                 return redirect()->route('absensi.edit', array_merge(
                     $request->except('tanggal'),
@@ -375,11 +389,13 @@ if ($user->role === 'guru') {
                 ->get();
             $stats['total'] = $siswas->count();
 
+            // Ambil data absensi existing untuk tanggal ini
             $absensiSiswa = Absensi::where('tanggal', $tanggal)
                 ->whereIn('siswa_id', $siswas->pluck('id'))
                 ->pluck('status', 'siswa_id')
                 ->toArray();
 
+            // Hitung statistik kehadiran
             foreach ($siswas as $s) {
                 $status = strtolower($absensiSiswa[$s->id] ?? 'hadir');
                 $stats[$status]++;
@@ -420,29 +436,36 @@ if ($user->role === 'guru') {
 
         $userId = $user->getKey();
 
+        // Dapatkan periode aktif untuk tanggal ini (atau error 404)
         $activePeriode = $this->activePeriodeOrFail($tanggal);
 
+        // Pastikan user punya akses ke kelas ini
         $this->ensureKelasAccessibleTo($user, $kelasId);
 
+        // Cek apakah tanggal valid untuk absensi (dalam range periode)
         if ($dateError = $this->attendanceDateError($activePeriode, $tanggal)) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $dateError);
         }
 
+        // Cek apakah tanggal jatuh pada hari libur
         $holiday = $this->findHariLibur($activePeriode->id, $tanggal);
         if ($holiday) {
             return redirect()->route('absensi.edit', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
                 ->with('error', $this->formatHariLiburMessage($holiday, $tanggal));
         }
 
+        // Ambil semua ID siswa di kelas ini
         $siswaIds = Siswa::query()
             ->where('kelas_id', $kelasId)
             ->orderBy('id')
             ->pluck('id')
             ->all();
 
+        // Validasi payload absensi lengkap untuk semua siswa
         $this->ensureCompleteAttendancePayload($data['absensi'], $siswaIds);
 
+        // Ambil data absensi existing untuk comparison
         $existingAbsensis = Absensi::query()
             ->where('kelas_id', $kelasId)
             ->where('tanggal', $tanggal)
@@ -455,11 +478,13 @@ if ($user->role === 'guru') {
         $notifSiswaIds = [];
         $hasChanges = false;
 
+        // Bandingkan data lama vs baru, siapkan untuk upsert
         foreach ($siswaIds as $siswaId) {
             $status = $data['absensi'][$siswaId];
             $existing = $existingAbsensis->get($siswaId);
             $oldStatus = $existing?->status;
 
+            // Deteksi apakah ada perubahan: status, user_id, atau kelas_id
             $hasChanges = $hasChanges
                 || ! $existing
                 || $oldStatus !== $status
@@ -477,6 +502,7 @@ if ($user->role === 'guru') {
                 'updated_at' => $now,
             ];
 
+            // Notifikasi hanya jika status berubah ke sakit/izin/alpa
             if (in_array($status, ['alpa', 'sakit', 'izin']) && $oldStatus !== $status) {
                 $notifSiswaIds[] = $siswaId;
             }
@@ -490,11 +516,12 @@ if ($user->role === 'guru') {
         DB::transaction(function () use ($upsertRows): void {
             Absensi::upsert(
                 $upsertRows,
-                ['siswa_id', 'tanggal'],
+                ['siswa_id', 'tanggal'], // Unique key untuk upsert
                 ['kelas_id', 'user_id', 'periode_id', 'status', 'updated_at']
             );
         });
 
+        // Kirim notifikasi WhatsApp untuk siswa yang statusnya berubah jadi sakit/izin/alpa
         $this->queueAbsensiNotificationsFor($notifSiswaIds, $tanggal);
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
@@ -502,8 +529,10 @@ if ($user->role === 'guru') {
     }
 
     /**
-     * @param  array<int|string, string>  $attendance
-     * @param  array<int, int>  $expectedStudentIds
+     * Memastikan payload absensi berisi semua siswa aktif kelas
+     * 
+     * @param  array<int|string, string>  $attendance  Data absensi dari request
+     * @param  array<int, int>  $expectedStudentIds  ID siswa yang seharusnya ada
      */
     private function ensureCompleteAttendancePayload(array $attendance, array $expectedStudentIds): void
     {
@@ -535,6 +564,11 @@ if ($user->role === 'guru') {
         }
     }
 
+    /**
+     * Memastikan user memiliki akses ke kelas yang diminta
+     * Guru hanya bisa akses kelas yang diampunya
+     * Operator/kepala sekolah cek via policy
+     */
     private function ensureKelasAccessibleTo(User $user, int $kelasId): void
     {
         if ($user->role === 'guru') {
@@ -550,6 +584,9 @@ if ($user->role === 'guru') {
             ->findOrFail($kelasId);
     }
 
+    /**
+     * Cari periode aktif untuk tanggal tertentu, error 404 jika tidak ada
+     */
     private function activePeriodeOrFail(string $tanggal): Periode
     {
         $periode = Periode::query()
@@ -564,6 +601,10 @@ if ($user->role === 'guru') {
         return $periode;
     }
 
+    /**
+     * Validasi apakah tanggal berada dalam range periode
+     * Return error message jika di luar range, null jika valid
+     */
     private function attendanceDateError(Periode $periode, string $tanggal): ?string
     {
         $tanggalMulai = $periode->tanggal_mulai->toDateString();
@@ -576,21 +617,27 @@ if ($user->role === 'guru') {
         return null;
     }
 
+    /**
+     * Cari data hari libur (nasional atau mingguan) untuk tanggal & periode tertentu
+     */
     private function findHariLibur(?int $periodeId, string $tanggal): ?HariLibur
     {
         $namaHari = $this->namaHariIndonesia(Carbon::parse($tanggal)->dayOfWeek);
 
         return HariLibur::where('periode_id', $periodeId)
             ->where(function ($query) use ($tanggal, $namaHari) {
-                $query->whereDate('tanggal', $tanggal)
+                $query->whereDate('tanggal', $tanggal)      // Libur nasional (tanggal spesifik)
                     ->orWhere(function ($query) use ($namaHari) {
-                        $query->where('tipe', 'mingguan')
+                        $query->where('tipe', 'mingguan')   // Libur mingguan (berulang per hari)
                             ->where('hari', $namaHari);
                     });
             })
             ->first();
     }
 
+    /**
+     * Format pesan error untuk hari libur
+     */
     private function formatHariLiburMessage(HariLibur $hariLibur, string $tanggal): string
     {
         $tanggalFormatted = Carbon::parse($tanggal)->format('d-m-Y');
@@ -599,6 +646,9 @@ if ($user->role === 'guru') {
         return "Tanggal {$tanggalFormatted} termasuk {$keterangan}. Guru tidak dapat melakukan input absensi pada hari libur.";
     }
 
+    /**
+     * Konversi angka hari (0-6) ke nama hari Indonesia
+     */
     private function namaHariIndonesia(int $dayOfWeek): string
     {
         return [
@@ -613,14 +663,16 @@ if ($user->role === 'guru') {
     }
 
     /**
-     * Get list of active dates (non-holiday weekdays) for a periode
-     * @return array<string> Y-m-d format dates
+     * Ambil daftar tanggal aktif (hari sekolah, bukan libur/akhir pekan) untuk satu periode
+     * 
+     * @return array<string> Format Y-m-d
      */
     private function getActiveDatesForPeriode(Periode $periode): array
     {
         $mulai = Carbon::parse($periode->tanggal_mulai);
         $akhir = Carbon::parse($periode->tanggal_selesai);
 
+        // Ambil hari libur nasional untuk periode ini
         $hariLiburNasional = HariLibur::where('periode_id', $periode->id)
             ->where('tipe', 'nasional')
             ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
@@ -629,6 +681,7 @@ if ($user->role === 'guru') {
             ->unique()
             ->values();
 
+        // Ambil hari libur mingguan untuk periode ini (misal: Sabtu, Minggu)
         $hariLiburMingguan = HariLibur::where('periode_id', $periode->id)
             ->where('tipe', 'mingguan')
             ->pluck('hari')
@@ -640,10 +693,12 @@ if ($user->role === 'guru') {
         $activeDates = [];
         $hari = $mulai->copy();
 
+        // Loop setiap hari dalam range periode
         while ($hari->lte($akhir)) {
             $tanggalStr = $hari->toDateString();
             $namaHariIni = $namaHari[$hari->dayOfWeek];
 
+            // Cek apakah hari ini libur (nasional atau mingguan)
             $isHariLibur = $hariLiburNasional->contains($tanggalStr)
                 || $hariLiburMingguan->contains($namaHariIni);
 
@@ -658,7 +713,10 @@ if ($user->role === 'guru') {
     }
 
     /**
-     * Find nearest active date from a given date
+     * Cari tanggal aktif terdekat dari tanggal target
+     * Logika:
+     * - Jika target di masa depan: pakai hari ini (jika aktif) atau hari aktif terakhir sebelum hari ini
+     * - Jika target di masa lalu: cari tanggal aktif dengan selisih hari terkecil
      */
     private function findNearestActiveDate(string $targetDate, array $activeDates, string $today): string
     {
@@ -669,17 +727,17 @@ if ($user->role === 'guru') {
         $targetCarbon = Carbon::parse($targetDate);
         $todayCarbon = Carbon::parse($today);
 
-        // If target is in future, return today if today is active, else nearest past active date
+        // Jika target di masa depan
         if ($targetCarbon->gt($todayCarbon)) {
             if (in_array($today, $activeDates)) {
                 return $today;
             }
-            // Find latest active date before today
+            // Cari tanggal aktif terakhir sebelum hari ini
             $pastDates = array_filter($activeDates, fn ($d) => $d <= $today);
             return $pastDates ? max($pastDates) : ($activeDates ? $activeDates[0] : $today);
         }
 
-        // Target is in past - find nearest active date
+        // Target di masa lalu - cari tanggal aktif dengan selisih terkecil
         $closest = null;
         $minDiff = PHP_INT_MAX;
 
@@ -695,6 +753,8 @@ if ($user->role === 'guru') {
     }
 
     /**
+     * Antrekan notifikasi WhatsApp untuk siswa yang sakit/izin/alpa
+     * 
      * @param  array<int, int>  $siswaIds
      */
     private function queueAbsensiNotificationsFor(array $siswaIds, string $tanggal): void
@@ -720,6 +780,9 @@ if ($user->role === 'guru') {
     }
 
     /**
+     * Buat/update notifikasi WhatsApp untuk satu data absensi
+     * Return array ID notifikasi yang dibuat
+     * 
      * @return array<int, int>
      */
     private function upsertAbsensiWhatsappNotifications(Absensi $absensi): array
@@ -748,6 +811,7 @@ if ($user->role === 'guru') {
                 'parent_phone' => $primary[1],
             ]);
 
+        // Jika sudah terkirim, jangan buat ulang
         if ($notification->status === 'sent') {
             return [(int) $notification->id];
         }
@@ -771,6 +835,9 @@ if ($user->role === 'guru') {
         return [(int) $notification->id];
     }
 
+    /**
+     * Simpan notifikasi gagal karena tidak ada nomor WA orang tua
+     */
     private function unsentParentNotification(Absensi $absensi): void
     {
         $siswa = $absensi->siswa;
@@ -798,9 +865,9 @@ if ($user->role === 'guru') {
     }
 
     /**
-     * Mengembalikan daftar kontak orang tua yang unik (berdasarkan nomor
-     * WhatsApp yang sudah dinormalisasi), dengan urutan prioritas ibu lalu ayah.
-     *
+     * Ambil daftar kontak orang tua yang unik (berdasarkan nomor WA)
+     * Prioritas: Ibu dulu, lalu Ayah. Duplikat nomor diabaikan.
+     * 
      * @return array<int, array{0: ?string, 1: string}>
      */
     private function resolveParentContacts(Siswa $siswa): array
@@ -825,6 +892,10 @@ if ($user->role === 'guru') {
         return $contacts;
     }
 
+    /**
+     * Normalisasi nomor WA ke format internasional (62xxx)
+     * Contoh: 0812... -> 62812..., 812... -> 62812...
+     */
     private function normalizeWhatsappNumber(?string $phone): ?string
     {
         if (blank($phone)) {
@@ -844,6 +915,10 @@ if ($user->role === 'guru') {
         return $number ?: null;
     }
 
+    /**
+     * Bangun pesan WhatsApp untuk notifikasi absensi
+     * Termasuk sapaan, nama siswa, kelas, tanggal, dan keterangan status
+     */
     private function buildAbsensiWhatsappMessage(Absensi $absensi, ?string $parentName): string
     {
         $siswa = $absensi->siswa;
@@ -863,7 +938,7 @@ if ($user->role === 'guru') {
     }
 
     /**
-     * Parse date string supporting both d/m/Y and Y-m-d formats
+     * Parse string tanggal support format d/m/Y dan Y-m-d
      */
     private function parseDate(string $date): Carbon
     {
