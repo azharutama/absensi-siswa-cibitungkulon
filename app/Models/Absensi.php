@@ -6,7 +6,6 @@ use Database\Factories\AbsensiFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Absensi extends Model
 {
@@ -40,11 +39,6 @@ class Absensi extends Model
     public function periode(): BelongsTo
     {
         return $this->belongsTo(Periode::class);
-    }
-
-    public function rekaps(): HasMany
-    {
-        return $this->hasMany(Rekap::class);
     }
 
     public function siswa(): BelongsTo

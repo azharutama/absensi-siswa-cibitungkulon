@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\Periode;
-use App\Models\Rekap;
 use App\Models\RiwayatKelasSiswa;
 use App\Models\Siswa;
 use App\Models\User;
@@ -132,10 +131,6 @@ class DataIntegrityTest extends TestCase
             'periode_id' => $periode->id,
             'tanggal' => $periode->tanggal_mulai,
         ]);
-        Rekap::factory()->create([
-            'absensi_id' => $absensi->id,
-            'user_id' => $operator->id,
-        ]);
         RiwayatKelasSiswa::create([
             'siswa_id' => $siswa->id,
             'kelas_asal_id' => $kelas->id,
@@ -153,7 +148,6 @@ class DataIntegrityTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseMissing('siswas', ['id' => $siswa->id]);
         $this->assertDatabaseMissing('absensis', ['id' => $absensi->id]);
-        $this->assertDatabaseMissing('rekap_absensis', ['absensi_id' => $absensi->id]);
         $this->assertDatabaseMissing('riwayat_kelas_siswa', ['siswa_id' => $siswa->id]);
         $this->assertDatabaseMissing('whatsapp_notifications', ['siswa_id' => $siswa->id]);
     }

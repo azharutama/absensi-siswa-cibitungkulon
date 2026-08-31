@@ -252,8 +252,8 @@ class GuruController extends Controller
                 return 'Operator terakhir tidak dapat dihapus.';
             }
 
-            if ($user->absensis()->exists() || $user->rekaps()->exists()) {
-                return 'Pengguna tidak dapat dihapus karena memiliki riwayat absensi atau rekap.';
+            if ($user->absensis()->exists()) {
+                return 'Pengguna tidak dapat dihapus karena memiliki riwayat absensi.';
             }
 
             $userName = $user->nama;

@@ -64,6 +64,6 @@ class Kelas extends Model
 
     public function hasRekapData(): bool
     {
-        return $this->absensis()->whereHas('rekaps')->exists();
+        return $this->absensis()->exists();
     }
 }

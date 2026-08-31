@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Absensi;
 use App\Models\Periode;
-use App\Models\Rekap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -365,15 +364,14 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Periode akademik berhasil dihapus.');
     }
 
-    public function reset(Request $request)
+public function reset(Request $request)
     {
         DB::transaction(function (): void {
-            Rekap::query()->delete();
             Absensi::query()->delete();
             Periode::query()->delete();
         });
 
-return redirect()->route('periode.index')->with('success', 'Semua data periode, absensi, dan rekap berhasil direset.');
+        return redirect()->route('periode.index')->with('success', 'Semua data periode dan absensi berhasil direset.');
     }
 
     /** @param array<string, mixed> $validated */
