@@ -875,8 +875,8 @@ class AbsensiController extends Controller
     }
 
     /**
-     * Buat/update notifikasi WhatsApp untuk siswa yang berubah status ke hadir
-     * Return array ID notifikasi yang dibuat
+     * Buat notifikasi WhatsApp baru untuk siswa yang berubah status ke hadir
+     * Notifikasi lama tetap dipertahankan di riwayat
      * 
      * @return array<int, int>
      */
@@ -897,15 +897,15 @@ class AbsensiController extends Controller
         $primary = $contacts[0];
         $fallback = $contacts[1] ?? null;
 
-        // Buat notifikasi baru untuk perubahan status ke hadir
-        $notification = new WhatsappNotification();
-
         $message = $this->buildHadirWhatsappMessage($absensi, $primary[0]);
 
         if ($fallback) {
             $message .= "\n\n[Fallback: {$fallback[0]} - {$fallback[1]}]";
         }
 
+        // Buat notifikasi baru tanpa menghapus/update yang lama
+        // Riwayat notifikasi lama tetap tersimpan
+        $notification = new WhatsappNotification();
         $notification->fill([
             'absensi_id' => $absensi->id,
             'siswa_id' => $absensi->siswa_id,
@@ -1010,47 +1010,31 @@ class AbsensiController extends Controller
     private function buildAbsensiWhatsappMessage(Absensi $absensi, ?string $parentName): string
     {
         $siswa = $absensi->siswa;
-        $tanggal = Carbon::parse($absensi->tanggal)->format('d F Y');
+        $tanggal = Carbon::parse($absensi->tanggal)->format('d/m/Y');
         $hari = $this->namaHariIndonesia(Carbon::parse($absensi->tanggal)->dayOfWeek);
-        $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
-        $kelas = $absensi->kelas?->nama_kelas ? "Kelas {$absensi->kelas->nama_kelas}" : '-';
-        $status = strtolower($absensi->status);
+        $sapaan = $parentName ? "Yth. Bapak/Ibu {$parentName}" : 'Yth. Bapak/Ibu Orang Tua/Wali';
+        $kelas = $absensi->kelas?->nama_kelas ?? '-';
+        $status = strtoupper($absensi->status);
         $namaSekolah = config('app.name', 'SD Cibitung Kulon');
 
-        $statusLabel = match ($status) {
-            'sakit' => '⚠️ SAKIT',
-            'izin' => '📋 IZIN',
-            'alpa' => '❌ ALPA (Tanpa Keterangan)',
-            default => strtoupper($status),
+        $keterangan = match (strtolower($absensi->status)) {
+            'sakit' => 'Siswa tidak hadir karena sakit.',
+            'izin' => 'Siswa tidak hadir karena izin.',
+            'alpa' => 'Siswa tidak hadir tanpa keterangan.',
+            default => 'Informasi kehadiran siswa.',
         };
 
-        $keterangan = match ($status) {
-            'sakit' => "Ananda tercatat tidak hadir karena sakit.\nSemoga ananda lekas sembuh dan diberikan perawatan yang tepat.\nMohon informasikan perkembangan kondisi ananda kepada wali kelas/sekolah.",
-            'izin' => "Ananda tercatat tidak hadir karena izin.\nMohon konfirmasi alasan izin kepada wali kelas/sekolah untuk catatan kami.",
-            'alpa' => "Ananda tercatat tidak hadir tanpa keterangan (alpa).\nMohon segera hubungi wali kelas/sekolah untuk mengklarifikasi ketidakhadiran ananda.",
-            default => "Status kehadiran ananda: {$status}.\nMohon konfirmasi kepada wali kelas/sekolah.",
-        };
-
-        $pesan = "Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\n";
-        $pesan .= "Hormat kami,\n";
+        $pesan = "NOTIFIKASI KEHADIRAN SISWA\n";
+        $pesan .= "{$namaSekolah}\n\n";
         $pesan .= "{$sapaan},\n\n";
-        $pesan .= "Dengan hormat, kami dari {$namaSekolah} menyampaikan informasi kehadiran ananda sebagai berikut:\n\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
-        $pesan .= " *DETAIL KEHADIRAN*\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
-        $pesan .= "*Nama Siswa* : {$siswa->nama_siswa}\n";
-        $pesan .= "*Kelas*      : {$kelas}\n";
-        $pesan .= " *Tanggal*    : {$hari}, {$tanggal}\n";
-        $pesan .= "*Status*     : {$statusLabel}\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $pesan .= "*KETERANGAN*\n";
+        $pesan .= "Berikut informasi kehadiran putra/putri Anda:\n\n";
+        $pesan .= "Nama    : {$siswa->nama_siswa}\n";
+        $pesan .= "Kelas   : {$kelas}\n";
+        $pesan .= "Hari    : {$hari}, {$tanggal}\n";
+        $pesan .= "Status  : {$status}\n\n";
         $pesan .= "{$keterangan}\n\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
-        $pesan .= "Jika ada pertanyaan atau perlu klarifikasi,\nsilakan hubungi wali kelas atau administrasi sekolah.\n\n";
-        $pesan .= "Atas perhatian dan kerjasamanya,\nkami ucapkan terima kasih.\n\n";
-        $pesan .= "Wassalamu'alaikum Warahmatullahi Wabarakatuh\n";
-        $pesan .= "—\n";
-        $pesan .= "{$namaSekolah}\n";
+        $pesan .= "Untuk informasi lebih lanjut, silakan hubungi wali kelas.\n\n";
+        $pesan .= "Terima kasih.\n";
         $pesan .= "Sistem Informasi Absensi";
 
         return $pesan;
@@ -1063,34 +1047,24 @@ class AbsensiController extends Controller
     private function buildHadirWhatsappMessage(Absensi $absensi, ?string $parentName): string
     {
         $siswa = $absensi->siswa;
-        $tanggal = Carbon::parse($absensi->tanggal)->format('d F Y');
+        $tanggal = Carbon::parse($absensi->tanggal)->format('d/m/Y');
         $hari = $this->namaHariIndonesia(Carbon::parse($absensi->tanggal)->dayOfWeek);
-        $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
-        $kelas = $absensi->kelas?->nama_kelas ? "Kelas {$absensi->kelas->nama_kelas}" : '-';
+        $sapaan = $parentName ? "Yth. Bapak/Ibu {$parentName}" : 'Yth. Bapak/Ibu Orang Tua/Wali';
+        $kelas = $absensi->kelas?->nama_kelas ?? '-';
         $namaSekolah = config('app.name', 'SD Cibitung Kulon');
 
-        $pesan = "Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\n";
-        $pesan .= "Hormat kami,\n";
+        $pesan = "PEMBARUAN KEHADIRAN SISWA\n";
+        $pesan .= "{$namaSekolah}\n\n";
         $pesan .= "{$sapaan},\n\n";
-        $pesan .= "Dengan hormat, kami dari {$namaSekolah} menyampaikan informasi pembaruan kehadiran ananda sebagai berikut:\n\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
-        $pesan .= " *PEMBARUAN KEHADIRAN*\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
-        $pesan .= "*Nama Siswa* : {$siswa->nama_siswa}\n";
-        $pesan .= "*Kelas*      : {$kelas}\n";
-        $pesan .= "*Tanggal*    : {$hari}, {$tanggal}\n";
-        $pesan .= "*Status*     : ✅ HADIR (Diperbarui)\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $pesan .= "*KETERANGAN*\n";
-        $pesan .= "Status kehadiran ananda telah diperbarui menjadi HADIR.\n";
-        $pesan .= "Data absensi sebelumnya telah dikoreksi oleh wali kelas/sekolah.\n\n";
-        $pesan .= "Alhamdulillah, ananda telah tercatat hadir di sekolah pada tanggal tersebut.\n\n";
-        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
-        $pesan .= "Jika ada pertanyaan atau perlu klarifikasi,\nsilakan hubungi wali kelas atau administrasi sekolah.\n\n";
-        $pesan .= "Atas perhatian dan kerjasamanya,\nkami ucapkan terima kasih.\n\n";
-        $pesan .= "Wassalamu'alaikum Warahmatullahi Wabarakatuh\n";
-        $pesan .= "—\n";
-        $pesan .= "{$namaSekolah}\n";
+        $pesan .= "Berikut pembaruan kehadiran putra/putri Anda:\n\n";
+        $pesan .= "Nama    : {$siswa->nama_siswa}\n";
+        $pesan .= "Kelas   : {$kelas}\n";
+        $pesan .= "Hari    : {$hari}, {$tanggal}\n";
+        $pesan .= "Status  : HADIR (Diperbarui)\n\n";
+        $pesan .= "Data kehadiran telah dikoreksi oleh wali kelas.\n";
+        $pesan .= "Siswa tercatat hadir pada tanggal tersebut.\n\n";
+        $pesan .= "Untuk informasi lebih lanjut, silakan hubungi wali kelas.\n\n";
+        $pesan .= "Terima kasih.\n";
         $pesan .= "Sistem Informasi Absensi";
 
         return $pesan;

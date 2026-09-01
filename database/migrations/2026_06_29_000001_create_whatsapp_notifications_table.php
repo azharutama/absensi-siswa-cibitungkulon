@@ -27,7 +27,7 @@ return new class extends Migration
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['absensi_id', 'provider', 'parent_phone']);
+            $table->index(['absensi_id', 'provider', 'parent_phone']);
             $table->index(['status', 'created_at']);
             $table->index(['status', 'updated_at', 'id']);
             $table->index(['siswa_id', 'created_at']);
