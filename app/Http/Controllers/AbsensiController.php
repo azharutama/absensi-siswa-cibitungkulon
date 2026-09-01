@@ -476,6 +476,7 @@ class AbsensiController extends Controller
         $now = now();
         $upsertRows = [];
         $notifSiswaIds = [];
+        $notifHadirSiswaIds = [];
         $hasChanges = false;
 
         // Bandingkan data lama vs baru, siapkan untuk upsert
@@ -502,9 +503,17 @@ class AbsensiController extends Controller
                 'updated_at' => $now,
             ];
 
-            // Notifikasi hanya jika status berubah ke sakit/izin/alpa
+            // Notifikasi jika status berubah ke sakit/izin/alpa
             if (in_array($status, ['alpa', 'sakit', 'izin']) && $oldStatus !== $status) {
                 $notifSiswaIds[] = $siswaId;
+            }
+
+            // Notifikasi jika status berubah dari alfa/sakit/izin ke hadir (hanya melalui edit)
+            if ($status === 'hadir' 
+                && $oldStatus !== null 
+                && $oldStatus !== 'hadir' 
+                && in_array($oldStatus, ['alpa', 'sakit', 'izin'])) {
+                $notifHadirSiswaIds[] = $siswaId;
             }
         }
 
@@ -523,6 +532,9 @@ class AbsensiController extends Controller
 
         // Kirim notifikasi WhatsApp untuk siswa yang statusnya berubah jadi sakit/izin/alpa
         $this->queueAbsensiNotificationsFor($notifSiswaIds, $tanggal);
+
+        // Kirim notifikasi WhatsApp untuk siswa yang statusnya berubah dari alfa/sakit/izin ke hadir
+        $this->queueHadirNotificationsFor($notifHadirSiswaIds, $tanggal);
 
         return redirect()->route('absensi.create', ['kelas_id' => $kelasId, 'tanggal' => $tanggal])
             ->with('success', 'Data riwayat absensi berhasil diperbarui.');
@@ -780,6 +792,33 @@ class AbsensiController extends Controller
     }
 
     /**
+     * Antrekan notifikasi WhatsApp untuk siswa yang berubah status dari alfa/sakit/izin ke hadir
+     * 
+     * @param  array<int, int>  $siswaIds
+     */
+    private function queueHadirNotificationsFor(array $siswaIds, string $tanggal): void
+    {
+        if ($siswaIds === []) {
+            return;
+        }
+
+        $notificationIds = Absensi::query()
+            ->with(['siswa', 'kelas'])
+            ->where('tanggal', $tanggal)
+            ->whereIn('siswa_id', array_unique($siswaIds))
+            ->where('status', 'hadir')
+            ->get()
+            ->flatMap(fn(Absensi $absensi) => $this->upsertHadirWhatsappNotifications($absensi))
+            ->filter(fn(?int $id) => $id !== null)
+            ->values()
+            ->all();
+
+        if ($notificationIds !== []) {
+            SendAlpaWhatsappBatchJob::dispatch($notificationIds);
+        }
+    }
+
+    /**
      * Buat/update notifikasi WhatsApp untuk satu data absensi
      * Return array ID notifikasi yang dibuat
      * 
@@ -824,6 +863,53 @@ class AbsensiController extends Controller
 
         $notification->fill([
             'siswa_id' => $absensi->siswa_id,
+            'parent_name' => $primary[0],
+            'parent_phone' => $primary[1],
+            'message' => $message,
+            'status' => 'pending',
+            'last_error' => null,
+            'sent_at' => null,
+        ])->save();
+
+        return [(int) $notification->id];
+    }
+
+    /**
+     * Buat/update notifikasi WhatsApp untuk siswa yang berubah status ke hadir
+     * Return array ID notifikasi yang dibuat
+     * 
+     * @return array<int, int>
+     */
+    private function upsertHadirWhatsappNotifications(Absensi $absensi): array
+    {
+        $siswa = $absensi->siswa;
+
+        if (! $siswa) {
+            return [];
+        }
+
+        $contacts = $this->resolveParentContacts($siswa);
+
+        if ($contacts === []) {
+            return [];
+        }
+
+        $primary = $contacts[0];
+        $fallback = $contacts[1] ?? null;
+
+        // Buat notifikasi baru untuk perubahan status ke hadir
+        $notification = new WhatsappNotification();
+
+        $message = $this->buildHadirWhatsappMessage($absensi, $primary[0]);
+
+        if ($fallback) {
+            $message .= "\n\n[Fallback: {$fallback[0]} - {$fallback[1]}]";
+        }
+
+        $notification->fill([
+            'absensi_id' => $absensi->id,
+            'siswa_id' => $absensi->siswa_id,
+            'provider' => 'fonnte',
             'parent_name' => $primary[0],
             'parent_phone' => $primary[1],
             'message' => $message,
@@ -959,6 +1045,46 @@ class AbsensiController extends Controller
         $pesan .= "━━━━━━━━━━━━━━━━━━\n\n";
         $pesan .= "*KETERANGAN*\n";
         $pesan .= "{$keterangan}\n\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
+        $pesan .= "Jika ada pertanyaan atau perlu klarifikasi,\nsilakan hubungi wali kelas atau administrasi sekolah.\n\n";
+        $pesan .= "Atas perhatian dan kerjasamanya,\nkami ucapkan terima kasih.\n\n";
+        $pesan .= "Wassalamu'alaikum Warahmatullahi Wabarakatuh\n";
+        $pesan .= "—\n";
+        $pesan .= "{$namaSekolah}\n";
+        $pesan .= "Sistem Informasi Absensi";
+
+        return $pesan;
+    }
+
+    /**
+     * Bangun pesan WhatsApp untuk notifikasi perubahan status ke hadir
+     * Format rapi dan formal dengan struktur yang jelas
+     */
+    private function buildHadirWhatsappMessage(Absensi $absensi, ?string $parentName): string
+    {
+        $siswa = $absensi->siswa;
+        $tanggal = Carbon::parse($absensi->tanggal)->format('d F Y');
+        $hari = $this->namaHariIndonesia(Carbon::parse($absensi->tanggal)->dayOfWeek);
+        $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
+        $kelas = $absensi->kelas?->nama_kelas ? "Kelas {$absensi->kelas->nama_kelas}" : '-';
+        $namaSekolah = config('app.name', 'SD Cibitung Kulon');
+
+        $pesan = "Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\n";
+        $pesan .= "Hormat kami,\n";
+        $pesan .= "{$sapaan},\n\n";
+        $pesan .= "Dengan hormat, kami dari {$namaSekolah} menyampaikan informasi pembaruan kehadiran ananda sebagai berikut:\n\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
+        $pesan .= " *PEMBARUAN KEHADIRAN*\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
+        $pesan .= "*Nama Siswa* : {$siswa->nama_siswa}\n";
+        $pesan .= "*Kelas*      : {$kelas}\n";
+        $pesan .= "*Tanggal*    : {$hari}, {$tanggal}\n";
+        $pesan .= "*Status*     : ✅ HADIR (Diperbarui)\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $pesan .= "*KETERANGAN*\n";
+        $pesan .= "Status kehadiran ananda telah diperbarui menjadi HADIR.\n";
+        $pesan .= "Data absensi sebelumnya telah dikoreksi oleh wali kelas/sekolah.\n\n";
+        $pesan .= "Alhamdulillah, ananda telah tercatat hadir di sekolah pada tanggal tersebut.\n\n";
         $pesan .= "━━━━━━━━━━━━━━━━━━\n";
         $pesan .= "Jika ada pertanyaan atau perlu klarifikasi,\nsilakan hubungi wali kelas atau administrasi sekolah.\n\n";
         $pesan .= "Atas perhatian dan kerjasamanya,\nkami ucapkan terima kasih.\n\n";
