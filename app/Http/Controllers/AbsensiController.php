@@ -79,20 +79,20 @@ class AbsensiController extends Controller
 
         $periodeWarning = null;
         $activeDates = [];
-        
+
         if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan input absensi.';
         } else {
             // Ambil daftar tanggal aktif (bukan hari libur/akhir pekan) untuk periode ini
             $activeDates = $this->getActiveDatesForPeriode($activePeriode);
-            
+
             // Validasi: tanggal harus hari sekolah aktif (bukan libur/akhir pekan)
             $today = today()->toDateString();
-            
+
             if (! in_array($tanggal, $activeDates)) {
                 // Cari tanggal aktif terdekat (prioritas: hari ini, lalu hari sebelumnya, lalu hari sesudahnya)
                 $nearestDate = $this->findNearestActiveDate($tanggal, $activeDates, $today);
-                
+
                 if ($nearestDate !== $tanggal) {
                     return redirect()->route('absensi.create', array_merge(
                         $request->except('tanggal'),
@@ -100,7 +100,7 @@ class AbsensiController extends Controller
                     ))->with('warning', "Tanggal {$tanggal} bukan hari aktif sekolah. Otomatis diarahkan ke tanggal aktif terdekat: " . Carbon::parse($nearestDate)->format('d/m/Y'));
                 }
             }
-            
+
             // Tidak boleh memilih tanggal di masa depan
             if ($tanggal > $today) {
                 return redirect()->route('absensi.create', array_merge(
@@ -161,7 +161,7 @@ class AbsensiController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        
+
         // Validasi berbeda untuk guru vs operator/kepala sekolah
         if ($user->role === 'guru') {
             $userKelas = $user->kelas;
@@ -192,7 +192,7 @@ class AbsensiController extends Controller
 
         // Dapatkan periode aktif untuk tanggal ini (atau error 404)
         $activePeriode = $this->activePeriodeOrFail($tanggal);
-        
+
         // Pastikan user punya akses ke kelas ini
         $this->ensureKelasAccessibleTo($user, $kelasId);
 
@@ -333,20 +333,20 @@ class AbsensiController extends Controller
 
         $periodeWarning = null;
         $activeDates = [];
-        
+
         if (! $activePeriode) {
             $periodeWarning = 'Periode akademik belum dikonfigurasi. Silakan hubungi operator untuk menambahkan periode terlebih dahulu sebelum dapat melakukan edit absensi.';
         } else {
             // Ambil daftar tanggal aktif (bukan hari libur/akhir pekan) untuk periode ini
             $activeDates = $this->getActiveDatesForPeriode($activePeriode);
-            
+
             // Validasi: tanggal harus hari sekolah aktif (bukan libur/akhir pekan)
             $today = today()->toDateString();
-            
+
             if (! in_array($tanggal, $activeDates)) {
                 // Cari tanggal aktif terdekat
                 $nearestDate = $this->findNearestActiveDate($tanggal, $activeDates, $today);
-                
+
                 if ($nearestDate !== $tanggal) {
                     return redirect()->route('absensi.edit', array_merge(
                         $request->except('tanggal'),
@@ -354,7 +354,7 @@ class AbsensiController extends Controller
                     ))->with('warning', "Tanggal {$tanggal} bukan hari aktif sekolah. Otomatis diarahkan ke tanggal aktif terdekat: " . Carbon::parse($nearestDate)->format('d/m/Y'));
                 }
             }
-            
+
             // Tidak boleh memilih tanggal di masa depan
             if ($tanggal > $today) {
                 return redirect()->route('absensi.edit', array_merge(
@@ -677,7 +677,7 @@ class AbsensiController extends Controller
             ->where('tipe', 'nasional')
             ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
             ->pluck('tanggal')
-            ->map(fn ($t) => Carbon::parse($t)->toDateString())
+            ->map(fn($t) => Carbon::parse($t)->toDateString())
             ->unique()
             ->values();
 
@@ -733,7 +733,7 @@ class AbsensiController extends Controller
                 return $today;
             }
             // Cari tanggal aktif terakhir sebelum hari ini
-            $pastDates = array_filter($activeDates, fn ($d) => $d <= $today);
+            $pastDates = array_filter($activeDates, fn($d) => $d <= $today);
             return $pastDates ? max($pastDates) : ($activeDates ? $activeDates[0] : $today);
         }
 
@@ -769,8 +769,8 @@ class AbsensiController extends Controller
             ->whereIn('siswa_id', array_unique($siswaIds))
             ->whereIn('status', ['alpa', 'sakit', 'izin'])
             ->get()
-            ->flatMap(fn (Absensi $absensi) => $this->upsertAbsensiWhatsappNotifications($absensi))
-            ->filter(fn (?int $id) => $id !== null)
+            ->flatMap(fn(Absensi $absensi) => $this->upsertAbsensiWhatsappNotifications($absensi))
+            ->filter(fn(?int $id) => $id !== null)
             ->values()
             ->all();
 
@@ -875,10 +875,12 @@ class AbsensiController extends Controller
         $contacts = [];
         $seen = [];
 
-        foreach ([
-            [$siswa->nama_ibu, $siswa->no_whatsapp_ibu],
-            [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
-        ] as [$name, $phone]) {
+        foreach (
+            [
+                [$siswa->nama_ibu, $siswa->no_whatsapp_ibu],
+                [$siswa->nama_ayah, $siswa->no_whatsapp_ayah],
+            ] as [$name, $phone]
+        ) {
             $normalized = $this->normalizeWhatsappNumber($phone);
 
             if (blank($normalized) || isset($seen[$normalized])) {
@@ -905,11 +907,11 @@ class AbsensiController extends Controller
         $number = (string) preg_replace('/\D+/', '', $phone);
 
         if (str_starts_with($number, '0')) {
-            return '62'.substr($number, 1);
+            return '62' . substr($number, 1);
         }
 
         if (str_starts_with($number, '8')) {
-            return '62'.$number;
+            return '62' . $number;
         }
 
         return $number ?: null;
@@ -917,24 +919,55 @@ class AbsensiController extends Controller
 
     /**
      * Bangun pesan WhatsApp untuk notifikasi absensi
-     * Termasuk sapaan, nama siswa, kelas, tanggal, dan keterangan status
+     * Format rapi dan formal dengan struktur yang jelas
      */
     private function buildAbsensiWhatsappMessage(Absensi $absensi, ?string $parentName): string
     {
         $siswa = $absensi->siswa;
-        $tanggal = Carbon::parse($absensi->tanggal)->format('d-m-Y');
+        $tanggal = Carbon::parse($absensi->tanggal)->format('d F Y');
+        $hari = $this->namaHariIndonesia(Carbon::parse($absensi->tanggal)->dayOfWeek);
         $sapaan = $parentName ? "Bapak/Ibu {$parentName}" : 'Bapak/Ibu Orang Tua/Wali';
-        $kelas = $absensi->kelas?->nama_kelas ? " kelas {$absensi->kelas->nama_kelas}" : '';
+        $kelas = $absensi->kelas?->nama_kelas ? "Kelas {$absensi->kelas->nama_kelas}" : '-';
         $status = strtolower($absensi->status);
+        $namaSekolah = config('app.name', 'SD Cibitung Kulon');
 
-        $keterangan = match ($status) {
-            'sakit' => "tercatat tidak hadir karena sakit pada tanggal {$tanggal}.\n\nSemoga ananda lekas sembuh. Mohon informasikan perkembangan kondisi ananda kepada wali kelas/sekolah.",
-            'izin' => "tercatat tidak hadir karena izin pada tanggal {$tanggal}.\n\nMohon konfirmasi alasan izin kepada wali kelas/sekolah.",
-            default => "tercatat tidak hadir tanpa keterangan (alpa) pada tanggal {$tanggal}.\n\nMohon konfirmasi kepada wali kelas/sekolah.",
+        $statusLabel = match ($status) {
+            'sakit' => '⚠️ SAKIT',
+            'izin' => '📋 IZIN',
+            'alpa' => '❌ ALPA (Tanpa Keterangan)',
+            default => strtoupper($status),
         };
 
-        return "Assalamu'alaikum {$sapaan},\n\n"
-            ."Kami informasikan bahwa ananda {$siswa->nama_siswa}{$kelas} {$keterangan} Terima kasih.";
+        $keterangan = match ($status) {
+            'sakit' => "Ananda tercatat tidak hadir karena sakit.\nSemoga ananda lekas sembuh dan diberikan perawatan yang tepat.\nMohon informasikan perkembangan kondisi ananda kepada wali kelas/sekolah.",
+            'izin' => "Ananda tercatat tidak hadir karena izin.\nMohon konfirmasi alasan izin kepada wali kelas/sekolah untuk catatan kami.",
+            'alpa' => "Ananda tercatat tidak hadir tanpa keterangan (alpa).\nMohon segera hubungi wali kelas/sekolah untuk mengklarifikasi ketidakhadiran ananda.",
+            default => "Status kehadiran ananda: {$status}.\nMohon konfirmasi kepada wali kelas/sekolah.",
+        };
+
+        $pesan = "Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\n";
+        $pesan .= "Hormat kami,\n";
+        $pesan .= "{$sapaan},\n\n";
+        $pesan .= "Dengan hormat, kami dari {$namaSekolah} menyampaikan informasi kehadiran ananda sebagai berikut:\n\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
+        $pesan .= " *DETAIL KEHADIRAN*\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
+        $pesan .= "*Nama Siswa* : {$siswa->nama_siswa}\n";
+        $pesan .= "*Kelas*      : {$kelas}\n";
+        $pesan .= " *Tanggal*    : {$hari}, {$tanggal}\n";
+        $pesan .= "*Status*     : {$statusLabel}\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $pesan .= "*KETERANGAN*\n";
+        $pesan .= "{$keterangan}\n\n";
+        $pesan .= "━━━━━━━━━━━━━━━━━━\n";
+        $pesan .= "Jika ada pertanyaan atau perlu klarifikasi,\nsilakan hubungi wali kelas atau administrasi sekolah.\n\n";
+        $pesan .= "Atas perhatian dan kerjasamanya,\nkami ucapkan terima kasih.\n\n";
+        $pesan .= "Wassalamu'alaikum Warahmatullahi Wabarakatuh\n";
+        $pesan .= "—\n";
+        $pesan .= "{$namaSekolah}\n";
+        $pesan .= "Sistem Informasi Absensi";
+
+        return $pesan;
     }
 
     /**
