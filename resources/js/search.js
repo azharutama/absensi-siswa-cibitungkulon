@@ -12,13 +12,11 @@ function initializeSearchForm(form) {
         }
     };
 
-    let debounceTimer = null;
-
+    // Hapus auto-submit, hanya toggle reset button saja
     searchInput.addEventListener("input", () => {
         toggleResetButton();
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => form.submit(), 500);
     });
+    
     toggleResetButton();
 }
 

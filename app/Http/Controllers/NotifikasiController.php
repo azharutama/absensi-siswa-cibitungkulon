@@ -74,6 +74,10 @@ class NotifikasiController extends Controller
      */
     private function parseDate(string $date): Carbon
     {
+        if (empty($date)) {
+            return today();
+        }
+
         // Coba parse format d/m/Y
         if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
             try {
