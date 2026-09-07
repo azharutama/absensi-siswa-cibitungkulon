@@ -25,6 +25,20 @@ class ProfileUpdateRequest extends FormRequest
                 'max:50',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'no_telepon' => ['nullable', 'string', 'max:20', 'regex:/^(\+?62|0)[0-9]{8,15}$/'],
+        ];
+    }
+
+    /**
+     * Get custom error messages for validation rules.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'no_telepon.regex' => 'Format nomor telepon tidak valid. Gunakan format 08xxx atau 62xxx.',
+            'no_telepon.max' => 'Nomor telepon maksimal 20 karakter.',
         ];
     }
 }
