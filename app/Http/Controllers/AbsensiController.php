@@ -1139,12 +1139,25 @@ class AbsensiController extends Controller
 
     /**
      * Parse string tanggal support format d/m/Y dan Y-m-d
+     * Dengan error handling untuk format yang tidak valid
      */
     private function parseDate(string $date): Carbon
     {
+        // Coba parse format d/m/Y
         if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
-            return Carbon::createFromFormat('d/m/Y', $date);
+            try {
+                return Carbon::createFromFormat('d/m/Y', $date);
+            } catch (\Exception $e) {
+                // Jika gagal, fallback ke Carbon::parse()
+            }
         }
-        return Carbon::parse($date);
+        
+        // Coba parse format Y-m-d atau format lain yang valid
+        try {
+            return Carbon::parse($date);
+        } catch (\Exception $e) {
+            // Jika semua gagal, return today sebagai fallback
+            return today();
+        }
     }
 }
