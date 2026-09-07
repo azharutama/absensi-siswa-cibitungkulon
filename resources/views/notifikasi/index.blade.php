@@ -24,7 +24,7 @@
                         id="tanggal_mulai"
                         name="tanggal_mulai"
                         type="date"
-                        value="{{ request('tanggal_mulai') ? \Carbon\Carbon::createFromFormat('d/m/Y', request('tanggal_mulai'))->format('Y-m-d') : '' }}"
+                        value="{{ request('tanggal_mulai') ?: '' }}"
                         onchange="this.form.submit()"
                         class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
@@ -38,7 +38,7 @@
                         id="tanggal_berakhir"
                         name="tanggal_berakhir"
                         type="date"
-                        value="{{ request('tanggal_berakhir') ? \Carbon\Carbon::createFromFormat('d/m/Y', request('tanggal_berakhir'))->format('Y-m-d') : '' }}"
+                        value="{{ request('tanggal_berakhir') ?: '' }}"
                         onchange="this.form.submit()"
                         class="block w-full rounded-lg border-gray-300 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
