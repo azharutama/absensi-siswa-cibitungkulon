@@ -1101,8 +1101,8 @@ class AbsensiController extends Controller
         $pesan .= "Status  : {$status}\n\n";
         $pesan .= "{$keterangan}\n\n";
         $pesan .= "Untuk informasi lebih lanjut, silakan hubungi wali kelas.\n\n";
-        $pesan .= "Terima kasih.\n";
-        $pesan .= "Sistem Informasi Absensi";
+        $pesan .= "Terima kasih.\n\n";
+        $pesan .= $this->formatWaliKelasFooter($absensi);
 
         return $pesan;
     }
@@ -1131,10 +1131,25 @@ class AbsensiController extends Controller
         $pesan .= "Data kehadiran telah dikoreksi oleh wali kelas.\n";
         $pesan .= "Siswa tercatat hadir pada tanggal tersebut.\n\n";
         $pesan .= "Untuk informasi lebih lanjut, silakan hubungi wali kelas.\n\n";
-        $pesan .= "Terima kasih.\n";
-        $pesan .= "Sistem Informasi Absensi";
+        $pesan .= "Terima kasih.\n\n";
+        $pesan .= $this->formatWaliKelasFooter($absensi);
 
         return $pesan;
+    }
+
+    private function formatWaliKelasFooter(Absensi $absensi): string
+    {
+        $waliKelas = $absensi->kelas?->guru;
+
+        if (! $waliKelas) {
+            return '[Walikelas: - -]';
+        }
+
+        return sprintf(
+            '[Walikelas: %s - %s]',
+            $waliKelas->nama ?: '-',
+            $waliKelas->no_telepon ?: '-'
+        );
     }
 
     /**
@@ -1151,7 +1166,7 @@ class AbsensiController extends Controller
                 // Jika gagal, fallback ke Carbon::parse()
             }
         }
-        
+
         // Coba parse format Y-m-d atau format lain yang valid
         try {
             return Carbon::parse($date);
