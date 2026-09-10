@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AutoSelectsSingleKelas;
-use App\Jobs\SendAlpaWhatsappBatchJob;
+use App\Jobs\SendWhatsappBatchJob;
 use App\Models\Absensi;
 use App\Models\HariLibur;
 use App\Models\Kelas;
@@ -776,7 +776,7 @@ class AbsensiController extends Controller
             ->all();
 
         if ($notificationIds !== []) {
-            SendAlpaWhatsappBatchJob::dispatch($notificationIds);
+            SendWhatsappBatchJob::dispatch($notificationIds);
         }
     }
 
@@ -803,7 +803,7 @@ class AbsensiController extends Controller
             ->all();
 
         if ($notificationIds !== []) {
-            SendAlpaWhatsappBatchJob::dispatch($notificationIds);
+            SendWhatsappBatchJob::dispatch($notificationIds);
         }
     }
 
@@ -830,7 +830,7 @@ class AbsensiController extends Controller
             ->all();
 
         if ($notificationIds !== []) {
-            SendAlpaWhatsappBatchJob::dispatch($notificationIds);
+            SendWhatsappBatchJob::dispatch($notificationIds);
         }
     }
 

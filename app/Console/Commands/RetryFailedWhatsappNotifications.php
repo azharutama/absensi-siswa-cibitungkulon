@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\SendAlpaWhatsappBatchJob;
+use App\Jobs\SendWhatsappBatchJob;
 use App\Models\WhatsappNotification;
 use Illuminate\Console\Command;
 
@@ -32,7 +32,7 @@ class RetryFailedWhatsappNotifications extends Command
             return self::SUCCESS;
         }
 
-        SendAlpaWhatsappBatchJob::dispatch($ids);
+        SendWhatsappBatchJob::dispatch($ids);
 
         $this->info('Menjadwalkan ulang '.count($ids).' notifikasi WhatsApp yang gagal.');
 
