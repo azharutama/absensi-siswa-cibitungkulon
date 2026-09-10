@@ -4,15 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Kelas;
-use App\Models\RiwayatKelasSiswa;
 use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -44,7 +41,7 @@ class SiswaController extends Controller
             ->with([
                 'kelas:id,nama_kelas',
             ])
-            ->whereHas('kelas', fn ($query) => $query->accessibleBy($request->user()))
+            ->whereHas('kelas', fn($query) => $query->accessibleBy($request->user()))
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('nama_siswa', 'like', "%{$search}%")
@@ -52,7 +49,7 @@ class SiswaController extends Controller
                         ->orWhere('nisn', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['kelas_id'] ?? null, fn ($query, $kelasId) => $query->where('kelas_id', $kelasId))
+            ->when($filters['kelas_id'] ?? null, fn($query, $kelasId) => $query->where('kelas_id', $kelasId))
             ->orderBy('nama_siswa')
             ->paginate(15)
             ->withQueryString();
@@ -210,6 +207,14 @@ class SiswaController extends Controller
         $data = $request->validate([
             'kelas_asal_id' => ['required', 'integer', 'exists:kelas,id'],
             'kelas_tujuan_id' => ['required', 'integer', 'exists:kelas,id', 'different:kelas_asal_id'],
+        ], [
+            'kelas_asal_id.required' => 'Kelas asal wajib dipilih.',
+            'kelas_asal_id.integer' => 'Kelas asal tidak valid.',
+            'kelas_asal_id.exists' => 'Kelas asal yang dipilih tidak ditemukan.',
+            'kelas_tujuan_id.required' => 'Kelas tujuan wajib dipilih.',
+            'kelas_tujuan_id.integer' => 'Kelas tujuan tidak valid.',
+            'kelas_tujuan_id.exists' => 'Kelas tujuan yang dipilih tidak ditemukan.',
+            'kelas_tujuan_id.different' => 'Kelas tujuan harus berbeda dari kelas asal.',
         ]);
 
         $kelasAsal = Kelas::findOrFail((int) $data['kelas_asal_id']);
@@ -241,8 +246,6 @@ class SiswaController extends Controller
             Siswa::query()
                 ->whereIn('id', $siswaIds)
                 ->update(['kelas_id' => $kelasTujuan->id]);
-
-            $this->storeRiwayatKelas($siswaIds, $kelasAsal, $kelasTujuan);
         });
 
         $movedCount = $siswaIds->count();
@@ -256,7 +259,7 @@ class SiswaController extends Controller
             ->with('success', $message);
     }
 
-    /** @return array{kelas: Collection} */
+    /** @return array{kelas: \Illuminate\Database\Eloquent\Collection} */
     private function formOptions(User $user): array
     {
         return [
@@ -284,29 +287,6 @@ class SiswaController extends Controller
         }
 
         return $kelas;
-    }
-
-    /**
-     * Simpan riwayat perpindahan kelas siswa ke tabel riwayat_kelas_siswa
-     * Dilakukan batch per 200 record untuk efisiensi
-     */
-    private function storeRiwayatKelas(SupportCollection $siswaIds, Kelas $kelasAsal, Kelas $kelasTujuan): void
-    {
-        $movedAt = now();
-
-        foreach ($siswaIds->chunk(200) as $chunk) {
-            RiwayatKelasSiswa::query()->insert(
-                $chunk->map(fn (int $siswaId): array => [
-                    'siswa_id' => $siswaId,
-                    'kelas_asal_id' => $kelasAsal->id,
-                    'kelas_tujuan_id' => $kelasTujuan->id,
-                    'tanggal_kenaikan' => $movedAt->toDateString(),
-                    'status' => 'aktif',
-                    'created_at' => $movedAt,
-                    'updated_at' => $movedAt,
-                ])->all(),
-            );
-        }
     }
 
     /**

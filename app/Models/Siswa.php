@@ -44,36 +44,9 @@ class Siswa extends Model
         return $this->hasMany(Absensi::class);
     }
 
-    public function riwayatKelas(): HasMany
-    {
-        return $this->hasMany(RiwayatKelasSiswa::class);
-    }
-
     public function kelasLulusan(): ?string
     {
         return $this->kelas?->nama_kelas;
-    }
-
-    public function pindahKeKelas(Kelas $kelasTujuan, string $tanggalKenaikan, ?string $keterangan = null): RiwayatKelasSiswa
-    {
-        $kelasAsal = $this->kelas;
-
-        $this->update(['kelas_id' => $kelasTujuan->id]);
-
-        $activePeriode = Periode::query()
-            ->whereDate('tanggal_mulai', '<=', today())
-            ->whereDate('tanggal_selesai', '>=', today())
-            ->first();
-
-        return $this->riwayatKelas()->create([
-            'kelas_asal_id' => $kelasAsal?->id,
-            'kelas_tujuan_id' => $kelasTujuan->id,
-            'tanggal_kenaikan' => $tanggalKenaikan,
-            'tahun_ajaran' => $activePeriode?->tahun_ajaran,
-            'semester' => $activePeriode?->semester,
-            'keterangan' => $keterangan,
-            'status' => 'aktif',
-        ]);
     }
 
     public function hasAbsensi(): bool

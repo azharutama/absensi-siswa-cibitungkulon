@@ -47,16 +47,6 @@ class Kelas extends Model
         return $this->hasMany(Absensi::class);
     }
 
-    public function riwayatMasuk(): HasMany
-    {
-        return $this->hasMany(RiwayatKelasSiswa::class, 'kelas_tujuan_id');
-    }
-
-    public function riwayatKeluar(): HasMany
-    {
-        return $this->hasMany(RiwayatKelasSiswa::class, 'kelas_asal_id');
-    }
-
     public function guru(): BelongsTo
     {
         return $this->belongsTo(User::class, 'guru_id');

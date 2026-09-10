@@ -56,7 +56,6 @@
                 </div>
                 <div>
                     <p class="text-sm font-bold text-gray-900 leading-tight">SDN Cibitung Kulon 02</p>
-                    <p class="text-xs text-gray-500">Management System</p>
                 </div>
             </div>
         </div>

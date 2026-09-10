@@ -15,7 +15,6 @@
             <!-- Header -->
             <div class="text-center mb-8">
                 <h2 class="text-2xl font-bold text-gray-900">SDN Cibitung Kulon 02</h2>
-                <p class="text-sm text-gray-600 mt-1">Management System</p>
             </div>
 
             <!-- Login Card -->
