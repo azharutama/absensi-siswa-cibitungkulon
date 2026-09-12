@@ -261,7 +261,7 @@ class DataIntegrityTest extends TestCase
             'username' => 'operator123',
             'nama' => $operator->nama,
             'no_telepon' => $operator->no_telepon,
-            'alamat' => $operator->address,
+            'alamat' => $operator->alamat,
             'role' => 'guru',
             'jenis_kelamin' => $operator->jenis_kelamin,
         ]);

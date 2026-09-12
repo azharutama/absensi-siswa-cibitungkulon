@@ -19,7 +19,6 @@ class User extends Authenticatable
         'nip',
         'username',
         'alamat',
-        'address',
         'no_telepon',
         'password',
         'role',
@@ -41,16 +40,6 @@ class User extends Authenticatable
     public function absensis(): HasMany
     {
         return $this->hasMany(Absensi::class);
-    }
-
-    public function getAlamatAttribute(): ?string
-    {
-        return $this->address;
-    }
-
-    public function setAlamatAttribute(?string $value): void
-    {
-        $this->attributes['address'] = $value;
     }
 
     /**

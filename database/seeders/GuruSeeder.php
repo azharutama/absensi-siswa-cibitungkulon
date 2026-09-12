@@ -31,7 +31,7 @@ class GuruSeeder extends Seeder
             'nama' => 'Operator SD',
             'nip' => '197001012005011001',
             'username' => 'operator',
-            'address' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
+            'alamat' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
             'no_telepon' => '081200000001',
             'role' => 'operator',
             'jenis_kelamin' => 'laki-laki',
@@ -49,7 +49,7 @@ class GuruSeeder extends Seeder
                 'username' => $number === 1
                     ? self::PRIMARY_TEACHER_USERNAME
                     : "guru{$number}",
-                'address' => $faker->address(),
+                'alamat' => $faker->address(),
                 'no_telepon' => sprintf('08121%07d', $number),
                 'role' => 'guru',
                 'jenis_kelamin' => $isFemale ? 'perempuan' : 'laki-laki',
@@ -61,7 +61,7 @@ class GuruSeeder extends Seeder
             'nama' => 'Kepala Sekolah',
             'nip' => '196001012005011001',
             'username' => 'kepsek',
-            'address' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
+            'alamat' => 'Jl. Raya Cibitung Kulon, Kab. Bekasi',
             'no_telepon' => '081299999999',
             'role' => 'kepala_sekolah',
             'jenis_kelamin' => 'laki-laki',

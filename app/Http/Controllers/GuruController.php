@@ -27,7 +27,7 @@ class GuruController extends Controller
         $search = trim($filters['search'] ?? '');
 
         $query = User::query()
-            ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'role', 'address'])
+            ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'role', 'alamat'])
             ->with('kelas:id,guru_id,nama_kelas');
 
         // Cari berdasarkan nama, no telepon, NIP, atau username
@@ -80,9 +80,6 @@ class GuruController extends Controller
             'kelas_id' => 'nullable|exists:kelas,id',
         ]);
 
-        $data['address'] = $data['alamat'];
-        unset($data['alamat']);
-
         if (filled($data['password'] ?? null)) {
             $data['password'] = Hash::make($data['password']);
         } else {
@@ -120,7 +117,7 @@ class GuruController extends Controller
     public function edit($id): View
     {
         $guru = User::query()
-            ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'address', 'role', 'jenis_kelamin'])
+            ->select(['id', 'nip', 'username', 'nama', 'no_telepon', 'alamat', 'role', 'jenis_kelamin'])
             ->with('kelas:id,guru_id,nama_kelas')
             ->findOrFail($id);
 
@@ -156,9 +153,6 @@ class GuruController extends Controller
             'password' => $user ? 'nullable|string|min:8|confirmed' : 'required|string|min:8|confirmed',
             'kelas_id' => 'nullable|exists:kelas,id',
         ]);
-
-        $data['address'] = $data['alamat'];
-        unset($data['alamat']);
 
         if (filled($data['password'] ?? null)) {
             $data['password'] = Hash::make($data['password']);
