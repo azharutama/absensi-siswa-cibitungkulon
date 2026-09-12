@@ -53,14 +53,14 @@ class PeriodeController extends Controller
         if ($periode) {
             $liburMingguan = $periode->hariLiburs
                 ->where('tipe', 'mingguan')
-                ->map(fn ($item) => [
+                ->map(fn($item) => [
                     'hari' => $item->hari,
                     'keterangan' => $item->keterangan,
                 ]);
 
             $liburNasional = $periode->hariLiburs
                 ->where('tipe', 'nasional')
-                ->map(fn ($item) => [
+                ->map(fn($item) => [
                     'tanggal' => $item->tanggal?->format('Y-m-d') ?? '', // Format Y-m-d untuk input HTML5 date
                     'nama_libur' => $item->keterangan,
                 ]);
@@ -77,7 +77,7 @@ class PeriodeController extends Controller
                 'string',
                 'max:20',
                 Rule::unique('periodes', 'tahun_ajaran')
-                    ->where(fn ($query) => $query->whereNull('semester')),
+                    ->where(fn($query) => $query->whereNull('semester')),
             ],
             'semester_1_tanggal_mulai' => ['required', 'date'],
             'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
@@ -220,7 +220,7 @@ class PeriodeController extends Controller
                 'string',
                 'max:20',
                 Rule::unique('periodes', 'tahun_ajaran')
-                    ->where(fn ($query) => $query->whereNull('semester'))
+                    ->where(fn($query) => $query->whereNull('semester'))
                     ->ignore($periode),
             ],
             'semester_1_tanggal_mulai' => ['required', 'date'],
@@ -442,7 +442,7 @@ class PeriodeController extends Controller
             $keterangan = $libur['nama_libur'];
 
             if (filled($libur['keterangan'] ?? null)) {
-                $keterangan .= ' - '.$libur['keterangan'];
+                $keterangan .= ' - ' . $libur['keterangan'];
             }
 
             $periode->hariLiburs()->create([
