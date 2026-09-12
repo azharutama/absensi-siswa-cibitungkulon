@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Absensi;
 use App\Models\Periode;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class PeriodeController extends Controller
 {
+    use LogsActivity;
+
     public function index(Request $request)
     {
         // Ambil kedua semester terbaru dalam 1 query untuk optimasi
@@ -300,23 +303,37 @@ class PeriodeController extends Controller
                 ->first();
 
             if ($semester1) {
+                $oldData = $semester1->load('hariLiburs')->toArray();
                 $semester1->update([
                     'tanggal_mulai' => $validated['semester_1_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_1_tanggal_selesai'],
                 ]);
                 $semester1->hariLiburs()->delete();
                 $this->storeHariLiburs($semester1, $validated);
+                $this->logUpdate(
+                    'Periode',
+                    $semester1,
+                    ['old' => $oldData, 'new' => $semester1->fresh('hariLiburs')->toArray()],
+                    "Memperbarui periode {$semester1->namaLengkap()}"
+                );
             }
 
             if ($semester2) {
+                $oldData = $semester2->load('hariLiburs')->toArray();
                 $semester2->update([
                     'tanggal_mulai' => $validated['semester_2_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
                 ]);
                 $semester2->hariLiburs()->delete();
                 $this->storeHariLiburs($semester2, $validated);
+                $this->logUpdate(
+                    'Periode',
+                    $semester2,
+                    ['old' => $oldData, 'new' => $semester2->fresh('hariLiburs')->toArray()],
+                    "Memperbarui periode {$semester2->namaLengkap()}"
+                );
             } else {
-                Periode::create([
+                $semester2 = Periode::create([
                     'tahun_ajaran' => $tahunAjaran,
                     'semester' => 2,
                     'tipe_periode' => 'semester',
@@ -325,14 +342,12 @@ class PeriodeController extends Controller
                     'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
                 ]);
 
-                $semester2 = Periode::query()
-                    ->where('tahun_ajaran', $tahunAjaran)
-                    ->where('semester', 2)
-                    ->first();
-
-                if ($semester2) {
-                    $this->storeHariLiburs($semester2, $validated);
-                }
+                $this->storeHariLiburs($semester2, $validated);
+                $this->logCreate(
+                    'Periode',
+                    $semester2->fresh('hariLiburs'),
+                    "Menambahkan periode {$semester2->namaLengkap()}"
+                );
             }
         });
 
