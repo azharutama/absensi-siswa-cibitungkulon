@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LogsActivity;
 use App\Models\Absensi;
 use App\Models\Kelas;
 use App\Models\User;
@@ -12,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class KelasController extends Controller
 {
+    use LogsActivity;
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -60,7 +63,7 @@ class KelasController extends Controller
                 ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia (sudah memiliki kelas).']);
         }
 
-        DB::transaction(function () use ($request): void {
+        $kelas = DB::transaction(function () use ($request): Kelas {
             if ($request->filled('guru_id')) {
                 User::query()->whereKey($request->integer('guru_id'))->lockForUpdate()->firstOrFail();
 
@@ -76,7 +79,11 @@ class KelasController extends Controller
                 'status' => 'aktif',
                 'guru_id' => $request->filled('guru_id') ? $request->integer('guru_id') : null,
             ]);
+
+            return $kelas;
         });
+
+        $this->logCreate('Kelas', $kelas, "Menambahkan kelas baru: {$kelas->nama_kelas}");
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil ditambahkan.');
     }
@@ -110,6 +117,7 @@ class KelasController extends Controller
         ]);
 
         $currentGuruId = $kelas->guru_id;
+        $oldData = $kelas->toArray();
 
         if (
             $request->filled('guru_id')
@@ -139,6 +147,14 @@ class KelasController extends Controller
             ]);
         });
 
+        $kelas->refresh();
+        $this->logUpdate(
+            'Kelas',
+            $kelas,
+            ['old' => $oldData, 'new' => $kelas->toArray()],
+            "Memperbarui data kelas: {$kelas->nama_kelas}"
+        );
+
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil diperbarui.');
     }
 
@@ -165,6 +181,8 @@ class KelasController extends Controller
         }
 
         $kelas->delete();
+
+        $this->logDelete('Kelas', $kelas->id, $kelas->nama_kelas);
 
         return redirect()->route('kelas.index')->with('success', 'Data Kelas berhasil dihapus.');
     }
