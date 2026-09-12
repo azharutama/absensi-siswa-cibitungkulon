@@ -28,7 +28,7 @@ class UserFactory extends Factory
             'nip' => fake()->unique()->numerify('###############'),
             'username' => fake()->unique()->userName(),
             'alamat' => fake()->address(),
-            'no_telepon' => '08'.fake()->unique()->numerify('##########'),
+            'no_telepon' => '08' . fake()->unique()->numerify('##########'),
             'password' => static::$password ??= Hash::make('password'),
             'role' => fake()->randomElement(['operator', 'guru', 'kepala_sekolah']),
             'jenis_kelamin' => fake()->randomElement(['laki-laki', 'perempuan']),
@@ -38,21 +38,21 @@ class UserFactory extends Factory
 
     public function operator(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'role' => 'operator',
         ]);
     }
 
     public function guru(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'role' => 'guru',
         ]);
     }
 
     public function kepalaSekolah(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'role' => 'kepala_sekolah',
         ]);
     }
