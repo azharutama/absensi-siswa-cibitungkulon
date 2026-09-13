@@ -31,16 +31,10 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
     public function array(): array
     {
         $totalHadir = 0;
-        $totalSakit = 0;
-        $totalIzin = 0;
-        $totalAlpa = 0;
         $totalTidakMasuk = 0;
 
         foreach ($this->rekapSiswa as $rekap) {
             $totalHadir += $rekap['hadir'];
-            $totalSakit += $rekap['sakit'];
-            $totalIzin += $rekap['izin'];
-            $totalAlpa += $rekap['alpa'];
             $totalTidakMasuk += $rekap['total_tidak_masuk'];
         }
 
@@ -48,9 +42,7 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
         $totalHariKerjaKelas = $this->totalHariAktif * $jumlahSiswa;
 
         $persentaseHadir = $totalHariKerjaKelas > 0 ? min(round(($totalHadir / $totalHariKerjaKelas) * 100, 1), 100) : 0;
-        $persentaseSakit = $totalHariKerjaKelas > 0 ? min(round(($totalSakit / $totalHariKerjaKelas) * 100, 1), 100) : 0;
-        $persentaseIzin = $totalHariKerjaKelas > 0 ? min(round(($totalIzin / $totalHariKerjaKelas) * 100, 1), 100) : 0;
-        $persentaseAlpa = $totalHariKerjaKelas > 0 ? min(round(($totalAlpa / $totalHariKerjaKelas) * 100, 1), 100) : 0;
+        $persentaseTidakMasuk = $totalHariKerjaKelas > 0 ? min(round(($totalTidakMasuk / $totalHariKerjaKelas) * 100, 1), 100) : 0;
 
         $rows = [
             ['REKAP ABSENSI SISWA'],
@@ -69,7 +61,7 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
                 $rekap['sakit'],
                 $rekap['izin'],
                 $rekap['alpa'],
-                $rekap['persentase'].'%',
+                $rekap['persentase'] . '%',
             ];
         }
 
@@ -79,9 +71,9 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
             'TOTAL',
             '',
             $totalHadir,
-            $totalSakit,
-            $totalIzin,
-            $totalAlpa,
+            $totalTidakMasuk,
+            '',
+            '',
             '',
         ];
 
@@ -90,11 +82,10 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
             '',
             'PERSENTASE (%)',
             '',
-            $persentaseHadir.'%',
-            $persentaseSakit.'%',
-            $persentaseIzin.'%',
-            $persentaseAlpa.'%',
-            '100%',
+            $persentaseHadir . '%',
+            $persentaseTidakMasuk . '%',
+            '',
+            '',
             '',
         ];
 
@@ -128,6 +119,9 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
         $persentaseRow = $lastDataRow + 2;
 
         $sheet->mergeCells('A1:H1');
+        $sheet->mergeCells("E{$totalRow}:G{$totalRow}");
+        $sheet->mergeCells("E{$persentaseRow}:G{$persentaseRow}");
+        $sheet->setSelectedCell('A1');
         $sheet->getStyle("A5:H{$persentaseRow}")
             ->getBorders()
             ->getAllBorders()
@@ -138,9 +132,20 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
         $sheet->getStyle("A5:A{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle("D5:H{$persentaseRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Style total row: apply blue fill to all columns except G (Alpa)
-        $sheet->getStyle("A{$totalRow}:F{$totalRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EFF6FF');
-        $sheet->getStyle("H{$totalRow}:H{$totalRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EFF6FF');
+        $sheet->getStyle('A5:H5')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A5:H5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('2563EB');
+
+        if ($lastDataRow >= 6) {
+            $sheet->getStyle("A6:H{$lastDataRow}")
+                ->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()
+                ->setRGB('FFFFFF');
+            $sheet->getStyle("A6:H{$lastDataRow}")->getFont()->getColor()->setRGB('000000');
+        }
+
+        // Style total row
+        $sheet->getStyle("A{$totalRow}:H{$totalRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EFF6FF');
         $sheet->getStyle("A{$totalRow}:H{$totalRow}")->getFont()->setBold(true);
         $sheet->getStyle("A{$totalRow}:H{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -170,6 +175,6 @@ class RekapAbsensiExport implements FromArray, WithColumnWidths, WithStyles, Wit
     private function periodeLabel(): string
     {
         return Carbon::parse($this->tanggalMulai)->translatedFormat('d F Y')
-            .' s.d. '.Carbon::parse($this->tanggalBerakhir)->translatedFormat('d F Y');
+            . ' s.d. ' . Carbon::parse($this->tanggalBerakhir)->translatedFormat('d F Y');
     }
 }

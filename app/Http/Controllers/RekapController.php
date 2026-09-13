@@ -216,6 +216,9 @@ class RekapController extends Controller
             $stats['persentase_sakit'] = $totalHariKerjaKelas > 0 ? min(round(($totalSakit / $totalHariKerjaKelas) * 100, 1), 100) : 0;
             $stats['persentase_izin'] = $totalHariKerjaKelas > 0 ? min(round(($totalIzin / $totalHariKerjaKelas) * 100, 1), 100) : 0;
             $stats['persentase_alpa'] = $totalHariKerjaKelas > 0 ? min(round(($totalAlpa / $totalHariKerjaKelas) * 100, 1), 100) : 0;
+            $stats['persentase_tidak_masuk'] = $totalHariKerjaKelas > 0
+                ? min(round(($totalTidakMasuk / $totalHariKerjaKelas) * 100, 1), 100)
+                : 0;
         }
 
         if ($kelasId && $totalHariAbsensi === 0) {

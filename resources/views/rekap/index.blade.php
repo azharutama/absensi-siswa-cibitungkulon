@@ -187,17 +187,13 @@
                                 <tr class="bg-blue-50 font-bold border-t-2 border-blue-200 text-gray-900">
                                     <td class="px-4 py-3 border-r border-gray-200" colspan="3">TOTAL</td>
                                     <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_hadir'] ?? 0 }}</td>
-                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_sakit'] ?? 0 }}</td>
-                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_izin'] ?? 0 }}</td>
-                                    <td class="px-2 py-3 border-r border-gray-200">{{ $stats['total_alpa'] ?? 0 }}</td>
+                                    <td class="px-2 py-3 border-r border-gray-200" colspan="3">{{ $stats['total_tidak_masuk'] ?? 0 }}</td>
                                     <td class="px-4 py-3">-</td>
                                 </tr>
                                 <tr class="bg-gray-50 font-medium text-sm text-gray-900">
                                     <td class="px-4 py-2 border-r border-gray-200" colspan="3">PERSENTASE (%)</td>
                                     <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_hadir'] ?? 0 }}%</td>
-                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_sakit'] ?? 0 }}%</td>
-                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_izin'] ?? 0 }}%</td>
-                                    <td class="px-2 py-2 border-r border-gray-200">{{ $stats['persentase_alpa'] ?? 0 }}%</td>
+                                    <td class="px-2 py-2 border-r border-gray-200" colspan="3">{{ $stats['persentase_tidak_masuk'] ?? 0 }}%</td>
                                     <td class="px-4 py-2">-</td>
                                 </tr>
                             @endif
