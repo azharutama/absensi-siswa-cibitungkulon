@@ -6,7 +6,7 @@
             <h2 class="text-xl font-bold text-gray-800">Rekap Absensi</h2>
         </div>
 
-        @if($kelasId)
+        @if($kelasId && !$hideRekapTabel)
             <!-- 1. WIDGET CARDS STATISTIK KELAS -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <!-- Hari Aktif -->

@@ -89,18 +89,6 @@ class AbsensiController extends Controller
             // Validasi: tanggal harus hari sekolah aktif (bukan libur/akhir pekan)
             $today = today()->toDateString();
 
-            if (! in_array($tanggal, $activeDates)) {
-                // Cari tanggal aktif terdekat (prioritas: hari ini, lalu hari sebelumnya, lalu hari sesudahnya)
-                $nearestDate = $this->findNearestActiveDate($tanggal, $activeDates, $today);
-
-                if ($nearestDate !== $tanggal) {
-                    return redirect()->route('absensi.create', array_merge(
-                        $request->except('tanggal'),
-                        ['tanggal' => $nearestDate]
-                    ))->with('warning', "Tanggal {$tanggal} bukan hari aktif sekolah. Otomatis diarahkan ke tanggal aktif terdekat: " . Carbon::parse($nearestDate)->format('d/m/Y'));
-                }
-            }
-
             // Tidak boleh memilih tanggal di masa depan
             if ($tanggal > $today) {
                 return redirect()->route('absensi.create', array_merge(
@@ -342,18 +330,6 @@ class AbsensiController extends Controller
 
             // Validasi: tanggal harus hari sekolah aktif (bukan libur/akhir pekan)
             $today = today()->toDateString();
-
-            if (! in_array($tanggal, $activeDates)) {
-                // Cari tanggal aktif terdekat
-                $nearestDate = $this->findNearestActiveDate($tanggal, $activeDates, $today);
-
-                if ($nearestDate !== $tanggal) {
-                    return redirect()->route('absensi.edit', array_merge(
-                        $request->except('tanggal'),
-                        ['tanggal' => $nearestDate]
-                    ))->with('warning', "Tanggal {$tanggal} bukan hari aktif sekolah. Otomatis diarahkan ke tanggal aktif terdekat: " . Carbon::parse($nearestDate)->format('d/m/Y'));
-                }
-            }
 
             // Tidak boleh memilih tanggal di masa depan
             if ($tanggal > $today) {
@@ -642,7 +618,7 @@ class AbsensiController extends Controller
     private function formatHariLiburMessage(HariLibur $hariLibur, string $tanggal): string
     {
         $tanggalFormatted = Carbon::parse($tanggal)->format('d-m-Y');
-        $keterangan = $hariLibur->keterangan ?: 'Hari libur';
+        $keterangan = $hariLibur->nama_libur ?: $hariLibur->keterangan ?: 'Hari libur';
 
         return "Tanggal {$tanggalFormatted} termasuk {$keterangan}. Guru tidak dapat melakukan input absensi pada hari libur.";
     }

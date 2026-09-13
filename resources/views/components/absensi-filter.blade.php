@@ -27,35 +27,6 @@
                 {{ $disabled ? 'disabled' : '' }} 
                 onchange="this.form.submit()" 
                 class="w-full bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                x-data="{ 
-                    activeDates: @js($activeDates ?? []),
-                    minDate: '{{ $activeDates && count($activeDates) > 0 ? min($activeDates) : today()->toDateString() }}',
-                    maxDate: '{{ today()->toDateString() }}',
-                    init() {
-                        this.$watch('$refs.input.value', (value) => {
-                            if (value && this.activeDates.length > 0 && !this.activeDates.includes(value)) {
-                                // Find nearest active date
-                                const target = new Date(value);
-                                let closest = this.activeDates[0];
-                                let minDiff = Infinity;
-                                
-                                for (const date of this.activeDates) {
-                                    const diff = Math.abs(new Date(date).getTime() - target.getTime());
-                                    if (diff < minDiff) {
-                                        minDiff = diff;
-                                        closest = date;
-                                    }
-                                }
-                                
-                                if (closest !== value) {
-                                    this.$refs.input.value = closest;
-                                    this.$refs.input.dispatchEvent(new Event('change'));
-                                }
-                            }
-                        });
-                    }
-                }"
-                x-ref="input"
             >
         </div>
         

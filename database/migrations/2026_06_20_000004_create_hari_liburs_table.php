@@ -17,6 +17,7 @@ return new class extends Migration
             $table->enum('tipe', ['mingguan', 'nasional']);
             $table->string('hari')->nullable(); // Diisi 'Minggu' atau 'Sabtu' jika tipe mingguan
             $table->date('tanggal')->nullable(); // Diisi spesifik tanggal jika tipe nasional
+            $table->string('nama_libur')->nullable();
             $table->string('keterangan');
             $table->timestamps();
 

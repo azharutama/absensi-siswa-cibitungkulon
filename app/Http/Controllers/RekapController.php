@@ -83,10 +83,10 @@ class RekapController extends Controller
         $kelas ??= $this->accessibleKelas($request);
 
         $preset = $filters['preset'] ?? 'this_month';
-        
+
         // Auto-select kelas menggunakan trait helper
         $kelasId = $this->getKelasIdWithAutoSelect($filters['kelas_id'] ?? null, $kelas);
-        
+
         // Jika preset custom, gunakan tanggal manual
         if ($preset === 'custom') {
             $tanggalMulaiInput = $filters['tanggal_mulai'] ?? today()->startOfMonth()->format('d/m/Y');
@@ -153,6 +153,7 @@ class RekapController extends Controller
             $totalHariAbsensi = Absensi::query()
                 ->where('kelas_id', $kelasId)
                 ->whereBetween('tanggal', [$tanggalMulai, $tanggalBerakhir])
+                ->whereIn('tanggal', $activeDates)
                 ->distinct()
                 ->count('tanggal');
 
@@ -246,7 +247,7 @@ class RekapController extends Controller
     private function getPresetDateRange(string $preset): array
     {
         $today = today();
-        
+
         return match ($preset) {
             'today' => [
                 $today->toDateString(),
@@ -359,7 +360,7 @@ class RekapController extends Controller
                     ->orWhereBetween('tanggal_selesai', [$mulai->toDateString(), $akhir->toDateString()])
                     ->orWhere(function ($q) use ($mulai, $akhir) {
                         $q->where('tanggal_mulai', '<=', $mulai->toDateString())
-                          ->where('tanggal_selesai', '>=', $akhir->toDateString());
+                            ->where('tanggal_selesai', '>=', $akhir->toDateString());
                     });
             })
             ->get();
@@ -370,13 +371,13 @@ class RekapController extends Controller
         if ($periodes->isNotEmpty()) {
             // Ambil semua hari libur nasional dari semua periode yang relevan
             $periodeIds = $periodes->pluck('id');
-            
+
             $hariLiburNasional = HariLibur::query()
                 ->whereIn('periode_id', $periodeIds)
                 ->where('tipe', 'nasional')
                 ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
                 ->pluck('tanggal')
-                ->map(fn ($t) => $t instanceof Carbon ? $t->toDateString() : Carbon::parse($t)->toDateString())
+                ->map(fn($t) => $t instanceof Carbon ? $t->toDateString() : Carbon::parse($t)->toDateString())
                 ->unique()
                 ->values();
 
@@ -450,7 +451,7 @@ class RekapController extends Controller
                     ->orWhereBetween('tanggal_selesai', [$mulai->toDateString(), $akhir->toDateString()])
                     ->orWhere(function ($q) use ($mulai, $akhir) {
                         $q->where('tanggal_mulai', '<=', $mulai->toDateString())
-                          ->where('tanggal_selesai', '>=', $akhir->toDateString());
+                            ->where('tanggal_selesai', '>=', $akhir->toDateString());
                     });
             })
             ->get();
@@ -461,7 +462,7 @@ class RekapController extends Controller
             ->where('tipe', 'nasional')
             ->whereBetween('tanggal', [$mulai->toDateString(), $akhir->toDateString()])
             ->pluck('tanggal')
-            ->map(fn ($t) => Carbon::parse($t)->toDateString())
+            ->map(fn($t) => Carbon::parse($t)->toDateString())
             ->unique()
             ->values();
 

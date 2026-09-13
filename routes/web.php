@@ -44,7 +44,6 @@ Route::middleware(['auth'])->group(function () {
         // Kelola Periode
         Route::get('/periode', [PeriodeController::class, 'index'])->name('periode.index');
         Route::post('/periode', [PeriodeController::class, 'store'])->name('periode.store');
-        Route::get('/periode/{periode}/edit', [PeriodeController::class, 'edit'])->name('periode.edit');
         Route::put('/periode/{periode}', [PeriodeController::class, 'update'])->name('periode.update');
         Route::post('/periode/reset', [PeriodeController::class, 'reset'])->name('periode.reset');
 

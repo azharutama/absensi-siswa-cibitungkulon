@@ -18,6 +18,7 @@ class HariLibur extends Model
         'tipe',
         'hari',
         'tanggal',
+        'nama_libur',
         'keterangan',
     ];
 

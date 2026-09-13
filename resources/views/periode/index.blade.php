@@ -1,6 +1,8 @@
 @php
     $listMingguan = $liburMingguan ?? collect();
-    $listNasional = $liburNasional ?? collect();
+    $listNasional = collect($liburNasional ?? [])->values()->map(
+        fn (array $item, int $index) => [...$item, '_key' => "nasional-{$index}"]
+    );
     $isEdit = $periode !== null;
 @endphp
 
@@ -29,7 +31,12 @@
                 this.listMingguan.splice(index, 1);
             },
             addNasional() {
-                this.listNasional.push({ tanggal: '', nama_libur: '', keterangan: '' });
+                this.listNasional.push({
+                    _key: `nasional-${Date.now()}-${this.listNasional.length}`,
+                    tanggal: '',
+                    nama_libur: '',
+                    keterangan: '',
+                });
             },
             removeNasional(index) {
                 this.listNasional.splice(index, 1);
@@ -159,7 +166,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 bg-white">
-                                    <template x-for="(item, index) in listNasional" :key="index">
+                                    <template x-for="(item, index) in listNasional" :key="item._key">
                                         <tr>
                                             <td class="px-3 py-2 text-gray-500 text-center" x-text="index + 1"></td>
                                             <td class="px-2 py-1">
@@ -175,7 +182,7 @@
                                                 <span x-show="!editMode" x-text="item.keterangan"></span>
                                             </td>
                                             <td x-show="editMode" class="px-3 py-2 text-center">
-                                                <button type="button" @click="removeNasional(index)" class="text-red-600 hover:text-red-900 font-medium">Hapus</button>
+                                                <button type="button" @click.prevent.stop="removeNasional(index)" class="text-red-600 hover:text-red-900 font-medium">Hapus</button>
                                             </td>
                                         </tr>
                                     </template>

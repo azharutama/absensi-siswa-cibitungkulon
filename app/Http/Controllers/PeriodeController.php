@@ -62,7 +62,8 @@ class PeriodeController extends Controller
                 ->where('tipe', 'nasional')
                 ->map(fn($item) => [
                     'tanggal' => $item->tanggal?->format('Y-m-d') ?? '', // Format Y-m-d untuk input HTML5 date
-                    'nama_libur' => $item->keterangan,
+                    'nama_libur' => $item->nama_libur ?: $item->keterangan,
+                    'keterangan' => $item->nama_libur ? $item->keterangan : '',
                 ]);
         }
 
@@ -182,33 +183,6 @@ class PeriodeController extends Controller
         });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil disimpan.');
-    }
-
-    public function edit($id)
-    {
-        $periode = Periode::with('hariLiburs')->findOrFail($id);
-
-        $tahunAjaran = $periode->tahun_ajaran;
-        $semester1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
-        $semester2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
-
-        $periodeData = [
-            'tahun_ajaran' => $tahunAjaran,
-            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('Y-m-d'),
-            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('Y-m-d'),
-            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('Y-m-d'),
-            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('Y-m-d'),
-        ];
-
-        // Format untuk tampilan di view (d/m/Y)
-        $periodeDataDisplay = [
-            'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('d/m/Y'),
-            'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('d/m/Y'),
-            'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('d/m/Y'),
-            'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('d/m/Y'),
-        ];
-
-        return view('periode.edit', compact('periode', 'periodeData', 'periodeDataDisplay'));
     }
 
     public function update(Request $request, $id)
@@ -380,16 +354,11 @@ class PeriodeController extends Controller
         }
 
         foreach ($validated['libur_nasional'] ?? [] as $libur) {
-            $keterangan = $libur['nama_libur'];
-
-            if (filled($libur['keterangan'] ?? null)) {
-                $keterangan .= ' - ' . $libur['keterangan'];
-            }
-
             $periode->hariLiburs()->create([
                 'tipe' => 'nasional',
                 'tanggal' => $libur['tanggal'],
-                'keterangan' => $keterangan,
+                'nama_libur' => $libur['nama_libur'],
+                'keterangan' => $libur['keterangan'] ?? '',
             ]);
         }
     }
