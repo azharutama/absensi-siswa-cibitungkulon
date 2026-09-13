@@ -46,7 +46,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/periode', [PeriodeController::class, 'store'])->name('periode.store');
         Route::get('/periode/{periode}/edit', [PeriodeController::class, 'edit'])->name('periode.edit');
         Route::put('/periode/{periode}', [PeriodeController::class, 'update'])->name('periode.update');
-        Route::delete('/periode/{periode}', [PeriodeController::class, 'destroy'])->name('periode.destroy');
         Route::post('/periode/reset', [PeriodeController::class, 'reset'])->name('periode.reset');
 
         // Kelola Siswa - operasi massal khusus operator

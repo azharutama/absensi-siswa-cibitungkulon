@@ -183,6 +183,8 @@ document.addEventListener("click", (event) => {
 
     // Konfirmasi pada <form> ditangani lewat event submit, bukan klik.
     if (confirmTrigger instanceof HTMLElement && !(confirmTrigger instanceof HTMLFormElement)) {
+        event.preventDefault();
+
         const message = confirmTrigger.dataset.confirmMessage || "Apakah Anda yakin ingin melanjutkan?";
         const title = confirmTrigger.dataset.confirmTitle || "Konfirmasi";
         const confirmText = confirmTrigger.dataset.confirmText || "Konfirmasi";
