@@ -349,7 +349,6 @@ class PeriodeController extends Controller
                     "Menambahkan periode {$semester2->namaLengkap()}"
                 );
             }
-
         });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil diperbarui.');

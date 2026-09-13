@@ -16,7 +16,16 @@ function modalElements() {
 }
 
 export function openConfirmModal(options = {}) {
-    const { modal, form, cancelButton, title, description, iconContainer, icon, submitButton } = modalElements();
+    const {
+        modal,
+        form,
+        cancelButton,
+        title,
+        description,
+        iconContainer,
+        icon,
+        submitButton,
+    } = modalElements();
 
     if (!modal || !form) {
         return;
@@ -69,13 +78,28 @@ export function openConfirmModal(options = {}) {
     if (description) description.textContent = message;
     if (submitButton) {
         submitButton.textContent = confirmText;
-        submitButton.className = submitButton.className.replace(/bg-\S+/, colors.buttonBg);
-        submitButton.className = submitButton.className.replace(/hover:bg-\S+/, colors.buttonHover);
-        submitButton.className = submitButton.className.replace(/focus:ring-\S+/, colors.focusRing);
+        submitButton.className = submitButton.className.replace(
+            /bg-\S+/,
+            colors.buttonBg,
+        );
+        submitButton.className = submitButton.className.replace(
+            /hover:bg-\S+/,
+            colors.buttonHover,
+        );
+        submitButton.className = submitButton.className.replace(
+            /focus:ring-\S+/,
+            colors.focusRing,
+        );
     }
     if (iconContainer) {
-        iconContainer.className = iconContainer.className.replace(/bg-\S+/, colors.bg);
-        iconContainer.className = iconContainer.className.replace(/text-\S+/, colors.text);
+        iconContainer.className = iconContainer.className.replace(
+            /bg-\S+/,
+            colors.bg,
+        );
+        iconContainer.className = iconContainer.className.replace(
+            /text-\S+/,
+            colors.text,
+        );
     }
 
     pendingForm = formToSubmit;
@@ -106,9 +130,10 @@ export function openConfirmModal(options = {}) {
         form.removeAttribute("action");
     }
 
-    returnFocusElement = document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+    returnFocusElement =
+        document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
     bodyHadOverflowHidden = document.body.classList.contains("overflow-hidden");
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
@@ -152,7 +177,10 @@ export function closeConfirmModal(confirmed = false) {
 document.addEventListener("submit", (event) => {
     const form = event.target;
 
-    if (!(form instanceof HTMLFormElement) || form.id !== "confirm-modal-form") {
+    if (
+        !(form instanceof HTMLFormElement) ||
+        form.id !== "confirm-modal-form"
+    ) {
         return;
     }
 
@@ -167,9 +195,13 @@ document.addEventListener("click", (event) => {
 
     const openTrigger = event.target.closest("[data-open-delete-modal]");
 
-    if (openTrigger instanceof HTMLElement && openTrigger.dataset.deleteAction) {
+    if (
+        openTrigger instanceof HTMLElement &&
+        openTrigger.dataset.deleteAction
+    ) {
         openConfirmModal({
-            message: "Apakah Anda benar-benar yakin ingin menghapus data ini secara permanen? Tindakan ini tidak dapat dibatalkan.",
+            message:
+                "Apakah Anda benar-benar yakin ingin menghapus data ini secara permanen? Tindakan ini tidak dapat dibatalkan.",
             title: "Konfirmasi Hapus",
             confirmText: "Ya, Hapus Data",
             confirmColor: "red",
@@ -182,10 +214,15 @@ document.addEventListener("click", (event) => {
     const confirmTrigger = event.target.closest("[data-confirm-message]");
 
     // Konfirmasi pada <form> ditangani lewat event submit, bukan klik.
-    if (confirmTrigger instanceof HTMLElement && !(confirmTrigger instanceof HTMLFormElement)) {
+    if (
+        confirmTrigger instanceof HTMLElement &&
+        !(confirmTrigger instanceof HTMLFormElement)
+    ) {
         event.preventDefault();
 
-        const message = confirmTrigger.dataset.confirmMessage || "Apakah Anda yakin ingin melanjutkan?";
+        const message =
+            confirmTrigger.dataset.confirmMessage ||
+            "Apakah Anda yakin ingin melanjutkan?";
         const title = confirmTrigger.dataset.confirmTitle || "Konfirmasi";
         const confirmText = confirmTrigger.dataset.confirmText || "Konfirmasi";
         const confirmColor = confirmTrigger.dataset.confirmColor || "blue";
@@ -206,7 +243,10 @@ document.addEventListener("click", (event) => {
         return;
     }
 
-    if (event.target.closest("[data-close-confirm-modal]") || event.target.matches("[data-confirm-modal-backdrop]")) {
+    if (
+        event.target.closest("[data-close-confirm-modal]") ||
+        event.target.matches("[data-confirm-modal-backdrop]")
+    ) {
         closeConfirmModal(false);
     }
 });
@@ -229,8 +269,13 @@ document.addEventListener("keydown", (event) => {
     }
 
     const focusable = Array.from(
-        modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'),
-    ).filter((element) => element instanceof HTMLElement && element.offsetParent !== null);
+        modal.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+    ).filter(
+        (element) =>
+            element instanceof HTMLElement && element.offsetParent !== null,
+    );
 
     if (focusable.length === 0) {
         event.preventDefault();
@@ -241,10 +286,18 @@ document.addEventListener("keydown", (event) => {
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
 
-    if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+    if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+            !modal.contains(document.activeElement))
+    ) {
         event.preventDefault();
         last.focus();
-    } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+    } else if (
+        !event.shiftKey &&
+        (document.activeElement === last ||
+            !modal.contains(document.activeElement))
+    ) {
         event.preventDefault();
         first.focus();
     }
