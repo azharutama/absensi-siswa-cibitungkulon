@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('nama');
-            $table->string('nip')->unique()->nullable();
+            $table->string('nip')->nullable();
             $table->string('username')->unique();
             $table->string('alamat')->nullable();
-            $table->string('no_telepon')->unique();
+            $table->string('no_telepon');
             $table->string('password');
             $table->rememberToken();
             $table->enum('role', ['operator', 'guru', 'kepala_sekolah']);
@@ -27,6 +27,8 @@ return new class extends Migration
             $table->index('nama');
             $table->index('role');
             $table->index(['role', 'nama']);
+            $table->unique(['role', 'nip'], 'users_role_nip_unique');
+            $table->unique(['role', 'no_telepon'], 'users_role_no_telepon_unique');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

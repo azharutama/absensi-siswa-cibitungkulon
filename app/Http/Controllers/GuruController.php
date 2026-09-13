@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class GuruController extends Controller
@@ -69,10 +70,18 @@ class GuruController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nip' => 'required|numeric|unique:users,nip',
+            'nip' => [
+                'required',
+                'numeric',
+                Rule::unique('users', 'nip')->where(fn($query) => $query->where('role', $request->input('role'))),
+            ],
             'username' => 'required|string|alpha_dash|max:50|unique:users,username',
             'nama' => 'required|string|max:255',
-            'no_telepon' => 'required|numeric|unique:users,no_telepon',
+            'no_telepon' => [
+                'required',
+                'numeric',
+                Rule::unique('users', 'no_telepon')->where(fn($query) => $query->where('role', $request->input('role'))),
+            ],
             'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
@@ -140,13 +149,25 @@ class GuruController extends Controller
     public function update(Request $request, $id): RedirectResponse
     {
         $user = User::findOrFail($id);
+        $uniqueSuffix = ",{$user->id}";
 
-        $uniqueSuffix = $user ? ",{$user->id}" : '';
         $data = $request->validate([
-            'nip' => "required|numeric|unique:users,nip{$uniqueSuffix}",
+            'nip' => [
+                'required',
+                'numeric',
+                Rule::unique('users', 'nip')
+                    ->where(fn($query) => $query->where('role', $request->input('role')))
+                    ->ignore($user),
+            ],
             'username' => "required|string|alpha_dash|max:50|unique:users,username{$uniqueSuffix}",
             'nama' => 'required|string|max:255',
-            'no_telepon' => "required|numeric|unique:users,no_telepon{$uniqueSuffix}",
+            'no_telepon' => [
+                'required',
+                'numeric',
+                Rule::unique('users', 'no_telepon')
+                    ->where(fn($query) => $query->where('role', $request->input('role')))
+                    ->ignore($user),
+            ],
             'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
             'jenis_kelamin' => 'required|string|in:laki-laki,perempuan',
