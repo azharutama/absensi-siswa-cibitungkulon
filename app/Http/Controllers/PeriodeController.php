@@ -323,6 +323,22 @@ class PeriodeController extends Controller
                     "Menambahkan periode {$semester2->namaLengkap()}"
                 );
             }
+
+            $periodeIds = Periode::query()
+                ->where('tahun_ajaran', $tahunAjaran)
+                ->whereIn('semester', [1, 2])
+                ->pluck('id');
+
+            $tanggalMulaiPeriode = $validated['semester_1_tanggal_mulai'];
+            $tanggalSelesaiPeriode = $validated['semester_2_tanggal_selesai'];
+
+            Absensi::query()
+                ->whereIn('periode_id', $periodeIds)
+                ->where(function ($query) use ($tanggalMulaiPeriode, $tanggalSelesaiPeriode): void {
+                    $query->whereDate('tanggal', '<', $tanggalMulaiPeriode)
+                        ->orWhereDate('tanggal', '>', $tanggalSelesaiPeriode);
+                })
+                ->delete();
         });
 
         return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil diperbarui.');
