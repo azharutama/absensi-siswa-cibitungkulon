@@ -147,6 +147,9 @@
                                 </tbody>
                             </table>
                         </div>
+                        @if($errors->has('libur_mingguan.*') || $errors->has('libur_mingguan.*.hari') || $errors->has('libur_mingguan.*.keterangan'))
+                            <p class="text-xs text-red-600 mt-2">{{ $errors->first('libur_mingguan.*.hari') ?: $errors->first('libur_mingguan.*.keterangan') ?: 'Data hari libur mingguan tidak valid.' }}</p>
+                        @endif
                         <p class="text-[10px] text-gray-400 mt-2 italic">Tambahkan hanya jika periode memiliki hari libur mingguan.</p>
                     </div>
 
@@ -196,6 +199,9 @@
                                 </tbody>
                             </table>
                         </div>
+                        @if($errors->has('libur_nasional.*') || $errors->has('libur_nasional.*.tanggal') || $errors->has('libur_nasional.*.nama_libur'))
+                            <p class="text-xs text-red-600 mt-2">{{ $errors->first('libur_nasional.*.tanggal') ?: $errors->first('libur_nasional.*.nama_libur') ?: 'Data hari libur nasional tidak valid.' }}</p>
+                        @endif
                         <p class="text-[10px] text-gray-400 mt-2 italic">Tambahkan hanya jika periode memiliki hari libur nasional.</p>
                     </div>
 
