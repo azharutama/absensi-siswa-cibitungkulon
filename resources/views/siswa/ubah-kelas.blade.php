@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Form memindahkan semua siswa dari satu kelas ke kelas lain secara atomik. --}}
     <x-form-card :title="__('Pindah Kelas')" :backUrl="route('siswa.index')">
 
         @if(session('success'))
@@ -16,6 +17,7 @@
         <form method="POST" action="{{ route('siswa.ubah-kelas') }}" class="space-y-6">
             @csrf
 
+            {{-- Kelas asal dan tujuan dipilih terpisah agar tidak sama. --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <x-input-label for="kelas_asal_id" :value="__('Kelas Asal')" />

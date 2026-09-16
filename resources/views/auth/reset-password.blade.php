@@ -1,4 +1,5 @@
 <x-guest-layout>
+    {{-- Token dan username tersembunyi mengidentifikasi akun untuk password baru. --}}
     <div class="mb-4 text-sm text-gray-600">
         Buat kata sandi baru untuk akun Anda. Tautan ini dikirim melalui WhatsApp.
     </div>

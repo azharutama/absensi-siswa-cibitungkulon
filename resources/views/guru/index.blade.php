@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Daftar pengguna mendukung pencarian, aksi akun, dan pagination. --}}
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
@@ -34,6 +35,7 @@
                     </div>
                 </div>
 
+                {{-- Tabel ditampilkan jika pencarian menghasilkan data. --}}
                 @if($gurus->isNotEmpty())
                     <x-table :headers="['No', 'NIP', 'Username', 'Nama Lengkap', 'Alamat', 'No. Telepon', 'Role Akses', 'Kelas Diampu', 'Aksi']">
                         @foreach ($gurus as $index => $guru)
@@ -73,6 +75,7 @@
                                         Edit
                                     </a>
                                     
+                                    {{-- Akun yang sedang dipakai tidak boleh dihapus sendiri. --}}
                                     @if((int) auth()->id() !== (int) $guru->id)
                                         <button type="button" data-open-delete-modal data-delete-action="{{ route('guru.destroy', $guru->id) }}" aria-haspopup="dialog" aria-controls="global-delete-modal" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition">
                                             Hapus
@@ -103,6 +106,7 @@
 
             </div>
 
+            {{-- Pagination hanya dirender ketika data terbagi ke beberapa halaman. --}}
             @if($gurus->hasPages())
                 <div class="mt-4">
                     {{ $gurus->links() }}

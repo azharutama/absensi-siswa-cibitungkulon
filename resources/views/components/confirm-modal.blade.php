@@ -1,3 +1,4 @@
+{{-- Modal global diisi dan dibuka oleh JavaScript melalui atribut data pada tombol aksi. --}}
 <div 
     id="global-confirm-modal" 
     class="fixed inset-0 z-50 overflow-y-auto hidden"

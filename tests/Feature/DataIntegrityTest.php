@@ -250,7 +250,28 @@ class DataIntegrityTest extends TestCase
         $this->assertDatabaseMissing('periodes', ['nama_periode' => 'Semester Bertumpuk']);
     }
 
-    public function test_active_operator_cannot_demote_own_account(): void
+    public function test_single_operator_can_update_own_account(): void
+    {
+        $operator = User::factory()->operator()->create([
+            'username' => 'operator123',
+        ]);
+
+        $response = $this->actingAs($operator)->put(route('guru.update', $operator), [
+            'nip' => $operator->nip,
+            'username' => 'operator123',
+            'nama' => 'Operator Utama',
+            'no_telepon' => $operator->no_telepon,
+            'alamat' => $operator->alamat,
+            'role' => 'operator',
+            'jenis_kelamin' => $operator->jenis_kelamin,
+        ]);
+
+        $response->assertRedirect(route('guru.index'));
+        $this->assertSame('Operator Utama', $operator->fresh()->nama);
+        $this->assertSame('operator', $operator->fresh()->role);
+    }
+
+    public function test_single_operator_cannot_remove_own_operator_role(): void
     {
         $operator = User::factory()->operator()->create([
             'username' => 'operator123',

@@ -1,4 +1,5 @@
 <x-guest-layout>
+    {{-- Pengguna meminta tautan reset melalui nomor WhatsApp yang terdaftar. --}}
     <div class="mb-4 text-sm text-gray-600">
         Masukkan nomor WhatsApp yang terdaftar pada akun Anda. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi.
     </div>

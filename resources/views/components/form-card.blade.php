@@ -4,6 +4,7 @@
     'maxWidth' => 'max-w-4xl' // Ukuran lebar card (default max-w-4xl, bisa di-override)
 ])
 
+{{-- Wrapper seragam untuk form dengan judul, tombol kembali, dan lebar yang dapat diatur. --}}
 <div class="py-12">
     <div class="{{ $maxWidth }} mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">

@@ -1,4 +1,5 @@
 @php
+    {{-- Normalisasi data libur untuk state Alpine dan beri key pada item dinamis. --}}
     $listMingguan = $liburMingguan ?? collect();
     $listNasional = collect($liburNasional ?? [])->values()->map(
         fn (array $item, int $index) => [...$item, '_key' => "nasional-{$index}"]
@@ -7,6 +8,7 @@
 @endphp
 
 <x-app-layout>
+    {{-- Form periode memakai mode lihat/edit dan mengelola dua daftar hari libur secara dinamis. --}}
     <x-form-card :title="__('Periode Aktif')" :backUrl="route('dashboard')" maxWidth="max-w-5xl">
         @if(session('success'))
             <div class="mb-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm">
@@ -20,6 +22,7 @@
             </div>
         @endif
 
+        {{-- State Alpine mengatur mode edit serta tambah/hapus hari libur tanpa reload halaman. --}}
         <form method="POST" action="{{ $isEdit ? route('periode.update', $periode->id) : route('periode.store') }}" class="space-y-8" x-data="{ 
             editMode: false,
             listMingguan: @js($listMingguan),
@@ -89,6 +92,7 @@
                 </div>
             </div>
 
+            {{-- Dua tabel berikut mengirim hari libur mingguan dan nasional sebagai array form. --}}
             <div class="space-y-2 pt-4 border-t border-gray-200">
                 <h3 class="text-sm font-bold text-gray-900 mb-4">Hari Libur (Opsional)</h3>
                 
@@ -211,6 +215,7 @@
             </div>
         </form>
 
+        {{-- Reset bersifat destruktif dan meminta konfirmasi sebelum menghapus periode serta absensi. --}}
         <div class="mt-6 pt-4 border-t border-red-200">
             <form method="POST" action="{{ route('periode.reset') }}" class="flex items-center justify-between">
                 @csrf

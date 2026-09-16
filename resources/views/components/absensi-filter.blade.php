@@ -1,5 +1,6 @@
 @props(['action', 'kelas', 'kelasId' => null, 'tanggal' => null, 'disabled' => false, 'hideKelas' => false, 'activeDates' => []])
 
+{{-- Filter kelas disembunyikan untuk guru karena kelasnya sudah ditentukan oleh akses. --}}
 <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
     <form method="GET" action="{{ $action }}" class="flex flex-wrap items-end gap-4">
         @if(!$hideKelas)

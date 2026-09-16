@@ -5,6 +5,7 @@
     'preserve' => [],
 ])
 
+{{-- Pertahankan filter lain ketika pencarian di-reset atau dikirim ulang. --}}
 @php
     $preservedQuery = collect($preserve)
         ->reject(fn ($value) => blank($value))

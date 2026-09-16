@@ -32,6 +32,7 @@ class PasswordResetLinkController extends Controller
             'no_telepon' => ['required', 'numeric', 'max_digits:25'],
         ]);
 
+        // Token hanya dibuat dan dikirim setelah nomor terverifikasi serta melewati rate limit.
         $phoneNumber = trim((string) $validated['no_telepon']);
         $user = User::query()->where('no_telepon', $phoneNumber)->first();
 
@@ -39,7 +40,7 @@ class PasswordResetLinkController extends Controller
             return $this->resetLinkFailure($request, self::UNREGISTERED_PHONE_MESSAGE);
         }
 
-        $rateLimitKey = 'password-reset-whatsapp:'.hash('sha256', Str::lower($phoneNumber));
+        $rateLimitKey = 'password-reset-whatsapp:' . hash('sha256', Str::lower($phoneNumber));
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
             return back()->with('status', self::RESET_LINK_SENT_MESSAGE);
@@ -83,7 +84,7 @@ class PasswordResetLinkController extends Controller
     private function resetMessage(User $user, string $resetUrl): string
     {
         return "Halo {$user->nama},\n\n"
-            ."Gunakan tautan berikut untuk mengatur ulang kata sandi akun Anda:\n{$resetUrl}\n\n"
-            .'Tautan ini berlaku selama 60 menit. Jika Anda tidak meminta pengaturan ulang kata sandi, abaikan pesan ini.';
+            . "Gunakan tautan berikut untuk mengatur ulang kata sandi akun Anda:\n{$resetUrl}\n\n"
+            . 'Tautan ini berlaku selama 60 menit. Jika Anda tidak meminta pengaturan ulang kata sandi, abaikan pesan ini.';
     }
 }

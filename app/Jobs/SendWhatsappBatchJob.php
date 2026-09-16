@@ -155,7 +155,7 @@ class SendWhatsappBatchJob implements ShouldQueue
                     ]);
                     $notification->update([
                         'status' => 'cancelled',
-                        'last_error' => 'Dikirim ke nomor cadangan ('.$fallback['name'].').',
+                        'last_error' => 'Dikirim ke nomor cadangan (' . $fallback['name'] . ').',
                     ]);
                     continue;
                 }

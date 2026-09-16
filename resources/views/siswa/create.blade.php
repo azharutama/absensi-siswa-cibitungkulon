@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Form menyimpan identitas siswa, kelas, alamat, dan kontak orang tua. --}}
     <x-form-card :title="__('Tambah Data Siswa Baru')" :backUrl="route('siswa.index')">
         
         @if($kelas->isEmpty())
@@ -35,6 +36,7 @@
 
                     <div>
                         <x-input-label for="kelas_id" :value="__('Kelas *')" />
+                        {{-- Guru terikat pada kelasnya; role lain dapat memilih kelas dari daftar. --}}
                         @if(auth()->user()->role === 'guru')
                             <input type="hidden" name="kelas_id" value="{{ $kelas->first()->id }}">
                             <div class="mt-1 block w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">

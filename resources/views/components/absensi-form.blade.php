@@ -10,6 +10,7 @@
     'isLocked' => false
 ])
 
+{{-- Komponen ini menangani tampilan baca-saja dan input status absensi siswa. --}}
 @php
     $initialStatuses = [];
     foreach ($siswas as $siswa) {
@@ -19,6 +20,7 @@
 
 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
     
+    {{-- Absensi terkunci ditampilkan sebagai status; jika tidak, pengguna dapat mengubah pilihan. --}}
     @if($isLocked)
         <div class="p-4 bg-amber-50 border-b border-amber-200 flex items-start gap-3">
             <div class="p-1 bg-amber-500 text-white rounded-lg mt-0.5">
@@ -65,6 +67,7 @@
             </div>
         </div>
 
+        {{-- Alpine menghitung jumlah Hadir, Izin, Sakit, dan Alpa secara langsung. --}}
         <div x-data="{
             statuses: @js($initialStatuses),
             get counts() {
@@ -86,6 +89,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
+                        {{-- Setiap siswa memiliki satu status yang dikirim melalui array absensi. --}}
                         @foreach($siswas as $index => $siswa)
                             @php 
                                 $currentStatus = $initialStatuses[$siswa->id];
@@ -153,6 +157,7 @@
                 </table>
             </div>
 
+            {{-- Ringkasan status hanya relevan saat form masih dapat diedit. --}}
             @if(!$isLocked)
                 <div class="px-4 py-3 bg-gray-50 border-t border-gray-100">
                     <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">

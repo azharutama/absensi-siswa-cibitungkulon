@@ -1,10 +1,12 @@
 <x-app-layout>
+    {{-- Form memperbarui nama kelas dan wali kelas yang ditugaskan. --}}
     <x-form-card :title="__('Edit Data Kelas')" :backUrl="route('kelas.index')" maxWidth="max-w-2xl">
         
         <form method="POST" action="{{ route('kelas.update', $kelas->id) }}" class="space-y-6">
             @csrf
             @method('PUT')
 
+            {{-- Dropdown mempertahankan guru saat ini dan menampilkan guru lain yang tersedia. --}}
             <div>
                 <x-input-label for="nama_kelas" :value="__('Nama Kelas *')" />
                 <x-text-input id="nama_kelas" name="nama_kelas" type="text" class="mt-1 block w-full" :value="old('nama_kelas', $kelas->nama_kelas)" required autofocus />

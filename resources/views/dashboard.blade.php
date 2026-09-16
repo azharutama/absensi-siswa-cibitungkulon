@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Kartu statistik menampilkan data sesuai cakupan akses pengguna. --}}
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
@@ -32,6 +33,7 @@
                     </div>
                 </div>
 
+                {{-- Jumlah guru hanya terlihat bagi operator dan kepala sekolah. --}}
                 @if (in_array(Auth::user()->role, ['operator', 'kepala_sekolah'], true))
                 <div class="bg-white min-h-52 rounded-xl border border-gray-200 p-8 shadow-sm">
                     <div class="flex items-center justify-between">

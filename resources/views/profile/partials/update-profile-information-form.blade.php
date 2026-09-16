@@ -1,4 +1,5 @@
 <section>
+    {{-- Form ini memperbarui identitas dasar akun melalui request PATCH. --}}
     <header>
         <h2 class="text-lg font-medium text-gray-900">
             Informasi Profil
@@ -35,6 +36,7 @@
         <div class="flex items-center gap-4">
             <x-primary-button>Simpan</x-primary-button>
 
+            {{-- Konfirmasi perubahan hanya ditampilkan setelah update berhasil. --}}
             @if (session('status') === 'profile-updated')
                 <p
                     x-data="{ show: true }"

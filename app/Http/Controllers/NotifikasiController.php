@@ -29,14 +29,16 @@ class NotifikasiController extends Controller
             ->orderBy('nama_kelas')
             ->get();
 
-        $kelasIds = $kelas->pluck('id');
-        $kelasId = isset($filters['kelas_id']) ? (int) $filters['kelas_id'] : null;
+        // Batasi notifikasi berdasarkan kelas yang dapat diakses pengguna.
+        $kelasIds = $kelas->pluck('id'); //Ambil semua id dari data kelas
+        $kelasId = isset($filters['kelas_id']) ? (int) $filters['kelas_id'] : null; //Kalau kelas_id ada di $filters, masukkan nilainya ke $kelasId. Kalau tidak ada, $kelasId diisi null
         if ($kelasId === null && $kelas->count() === 1) {
             $kelasId = $kelas->first()->id;
-        }
+        } //Jika user belum memilih kelas DAN user hanya memiliki satu kelas, maka sistem otomatis memilih kelas tersebut.
 
-        abort_if($kelasId !== null && ! $kelasIds->contains($kelasId), 404);
+        abort_if($kelasId !== null && ! $kelasIds->contains($kelasId), 404); //Jika user meminta kelas tertentu, tetapi kelas tersebut tidak termasuk kelas yang boleh dia akses, hentikan request dengan HTTP 404.
 
+        //Mulai mengambil data notifikasi
         $notifikasi = WhatsappNotification::query()
             ->select(['id', 'absensi_id', 'siswa_id', 'parent_phone', 'status', 'last_error', 'sent_at', 'updated_at', 'created_at'])
             ->with([
@@ -44,8 +46,8 @@ class NotifikasiController extends Controller
                 'absensi:id,kelas_id',
                 'absensi.kelas:id,nama_kelas',
             ])
-            ->when($user->role === 'guru' || $kelasId !== null, function (Builder $query) use ($user, $kelasIds, $kelasId): void {
-                $query->whereHas('absensi', function (Builder $query) use ($user, $kelasIds, $kelasId): void {
+            ->when($user->role === 'guru' || $kelasId !== null, function (Builder $query) use ($user, $kelasIds, $kelasId): void { //user adalah guru, atau user memilih kelas.
+                $query->whereHas('absensi', function (Builder $query) use ($user, $kelasIds, $kelasId): void { //Jalankan fungsi ini, berikan objek query ke $query, dan izinkan fungsi menggunakan variabel $user, $kelasIds, dan $kelasId dari luar.
                     if ($user->role === 'guru') {
                         $query->whereIn('kelas_id', $kelasIds);
                     }

@@ -1,7 +1,9 @@
 <x-app-layout title="Riwayat Notifikasi WhatsApp">
+    {{-- Filter dan tabel dibatasi pada kelas yang boleh diakses pengguna. --}}
     <div class="p-6 space-y-6">
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <form method="GET" action="{{ route('notifikasi.index') }}" class="flex flex-wrap items-end gap-4">
+                {{-- Guru memakai kelasnya secara otomatis; role lain dapat memilih kelas. --}}
                 @if(auth()->user()->role !== 'guru')
                 <div class="w-full sm:w-44">
                     <label for="kelas_id" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Kelas</label>
@@ -69,6 +71,7 @@
                             {{ $item->parent_phone ?: '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm border-b">
+                            {{-- Ubah status teknis notifikasi menjadi label dan warna yang mudah dibaca. --}}
                             @php
                                 $statusClass = [
                                     'sent' => 'bg-green-100 text-green-700',
@@ -109,6 +112,7 @@
                 @endforelse
             </x-table>
 
+            {{-- Pagination menjaga riwayat tetap ringan saat jumlah notifikasi besar. --}}
             @if($notifikasi->hasPages())
                 <div class="border-t border-gray-100 bg-white px-6 py-4">
                     {{ $notifikasi->links() }}

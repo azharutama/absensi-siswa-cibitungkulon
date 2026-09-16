@@ -1,5 +1,6 @@
 @props(['headers' => []])
 
+{{-- Header dibuat dari props, sedangkan baris tabel disediakan melalui slot. --}}
 <div class="p-6 text-gray-900 overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200 border">
         <thead class="bg-gray-50">

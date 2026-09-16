@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Daftar siswa mengikuti akses role, filter kelas, pencarian, dan pagination. --}}
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
@@ -35,6 +36,7 @@
                                   :value="request('search')"
                                   :preserve="request()->only(['kelas_id'])" />
 
+                        {{-- Hanya operator yang dapat memindahkan siswa antar kelas secara massal. --}}
                         @if(auth()->user()->role === 'operator')
                             <a href="{{ route('siswa.ubah-kelas.form') }}" class="w-full sm:w-auto text-center inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition shrink-0">
                                 Pindah Kelas
@@ -47,6 +49,7 @@
                     </div>
                  </div>
 
+{{-- Guru tidak memerlukan filter kelas karena hanya melihat kelas yang diampu. --}}
 @if(auth()->user()->role !== 'guru')
                   <x-filter-form 
                       :action="route('siswa.index')"
@@ -61,6 +64,7 @@
                   />
                   @endif
 
+                 {{-- Tabel siswa atau keadaan kosong ditentukan oleh hasil filter. --}}
                  @if($siswas->isNotEmpty())
                     <x-table :headers="['No', 'NIS / NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'Alamat', 'Nama Ayah', 'No. WA Ayah', 'Nama Ibu', 'No. WA Ibu', 'Aksi']">
                         @foreach ($siswas as $index => $siswa)
@@ -104,6 +108,7 @@
 
             </div>
 
+            {{-- Pertahankan filter saat pengguna berpindah halaman. --}}
             @if($siswas->hasPages())
                 <div class="mt-4">
                     {{ $siswas->links() }}

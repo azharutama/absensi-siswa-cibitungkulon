@@ -1,3 +1,4 @@
+{{-- Layout utama halaman terautentikasi: sidebar, header, konten, loading state, dan modal global. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -13,10 +14,12 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-gray-50">
+        {{-- Skip link membantu pengguna keyboard langsung menuju konten utama. --}}
         <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[10000] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-blue-700 focus:shadow-lg">
             Lewati ke konten utama
         </a>
 
+        {{-- Indikator ini dikendalikan JavaScript saat navigasi atau request berlangsung. --}}
         <div id="page-loading" class="fixed inset-x-0 top-0 z-[9999] hidden print:hidden" role="status" aria-live="polite" aria-hidden="true">
             <div class="h-1 overflow-hidden bg-blue-100">
                 <div class="page-loading-bar h-full w-1/2 bg-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.55)]"></div>

@@ -13,9 +13,10 @@ class DashboardController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+        // Ringkasan dashboard mengikuti kelas yang boleh diakses oleh pengguna.
         $totalKelas = Kelas::query()->accessibleBy($user)->count();
         $totalSiswa = Siswa::query()
-            ->whereHas('kelas', fn ($query) => $query->accessibleBy($user))
+            ->whereHas('kelas', fn($query) => $query->accessibleBy($user))
             ->count();
         $totalGuru = in_array($user->role, ['operator', 'kepala_sekolah'], true)
             ? User::query()->where('role', 'guru')->count()

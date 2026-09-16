@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Daftar kelas menampilkan wali kelas, aksi pengelolaan, dan pagination. --}}
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
@@ -31,6 +32,7 @@
                     </div>
                 </div>
 
+                {{-- Tabel kelas hanya ditampilkan ketika hasil pencarian tidak kosong. --}}
                 @if($kelas->isNotEmpty())
                     <x-table :headers="['No', 'Nama Kelas', 'Wali Kelas', 'Aksi']">
                         @foreach ($kelas as $index => $k)
@@ -59,6 +61,7 @@
 
             </div>
 
+            {{-- Pagination hanya diperlukan ketika jumlah kelas melebihi satu halaman. --}}
             @if($kelas->hasPages())
                 <div class="mt-4">
                     {{ $kelas->links() }}

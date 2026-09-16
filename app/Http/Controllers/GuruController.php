@@ -89,23 +89,25 @@ class GuruController extends Controller
             'kelas_id' => 'nullable|exists:kelas,id',
         ]);
 
+        // Hash password sebelum data pengguna disimpan ke database.
         if (filled($data['password'] ?? null)) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
 
-        $kelasId = $request->filled('kelas_id') ? $request->integer('kelas_id') : null;
+        $kelasId = $request->filled('kelas_id') ? $request->integer('kelas_id') : null; //boleh kosong, jika diisi, ID tersebut harus benar-benar ada di tabel kelas
 
+        // Simpan pengguna dan penugasan kelas sebagai satu operasi agar tidak terjadi data setengah tersimpan.
         DB::transaction(function () use ($data, $kelasId): void {
             $user = User::create($data);
 
-            if ($user->role === 'guru' && $kelasId) {
+            if ($user->role === 'guru' && $kelasId) { //Jika user adalah guru
                 $kelas = Kelas::where('id', $kelasId)
                     ->whereNull('guru_id')
-                    ->lockForUpdate()
-                    ->firstOrFail();
-                $kelas->update(['guru_id' => $user->id]);
+                    ->lockForUpdate() //Mengunci record selama transaction.
+                    ->firstOrFail(); //ika tidak ditemukan, Laravel menghasilkan error.
+                $kelas->update(['guru_id' => $user->id]); //Artinya kelas tersebut ditugaskan kepada guru baru
             }
 
             // Log aktivitas menggunakan trait
@@ -148,7 +150,7 @@ class GuruController extends Controller
      */
     public function update(Request $request, $id): RedirectResponse
     {
-        $user = User::findOrFail($id);
+        $user = User::findOrFail($id); //Cari user berdasarkan ID.
         $uniqueSuffix = ",{$user->id}";
 
         $data = $request->validate([
@@ -157,7 +159,7 @@ class GuruController extends Controller
                 'numeric',
                 Rule::unique('users', 'nip')
                     ->where(fn($query) => $query->where('role', $request->input('role')))
-                    ->ignore($user),
+                    ->ignore($user), //membuat aturan unik NIP berdasarkan role.
             ],
             'username' => "required|string|alpha_dash|max:50|unique:users,username{$uniqueSuffix}",
             'nama' => 'required|string|max:255',
@@ -166,7 +168,7 @@ class GuruController extends Controller
                 'numeric',
                 Rule::unique('users', 'no_telepon')
                     ->where(fn($query) => $query->where('role', $request->input('role')))
-                    ->ignore($user),
+                    ->ignore($user), //Artinya user yang sedang diedit tidak dihitung sebagai duplikat dirinya sendiri.
             ],
             'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
@@ -175,12 +177,14 @@ class GuruController extends Controller
             'kelas_id' => 'nullable|exists:kelas,id',
         ]);
 
+        // Password kosong berarti password lama tetap dipertahankan.
         if (filled($data['password'] ?? null)) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
 
+        // Kunci data operator dan user agar aturan akun terakhir aman dari request bersamaan.
         DB::transaction(function () use ($request, $user, $data): void {
             $operatorIds = User::query()
                 ->where('role', 'operator')
@@ -189,18 +193,8 @@ class GuruController extends Controller
                 ->pluck('id');
             $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            // Operator tidak boleh mengubah role akunnya sendiri
-            if (
-                $lockedUser->role === 'operator'
-                && $data['role'] !== 'operator'
-                && (int) $request->user()->getKey() === (int) $lockedUser->getKey()
-            ) {
-                throw ValidationException::withMessages([
-                    'role' => 'Operator yang sedang digunakan tidak dapat mengubah role akunnya sendiri.',
-                ]);
-            }
-
-            // Minimal 1 operator harus tersisa
+            // Operator tunggal tetap boleh memperbarui data akunnya sendiri.
+            // Hanya perubahan role yang menghilangkan operator terakhir yang ditolak.
             if ($lockedUser->role === 'operator' && $data['role'] !== 'operator' && $operatorIds->count() <= 1) {
                 throw ValidationException::withMessages([
                     'role' => 'Minimal satu akun operator harus tetap tersedia.',
@@ -210,7 +204,7 @@ class GuruController extends Controller
             $oldData = $lockedUser->makeHidden('password')->toArray();
             $lockedUser->update($data);
 
-            // Handle penugasan kelas untuk role guru
+            // Sinkronkan penugasan kelas setelah perubahan role atau kelas pengguna.
             if ($lockedUser->role === 'guru') {
                 $currentKelasId = $lockedUser->kelas?->id;
                 $newKelasId = $request->filled('kelas_id') ? $request->integer('kelas_id') : null;
@@ -258,6 +252,7 @@ class GuruController extends Controller
             return redirect()->route('guru.index')->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
         }
 
+        // Validasi dan penghapusan dilakukan dalam transaksi agar status operator dan kelas tetap konsisten.
         $error = DB::transaction(function () use ($id): ?string {
             $operatorIds = User::query()
                 ->where('role', 'operator')

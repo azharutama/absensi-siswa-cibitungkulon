@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Form edit memuat data siswa dan menjaga kelas tetap konsisten dengan riwayat absensi. --}}
     <x-form-card :title="__('Edit Data Siswa')" :backUrl="route('siswa.index')">
         
         <form method="POST" action="{{ route('siswa.update', $siswa->id) }}" class="space-y-6">
@@ -29,6 +30,7 @@
 
                     <div>
                         <x-input-label for="kelas_id" :value="__('Kelas *')" />
+                        {{-- Guru hanya melihat kelasnya; siswa berabsensi tidak boleh dipindahkan. --}}
                         @if(auth()->user()->role === 'guru')
                             <input type="hidden" name="kelas_id" value="{{ $siswa->kelas_id }}">
                             <div class="mt-1 block w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">

@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Form ini membuat akun pengguna sekaligus menyediakan opsi penugasan kelas. --}}
     <x-form-card :title="__('Tambah Pengguna / Guru Baru')" :backUrl="route('guru.index')">
         
         <form method="POST" action="{{ route('guru.store') }}" data-guru-form class="space-y-6">
@@ -57,6 +58,7 @@
                 <x-input-error class="mt-2" :messages="$errors->get('alamat')" />
             </div>
 
+            {{-- Pilihan kelas digunakan terutama saat role yang dibuat adalah guru. --}}
             <div id="kelas-section" data-kelas-section class="bg-gray-50 p-4 rounded-md border border-gray-200">
                 <x-input-label for="kelas_id" :value="__('Kelas yang Diampu (Opsional)')" />
                 <select id="kelas_id" name="kelas_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">

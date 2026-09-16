@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 
 trait AutoSelectsSingleKelas
 {
+    // Arahkan pengguna ke satu-satunya kelas agar filter tidak perlu dipilih ulang.
     protected function autoRedirectForSingleKelas(
         Request $request,
         Collection $kelas,

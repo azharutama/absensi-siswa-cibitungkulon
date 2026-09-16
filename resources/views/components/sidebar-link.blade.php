@@ -1,5 +1,6 @@
 @props(['active' => false])
 
+{{-- Class navigasi berubah untuk membedakan menu yang sedang aktif. --}}
 @php
     $classes = $active
         ? 'flex items-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg transition'

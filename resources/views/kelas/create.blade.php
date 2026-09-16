@@ -1,8 +1,10 @@
 <x-app-layout>
+    {{-- Form membuat kelas baru dan opsional menetapkan wali kelas. --}}
     <x-form-card :title="__('Tambah Data Kelas Baru')" :backUrl="route('kelas.index')" maxWidth="max-w-2xl">
         <form method="POST" action="{{ route('kelas.store') }}" class="space-y-6">
             @csrf
 
+            {{-- Dropdown hanya berisi guru yang tersedia untuk ditugaskan. --}}
             <div>
                 <x-input-label for="nama_kelas" :value="__('Nama Kelas *')" />
                 <x-text-input id="nama_kelas" name="nama_kelas" type="text" class="mt-1 block w-full" :value="old('nama_kelas')" placeholder="Contoh: Kelas 1-A" required autofocus />

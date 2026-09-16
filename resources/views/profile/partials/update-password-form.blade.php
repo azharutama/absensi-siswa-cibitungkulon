@@ -1,4 +1,5 @@
 <section>
+    {{-- Error password memakai error bag khusus agar tidak tercampur dengan form profil. --}}
     <header>
         <h2 class="text-lg font-medium text-gray-900">
             Ubah Kata Sandi
@@ -34,6 +35,7 @@
         <div class="flex items-center gap-4">
             <x-primary-button>Simpan</x-primary-button>
 
+            {{-- Pesan sukses menghilang otomatis setelah ditampilkan sebentar. --}}
             @if (session('status') === 'password-updated')
                 <p
                     x-data="{ show: true }"

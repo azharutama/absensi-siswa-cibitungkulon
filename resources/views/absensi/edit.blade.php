@@ -1,4 +1,5 @@
 <x-app-layout>
+    {{-- Filter memilih data absensi yang akan diperbarui. --}}
     <div class="p-6 space-y-6">
         <h2 class="text-xl font-bold text-gray-800">Edit Absensi</h2>
         
@@ -14,6 +15,7 @@
             </div>
         @endif
 
+        {{-- Blok peringatan lama dipertahankan nonaktif; validasi aktif ditampilkan di bawah filter. --}}
         @if(false && $periodeWarning)
             <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-sm flex items-start gap-3">
                 <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,6 +28,7 @@
             </div>
         @endif
 
+        {{-- Guru hanya memilih tanggal untuk kelasnya, sedangkan role lain dapat memilih kelas. --}}
         @if(auth()->user()->role === 'guru')
             <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :hideKelas="true" :activeDates="$activeDates ?? []" />
         @else
@@ -59,6 +62,7 @@
                     </div>
                 </div>
             @endif
+        {{-- Form edit hanya muncul untuk hari aktif yang memiliki data siswa. --}}
         @if($kelasId && count($siswas) > 0 && !$holidayMessage && !$periodeWarning)
             <x-absensi-form 
                 :action="route('absensi.update')" 

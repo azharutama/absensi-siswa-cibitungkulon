@@ -41,15 +41,15 @@ class SiswaController extends Controller
             ->with([
                 'kelas:id,nama_kelas',
             ])
-            ->whereHas('kelas', fn($query) => $query->accessibleBy($request->user()))
-            ->when($filters['search'] ?? null, function ($query, string $search): void {
+            ->whereHas('kelas', fn($query) => $query->accessibleBy($request->user())) //membatasi akkes siswa hanya untuk kelas yang dapat diakses oleh user (guru/operator)
+            ->when($filters['search'] ?? null, function ($query, string $search): void { //jalankan filter pencarian jika ada parameter search
                 $query->where(function ($query) use ($search): void {
                     $query->where('nama_siswa', 'like', "%{$search}%")
                         ->orWhere('nis', 'like', "%{$search}%")
                         ->orWhere('nisn', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['kelas_id'] ?? null, fn($query, $kelasId) => $query->where('kelas_id', $kelasId))
+            ->when($filters['kelas_id'] ?? null, fn($query, $kelasId) => $query->where('kelas_id', $kelasId)) //filter berdasarkan kelas jika ada parameter kelas_id
             ->orderBy('nama_siswa')
             ->paginate(15)
             ->withQueryString();
@@ -110,7 +110,7 @@ class SiswaController extends Controller
 
     public function edit(Request $request, Siswa $siswa): View
     {
-        $this->authorizeSiswaAccess($siswa, $request->user());
+        $this->authorizeSiswaAccess($siswa, $request->user()); //memastikan guru berhak mengelola data siswa di kelas tersebut
 
         return view('siswa.edit', [
             'siswa' => $siswa,
@@ -152,12 +152,12 @@ class SiswaController extends Controller
             ]);
         }
 
-        $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user());
+        $kelasSelected = $this->findKelas((int) $data['kelas_id'], $request->user()); //kelas mana yang dipilih dan apakah user berhak mengaksesnya.
 
         // Siswa tidak bisa pindah kelas jika sudah punya data absensi
         if ($siswa->kelas_id !== $kelasSelected->id && $siswa->hasAbsensi()) {
             return redirect()->back()
-                ->withInput()
+                ->withInput() //Mempertahankan input yang tadi dikirim.
                 ->withErrors(['kelas_id' => 'Siswa tidak bisa dipindahkan kelas karena sudah memiliki data absensi.']);
         }
 
@@ -175,7 +175,7 @@ class SiswaController extends Controller
 
     public function destroy(Request $request, Siswa $siswa): RedirectResponse
     {
-        $this->authorizeSiswaAccess($siswa, $request->user());
+        $this->authorizeSiswaAccess($siswa, $request->user()); //apakah user yang sedang login memiliki hak akses terhadap data siswa tersebut.
 
         $siswaName = $siswa->nama_siswa;
         $siswaId = $siswa->id;
@@ -220,26 +220,22 @@ class SiswaController extends Controller
         $kelasAsal = Kelas::findOrFail((int) $data['kelas_asal_id']);
         $kelasTujuan = Kelas::findOrFail((int) $data['kelas_tujuan_id']);
 
+        // Batalkan seluruh perpindahan jika ada satu siswa dengan riwayat absensi.
         $siswaWithAbsensiCount = Siswa::query()
             ->where('kelas_id', $kelasAsal->id)
             ->whereHas('absensis')
             ->count();
 
-        $siswaIds = Siswa::query()
+        if ($siswaWithAbsensiCount > 0) {
+            return redirect()->back()->with('error', 'Perpindahan dibatalkan. Semua siswa dalam kelas asal harus belum memiliki data absensi.');
+        }
+
+        $siswaIds = Siswa::query() //Mengambil ID siswa yang belum memiliki absensi
             ->where('kelas_id', $kelasAsal->id)
-            ->whereDoesntHave('absensis')
             ->pluck('id');
 
         if ($siswaIds->isEmpty()) {
-            $message = 'Tidak ada siswa yang bisa dipindahkan.';
-
-            if ($siswaWithAbsensiCount > 0) {
-                $message .= ' Semua siswa di kelas asal sudah memiliki data absensi.';
-            } else {
-                $message .= ' Tidak ada siswa di kelas asal.';
-            }
-
-            return redirect()->back()->with('error', $message);
+            return redirect()->back()->with('error', 'Tidak ada siswa di kelas asal yang bisa dipindahkan.');
         }
 
         DB::transaction(function () use ($kelasAsal, $kelasTujuan, $siswaIds): void {
@@ -250,10 +246,6 @@ class SiswaController extends Controller
 
         $movedCount = $siswaIds->count();
         $message = "{$movedCount} siswa berhasil dipindahkan ke kelas baru.";
-
-        if ($siswaWithAbsensiCount > 0) {
-            $message .= " {$siswaWithAbsensiCount} siswa tidak dipindahkan karena sudah memiliki data absensi.";
-        }
 
         return to_route('siswa.index')
             ->with('success', $message);
@@ -295,7 +287,7 @@ class SiswaController extends Controller
      */
     private function authorizeSiswaAccess(Siswa $siswa, User $user): void
     {
-        abort_unless(
+        abort_unless( //Batalkan request kecuali kondisi bernilai true.
             Kelas::query()
                 ->accessibleBy($user)
                 ->whereKey($siswa->kelas_id)

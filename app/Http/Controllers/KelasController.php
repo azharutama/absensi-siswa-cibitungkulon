@@ -63,6 +63,7 @@ class KelasController extends Controller
                 ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia (sudah memiliki kelas).']);
         }
 
+        // Kunci guru dan validasi ulang di dalam transaksi untuk mencegah penugasan ganda.
         $kelas = DB::transaction(function () use ($request): Kelas {
             if ($request->filled('guru_id')) {
                 User::query()->whereKey($request->integer('guru_id'))->lockForUpdate()->firstOrFail();
@@ -121,15 +122,16 @@ class KelasController extends Controller
 
         if (
             $request->filled('guru_id')
-            && ! $this->guruOptionsQuery($currentGuruId)->where('id', $request->guru_id)->exists()
+            && ! $this->guruOptionsQuery($currentGuruId)->where('id', $request->guru_id)->exists() //Tujuannya memastikan guru yang dipilih memang boleh ditugaskan.
         ) {
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['guru_id' => 'Guru yang dipilih tidak tersedia (sudah memiliki kelas).']);
         }
 
+        // Penguncian menjaga penugasan guru tetap konsisten saat ada request bersamaan.
         DB::transaction(function () use ($currentGuruId, $kelas, $request): void {
-            $lockedKelas = Kelas::query()->whereKey($kelas->id)->lockForUpdate()->firstOrFail();
+            $lockedKelas = Kelas::query()->whereKey($kelas->id)->lockForUpdate()->firstOrFail(); //Kelas yang sedang diedit dikunci sementara.
 
             if ($request->filled('guru_id')) {
                 User::query()->whereKey($request->integer('guru_id'))->lockForUpdate()->firstOrFail();
@@ -141,13 +143,14 @@ class KelasController extends Controller
                 }
             }
 
+            //Update data kelas dengan data baru yang diterima dari request.
             $lockedKelas->update([
                 'nama_kelas' => $request->string('nama_kelas')->trim()->toString(),
                 'guru_id' => $request->filled('guru_id') ? $request->integer('guru_id') : null,
             ]);
         });
 
-        $kelas->refresh();
+        $kelas->refresh(); //Ini meminta Laravel mengambil ulang data terbaru dari database.
         $this->logUpdate(
             'Kelas',
             $kelas,
@@ -162,6 +165,7 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id);
 
+        // Lindungi kelas yang masih menjadi referensi data siswa atau riwayat absensi.
         if ($kelas->siswas()->exists() || $kelas->absensis()->exists() || $kelas->hasRekapData()) {
             $messages = [];
             if ($kelas->siswas()->exists()) {
@@ -178,7 +182,7 @@ class KelasController extends Controller
                 'error',
                 'Kelas tidak bisa dihapus karena masih memiliki ' . implode(', ', $messages) . '.'
             );
-        }
+        } //implode() adalah fungsi PHP untuk menggabungkan isi array menjadi satu string dengan pemisah tertentu.
 
         $kelas->delete();
 

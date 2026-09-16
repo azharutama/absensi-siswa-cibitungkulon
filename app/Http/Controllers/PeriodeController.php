@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
-use Illuminate\Validation\ValidationException;
 
 class PeriodeController extends Controller
 {
@@ -17,19 +16,19 @@ class PeriodeController extends Controller
 
     public function index(Request $request)
     {
-        // Ambil kedua semester terbaru dalam 1 query untuk optimasi
+        // Ambil seluruh semester dari satu periode akademik aktif.
         $periodes = Periode::query()
             ->with('hariLiburs')
-            ->orderBy('tahun_ajaran', 'desc')
-            ->orderBy('semester', 'asc')
-            ->limit(2)
             ->get();
 
+        //Memisahkan Semester 1 dan Semester 2
         $semester1 = $periodes->firstWhere('semester', 1);
         $semester2 = $periodes->firstWhere('semester', 2);
 
+
+        //menyiapkan data agar mudah digunakan oleh Blade/view.
         $periodeData = [
-            'tahun_ajaran' => $semester1?->tahun_ajaran ?? $semester2?->tahun_ajaran ?? old('tahun_ajaran', ''),
+            'tahun_ajaran' => $semester1?->tahun_ajaran ?? $semester2?->tahun_ajaran ?? old('tahun_ajaran', ''), //?-> adalah null safe operator, jika $semester1 null maka akan mengecek $semester2, jika keduanya null maka akan menggunakan old('tahun_ajaran', '').
             'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('Y-m-d') ?? old('semester_1_tanggal_mulai', ''),
             'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('Y-m-d') ?? old('semester_1_tanggal_selesai', ''),
             'semester_2_tanggal_mulai' => $semester2?->tanggal_mulai?->format('Y-m-d') ?? old('semester_2_tanggal_mulai', ''),
@@ -48,17 +47,17 @@ class PeriodeController extends Controller
         $liburNasional = collect();
 
         // Ambil periode pertama untuk menampilkan hari libur
-        $periode = $semester1 ?? $semester2;
+        $periode = $semester1 ?? $semester2; //Gunakan Semester 1 jika tersedia. Kalau tidak, gunakan Semester 2.
 
         if ($periode) {
-            $liburMingguan = $periode->hariLiburs
+            $liburMingguan = $periode->hariLiburs //Mengambil libur mingguan
                 ->where('tipe', 'mingguan')
                 ->map(fn($item) => [
                     'hari' => $item->hari,
                     'keterangan' => $item->keterangan,
                 ]);
 
-            $liburNasional = $periode->hariLiburs
+            $liburNasional = $periode->hariLiburs //Mengambil libur nasional
                 ->where('tipe', 'nasional')
                 ->map(fn($item) => [
                     'tanggal' => $item->tanggal?->format('Y-m-d') ?? '', // Format Y-m-d untuk input HTML5 date
@@ -73,24 +72,28 @@ class PeriodeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            // Validasi untuk periode akademik
             'tahun_ajaran' => [
                 'required',
                 'string',
                 'max:20',
             ],
+            // Validasi untuk tanggal mulai dan selesai semester
             'semester_1_tanggal_mulai' => ['required', 'date'],
             'semester_1_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_mulai'],
             'semester_2_tanggal_mulai' => ['required', 'date', 'after_or_equal:semester_1_tanggal_selesai'],
             'semester_2_tanggal_selesai' => ['required', 'date', 'after_or_equal:semester_2_tanggal_mulai'],
+            // Validasi untuk libur mingguan 
             'libur_mingguan' => ['nullable', 'array'],
-            'libur_mingguan.*' => ['array'],
+            'libur_mingguan.*' => ['array'], //Tanda * berarti setiap elemen di dalam libur_mingguan.
             'libur_mingguan.*.hari' => [
                 'required',
                 'string',
                 Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']),
-                'distinct',
+                'distinct', //distinct misalnya mencegah duplikasi
             ],
             'libur_mingguan.*.keterangan' => ['required', 'string', 'max:255'],
+            // Validasi untuk libur nasional
             'libur_nasional' => ['nullable', 'array'],
             'libur_nasional.*' => ['array'],
             'libur_nasional.*.tanggal' => [
@@ -135,18 +138,13 @@ class PeriodeController extends Controller
         $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
 
-        foreach ($validated['libur_nasional'] ?? [] as &$libur) {
+        //mengambil tanggal libur → mengubahnya ke format standar Y-m-d → menyimpan kembali hasilnya.
+        foreach ($validated['libur_nasional'] ?? [] as &$libur) { //ulangi setiap data yang ada di libur_nasional.
             $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
         }
 
         DB::transaction(function () use ($validated): void {
-            if (Periode::query()->lockForUpdate()->exists()) {
-                throw ValidationException::withMessages([
-                    'tahun_ajaran' => 'Periode sudah tersedia. Gunakan menu ubah untuk memperbarui periode yang aktif.',
-                ]);
-            }
-
-            $tahunAjaran = trim($validated['tahun_ajaran']);
+            $tahunAjaran = trim($validated['tahun_ajaran']); //trim() menghilangkan spasi di awal dan akhir.
 
             $semester1Start = $validated['semester_1_tanggal_mulai'];
             $semester1End = $validated['semester_1_tanggal_selesai'];
@@ -171,9 +169,12 @@ class PeriodeController extends Controller
                 'tanggal_selesai' => $semester2End,
             ]);
 
+            //Mengambil kembali Semester 1 dan 2
             $periode1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
             $periode2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
 
+
+            //Karena storeHariLiburs() membutuhkan object Periode sebagai parent
             if ($periode1) {
                 $this->storeHariLiburs($periode1, $validated);
             }
@@ -255,17 +256,20 @@ class PeriodeController extends Controller
             $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
         }
 
+        // Perbarui periode, hari libur, dan data absensi secara atomik agar tetap konsisten.
         DB::transaction(function () use ($id, $validated): void {
-            Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
-            $lockedPeriode = Periode::query()->findOrFail($id);
+            Periode::query()->orderBy('id')->lockForUpdate()->get(['id']); //Ambil data periode, urutkan berdasarkan id, lalu kunci baris tersebut selama transaksi database berlangsung.
+            $lockedPeriode = Periode::query()->findOrFail($id); //Kalau tidak ditemukan, findOrFail() akan menghasilkan error 404.
             $tahunAjaran = trim($validated['tahun_ajaran']);
             $tahunAjaranLama = $lockedPeriode->tahun_ajaran;
 
+            //Mencari Semester 1 lama
             $semester1 = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaranLama)
                 ->where('semester', 1)
                 ->lockForUpdate()
                 ->first();
+            //Mencari Semester 2 lama
             $semester2 = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaranLama)
                 ->where('semester', 2)
@@ -273,33 +277,49 @@ class PeriodeController extends Controller
                 ->first();
 
             if ($semester1) {
-                $oldData = $semester1->load('hariLiburs')->toArray();
+                $oldData = $semester1->load('hariLiburs')->toArray(); //Ini menyimpan kondisi sebelum diubah.load()Memuat relasi hariLiburs dari periode tersebut.
                 $semester1->update([
                     'tahun_ajaran' => $tahunAjaran,
                     'nama_periode' => "Semester Ganjil {$tahunAjaran}",
                     'tanggal_mulai' => $validated['semester_1_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_1_tanggal_selesai'],
                 ]);
-                $semester1->hariLiburs()->delete();
-                $this->storeHariLiburs($semester1, $validated);
+                $semester1->hariLiburs()->delete(); //Hapus hari libur lama
+                $this->storeHariLiburs($semester1, $validated); //Simpan hari libur dari form terbaru
                 $this->logUpdate(
                     'Periode',
                     $semester1,
                     ['old' => $oldData, 'new' => $semester1->fresh('hariLiburs')->toArray()],
                     "Memperbarui periode {$semester1->namaLengkap()}"
                 );
+            } else {
+                $semester1 = Periode::create([
+                    'tahun_ajaran' => $tahunAjaran,
+                    'semester' => 1,
+                    'tipe_periode' => 'semester',
+                    'nama_periode' => "Semester Ganjil {$tahunAjaran}",
+                    'tanggal_mulai' => $validated['semester_1_tanggal_mulai'],
+                    'tanggal_selesai' => $validated['semester_1_tanggal_selesai'],
+                ]);
+
+                $this->storeHariLiburs($semester1, $validated);
+                $this->logCreate(
+                    'Periode',
+                    $semester1->fresh('hariLiburs'),
+                    "Menambahkan periode {$semester1->namaLengkap()}"
+                );
             }
 
             if ($semester2) {
-                $oldData = $semester2->load('hariLiburs')->toArray();
+                $oldData = $semester2->load('hariLiburs')->toArray(); ///Ini menyimpan kondisi sebelum diubah.load()Memuat relasi hariLiburs dari periode tersebut.
                 $semester2->update([
                     'tahun_ajaran' => $tahunAjaran,
                     'nama_periode' => "Semester Genap {$tahunAjaran}",
                     'tanggal_mulai' => $validated['semester_2_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
                 ]);
-                $semester2->hariLiburs()->delete();
-                $this->storeHariLiburs($semester2, $validated);
+                $semester2->hariLiburs()->delete(); //Hapus hari libur lama
+                $this->storeHariLiburs($semester2, $validated); ////Simpan hari libur dari form terbaru
                 $this->logUpdate(
                     'Periode',
                     $semester2,
@@ -324,7 +344,7 @@ class PeriodeController extends Controller
                 );
             }
 
-            $periodeIds = Periode::query()
+            $periodeIds = Periode::query() //Mengambil ID periode
                 ->where('tahun_ajaran', $tahunAjaran)
                 ->whereIn('semester', [1, 2])
                 ->pluck('id');
@@ -332,6 +352,7 @@ class PeriodeController extends Controller
             $tanggalMulaiPeriode = $validated['semester_1_tanggal_mulai'];
             $tanggalSelesaiPeriode = $validated['semester_2_tanggal_selesai'];
 
+            //Menghapus absensi di luar periode
             Absensi::query()
                 ->whereIn('periode_id', $periodeIds)
                 ->where(function ($query) use ($tanggalMulaiPeriode, $tanggalSelesaiPeriode): void {
@@ -346,6 +367,7 @@ class PeriodeController extends Controller
 
     public function reset(Request $request)
     {
+        // Reset total menghapus konfigurasi periode beserta seluruh riwayat absensi.
         DB::transaction(function (): void {
             Absensi::query()->delete();
             Periode::query()->delete();
