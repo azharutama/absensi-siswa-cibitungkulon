@@ -1,5 +1,5 @@
 @php
-    {{-- Normalisasi data libur untuk state Alpine dan beri key pada item dinamis. --}}
+    // Normalisasi data libur untuk state Alpine dan beri key pada item dinamis.
     $listMingguan = $liburMingguan ?? collect();
     $listNasional = collect($liburNasional ?? [])->values()->map(
         fn (array $item, int $index) => [...$item, '_key' => "nasional-{$index}"]
