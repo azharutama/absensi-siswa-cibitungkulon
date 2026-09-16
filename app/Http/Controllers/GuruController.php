@@ -80,7 +80,8 @@ class GuruController extends Controller
             'no_telepon' => [
                 'required',
                 'numeric',
-                Rule::unique('users', 'no_telepon')->where(fn($query) => $query->where('role', $request->input('role'))),
+                Rule::unique('users', 'no_telepon'),
+                'max_digits:20',
             ],
             'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',
@@ -166,9 +167,8 @@ class GuruController extends Controller
             'no_telepon' => [
                 'required',
                 'numeric',
-                Rule::unique('users', 'no_telepon')
-                    ->where(fn($query) => $query->where('role', $request->input('role')))
-                    ->ignore($user), //Artinya user yang sedang diedit tidak dihitung sebagai duplikat dirinya sendiri.
+                Rule::unique('users', 'no_telepon')->ignore($user), //Nomor telepon harus unik lintas role.
+                'max_digits:20',
             ],
             'alamat' => 'required|string|max:255',
             'role' => 'required|string|in:operator,guru,kepala_sekolah',

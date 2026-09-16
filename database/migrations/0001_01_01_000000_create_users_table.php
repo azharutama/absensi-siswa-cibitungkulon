@@ -28,7 +28,7 @@ return new class extends Migration
             $table->index('role');
             $table->index(['role', 'nama']);
             $table->unique(['role', 'nip'], 'users_role_nip_unique');
-            $table->unique(['role', 'no_telepon'], 'users_role_no_telepon_unique');
+            $table->unique('no_telepon');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

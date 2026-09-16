@@ -25,7 +25,13 @@ class ProfileUpdateRequest extends FormRequest
                 'max:50',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'no_telepon' => ['nullable', 'string', 'max:20', 'regex:/^(\+?62|0)[0-9]{8,15}$/'],
+            'no_telepon' => [
+                'nullable',
+                'string',
+                'max:20',
+                'regex:/^(\+?62|0)[0-9]{8,15}$/',
+                Rule::unique(User::class, 'no_telepon')->ignore($this->user()->id),
+            ],
         ];
     }
 
@@ -39,6 +45,7 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'no_telepon.regex' => 'Format nomor telepon tidak valid. Gunakan format 08xxx atau 62xxx.',
             'no_telepon.max' => 'Nomor telepon maksimal 20 karakter.',
+            'no_telepon.unique' => 'Nomor telepon sudah digunakan oleh pengguna lain.',
         ];
     }
 }
