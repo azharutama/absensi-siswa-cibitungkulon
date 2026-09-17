@@ -17,6 +17,15 @@ class DataIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_non_guru_cannot_open_attendance_pages(): void
+    {
+        foreach ([User::factory()->operator()->create(), User::factory()->kepalaSekolah()->create()] as $user) {
+            $this->actingAs($user)
+                ->get(route('absensi.create'))
+                ->assertForbidden();
+        }
+    }
+
     public function test_alpa_attendance_sends_whatsapp_notification_immediately(): void
     {
         config()->set('services.fonnte.token', 'test-token');

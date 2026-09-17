@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\AutoSelectsSingleKelas;
 use App\Jobs\SendWhatsappBatchJob;
 use App\Models\Absensi;
 use App\Models\HariLibur;
@@ -21,8 +20,6 @@ use Illuminate\Validation\ValidationException;
 
 class AbsensiController extends Controller
 {
-    use AutoSelectsSingleKelas;
-
     public function create(Request $request): View|RedirectResponse
     {
         $filters = $request->validate([
@@ -37,39 +34,24 @@ class AbsensiController extends Controller
         $user = $request->user();
         $userKelas = $user->kelas; // Relasi HasOne ke model Kelas
 
-        // Guru otomatis menggunakan kelas yang diampu
-        if ($user->role === 'guru') {
-            if (! $userKelas) {
-                return view('absensi.create', [
-                    'kelas' => collect(),
-                    'siswas' => [],
-                    'absensiSiswa' => [],
-                    'kelasId' => null,
-                    'tanggal' => $tanggalDisplay,
-                    'stats' => ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
-                    'isLocked' => false,
-                    'holidayMessage' => null,
-                    'periodeWarning' => 'Anda belum ditugaskan ke kelas manapun. Silakan hubungi operator.',
-                ]);
-            }
-            $kelasId = $userKelas->id;
-            $kelas = collect([$userKelas]);
-        } else {
-            // Operator/Kepala Sekolah bisa memilih kelas
-            $kelas = Kelas::query()
-                ->accessibleBy($user)
-                ->select(['id', 'nama_kelas'])
-                ->orderBy('nama_kelas')
-                ->get();
+        // Guru otomatis menggunakan kelas yang diampu.
+        abort_unless($user->role === 'guru', 403, 'Akses absensi hanya tersedia untuk guru.');
 
-            $kelasId = $this->getKelasIdWithAutoSelect($request->get('kelas_id'), $kelas);
+        if (! $userKelas) {
+            return view('absensi.create', [
+                'kelas' => collect(),
+                'siswas' => [],
+                'absensiSiswa' => [],
+                'kelasId' => null,
+                'tanggal' => $tanggalDisplay,
+                'stats' => ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
+                'isLocked' => false,
+                'holidayMessage' => null,
+                'periodeWarning' => 'Anda belum ditugaskan ke kelas manapun. Silakan hubungi operator.',
+            ]);
         }
-
-        if ($user->role !== 'guru') {
-            if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.create', ['tanggal' => $tanggal])) {
-                return $redirect;
-            }
-        }
+        $kelasId = $userKelas->id;
+        $kelas = collect([$userKelas]);
 
         // Cek apakah ada periode aktif untuk tanggal yang dipilih
         $activePeriode = Periode::query()
@@ -274,44 +256,29 @@ class AbsensiController extends Controller
         ]);
 
         $user = $request->user();
+        abort_unless($user->role === 'guru', 403, 'Akses absensi hanya tersedia untuk guru.');
         $userKelas = $user->kelas;
 
-        if ($user->role === 'guru') {
-            if (! $userKelas) {
-                $tanggalDisplay = $filters['tanggal'] ?? today()->format('d/m/Y');
-                return view('absensi.edit', [
-                    'kelas' => collect(),
-                    'siswas' => [],
-                    'absensiSiswa' => [],
-                    'kelasId' => null,
-                    'tanggal' => $tanggalDisplay,
-                    'stats' => ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
-                    'isLocked' => false,
-                    'holidayMessage' => null,
-                    'periodeWarning' => 'Anda belum ditugaskan ke kelas manapun. Silakan hubungi operator.',
-                    'activeDates' => [],
-                ]);
-            }
-            $kelasId = $userKelas->id;
-            $kelas = collect([$userKelas]);
-        } else {
-            $kelas = Kelas::query()
-                ->accessibleBy($user)
-                ->select(['id', 'nama_kelas'])
-                ->orderBy('nama_kelas')
-                ->get();
-
-            $kelasId = $this->getKelasIdWithAutoSelect($request->get('kelas_id'), $kelas);
+        if (! $userKelas) {
+            $tanggalDisplay = $filters['tanggal'] ?? today()->format('d/m/Y');
+            return view('absensi.edit', [
+                'kelas' => collect(),
+                'siswas' => [],
+                'absensiSiswa' => [],
+                'kelasId' => null,
+                'tanggal' => $tanggalDisplay,
+                'stats' => ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
+                'isLocked' => false,
+                'holidayMessage' => null,
+                'periodeWarning' => 'Anda belum ditugaskan ke kelas manapun. Silakan hubungi operator.',
+                'activeDates' => [],
+            ]);
         }
+        $kelasId = $userKelas->id;
+        $kelas = collect([$userKelas]);
 
         $tanggalInput = $filters['tanggal'] ?? today()->format('d/m/Y');
         $tanggal = $this->parseDate($tanggalInput)->format('Y-m-d');
-
-        if ($user->role !== 'guru') {
-            if ($redirect = $this->autoRedirectForSingleKelas($request, $kelas, 'absensi.edit', ['tanggal' => $tanggal])) {
-                return $redirect;
-            }
-        }
 
         // Cari periode aktif untuk tanggal ini
         $activePeriode = Periode::query()
