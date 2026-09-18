@@ -14,7 +14,7 @@
         <div class="w-full max-w-md">
             <!-- Header -->
             <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold text-gray-900">SDN Cibitung Kulon 02</h2>
+                <h2 class="text-2xl font-bold text-gray-900">SDN Cibitungkulon 02</h2>
             </div>
 
             <!-- Login Card -->
