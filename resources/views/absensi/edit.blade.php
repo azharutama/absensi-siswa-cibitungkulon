@@ -30,9 +30,9 @@
 
         {{-- Guru hanya memilih tanggal untuk kelasnya, sedangkan role lain dapat memilih kelas. --}}
         @if(auth()->user()->role === 'guru')
-            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :hideKelas="true" :activeDates="$activeDates ?? []" />
+            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :hideKelas="true" :activeDates="$activeDates ?? []" />
         @else
-            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :disabled="$periodeWarning !== null" :activeDates="$activeDates ?? []" />
+            <x-absensi-filter :action="route('absensi.edit')" :kelas="$kelas" :kelasId="$kelasId" :tanggal="$tanggal" :activeDates="$activeDates ?? []" />
         @endif
 
             @if(false && $periodeWarning)

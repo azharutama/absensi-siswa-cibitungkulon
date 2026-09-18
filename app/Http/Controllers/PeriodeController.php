@@ -8,25 +8,32 @@ use App\Models\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Closure;
 use Carbon\Carbon;
 
 class PeriodeController extends Controller
 {
     use LogsActivity;
 
+    /**
+     * Tampilkan konfigurasi tahun ajaran, semester, dan hari libur.
+     *
+     * Data semester dimuat bersama hari liburnya agar form dapat menampilkan
+     * nilai lama dalam format yang sesuai untuk input tanggal HTML.
+     */
     public function index(Request $request)
     {
-        // Ambil seluruh semester dari satu periode akademik aktif.
+        // Ambil semester beserta relasi hari libur dalam satu query.
         $periodes = Periode::query()
             ->with('hariLiburs')
             ->get();
 
-        //Memisahkan Semester 1 dan Semester 2
+        // Pisahkan data semester agar masing-masing tanggal dapat ditampilkan di form.
         $semester1 = $periodes->firstWhere('semester', 1);
         $semester2 = $periodes->firstWhere('semester', 2);
 
 
-        //menyiapkan data agar mudah digunakan oleh Blade/view.
+        // Siapkan nilai ISO untuk input HTML date dan pertahankan nilai lama saat validasi gagal.
         $periodeData = [
             'tahun_ajaran' => $semester1?->tahun_ajaran ?? $semester2?->tahun_ajaran ?? old('tahun_ajaran', ''), //?-> adalah null safe operator, jika $semester1 null maka akan mengecek $semester2, jika keduanya null maka akan menggunakan old('tahun_ajaran', '').
             'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('Y-m-d') ?? old('semester_1_tanggal_mulai', ''),
@@ -35,7 +42,7 @@ class PeriodeController extends Controller
             'semester_2_tanggal_selesai' => $semester2?->tanggal_selesai?->format('Y-m-d') ?? old('semester_2_tanggal_selesai', ''),
         ];
 
-        // Format untuk tampilan di view (d/m/Y)
+        // Siapkan format tanggal Indonesia untuk teks tampilan yang mudah dibaca pengguna.
         $periodeDataDisplay = [
             'semester_1_tanggal_mulai' => $semester1?->tanggal_mulai?->format('d/m/Y'),
             'semester_1_tanggal_selesai' => $semester1?->tanggal_selesai?->format('d/m/Y'),
@@ -46,10 +53,11 @@ class PeriodeController extends Controller
         $liburMingguan = collect();
         $liburNasional = collect();
 
-        // Ambil periode pertama untuk menampilkan hari libur
+        // Gunakan semester 1 sebagai sumber tampilan awal; jika belum ada, gunakan semester 2.
         $periode = $semester1 ?? $semester2; //Gunakan Semester 1 jika tersedia. Kalau tidak, gunakan Semester 2.
 
         if ($periode) {
+            // Pisahkan hari libur mingguan dan nasional agar sesuai dengan dua bagian form.
             $liburMingguan = $periode->hariLiburs //Mengambil libur mingguan
                 ->where('tipe', 'mingguan')
                 ->map(fn($item) => [
@@ -66,11 +74,19 @@ class PeriodeController extends Controller
                 ]);
         }
 
+        // Kirim konfigurasi periode dan hari libur ke halaman pengaturan akademik.
         return view('periode.index', compact('periode', 'periodeData', 'periodeDataDisplay', 'liburMingguan', 'liburNasional'));
     }
 
+    /**
+     * Buat konfigurasi baru untuk Semester 1 dan Semester 2.
+     *
+     * Tanggal hari libur nasional divalidasi agar hanya berada di salah satu
+     * rentang semester, lalu semua data disimpan atomik dalam satu transaksi.
+     */
     public function store(Request $request)
     {
+        // Validasi tahun ajaran, rentang semester, dan daftar hari libur dari form.
         $validated = $request->validate([
             // Validasi untuk periode akademik
             'tahun_ajaran' => [
@@ -99,8 +115,7 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal' => [
                 'required',
                 'date',
-                'after_or_equal:semester_1_tanggal_mulai',
-                'before_or_equal:semester_2_tanggal_selesai',
+                $this->nationalHolidayDateRule($request),
                 'distinct',
             ],
             'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
@@ -133,25 +148,28 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
         ]);
 
-        // Konversi d/m/Y ke Y-m-d untuk database
+        // Normalisasi seluruh batas semester ke format database Y-m-d.
         $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
         $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
 
-        //mengambil tanggal libur → mengubahnya ke format standar Y-m-d → menyimpan kembali hasilnya.
-        foreach ($validated['libur_nasional'] ?? [] as &$libur) { //ulangi setiap data yang ada di libur_nasional.
+        // Normalisasi tanggal nasional sebelum data diteruskan ke transaksi penyimpanan.
+        foreach ($validated['libur_nasional'] ?? [] as &$libur) {
             $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
         }
 
+        // Buat dua semester dan hari liburnya sebagai satu kesatuan atomik.
         DB::transaction(function () use ($validated): void {
-            $tahunAjaran = trim($validated['tahun_ajaran']); //trim() menghilangkan spasi di awal dan akhir.
+            // Bersihkan spasi pada tahun ajaran agar nama dan pencarian periode konsisten.
+            $tahunAjaran = trim($validated['tahun_ajaran']);
 
             $semester1Start = $validated['semester_1_tanggal_mulai'];
             $semester1End = $validated['semester_1_tanggal_selesai'];
             $semester2Start = $validated['semester_2_tanggal_mulai'];
             $semester2End = $validated['semester_2_tanggal_selesai'];
 
+            // Simpan Semester 1 menggunakan rentang tanggal yang telah divalidasi.
             Periode::create([
                 'tahun_ajaran' => $tahunAjaran,
                 'semester' => 1,
@@ -161,6 +179,7 @@ class PeriodeController extends Controller
                 'tanggal_selesai' => $semester1End,
             ]);
 
+            // Simpan Semester 2 menggunakan rentang tanggal yang telah divalidasi.
             Periode::create([
                 'tahun_ajaran' => $tahunAjaran,
                 'semester' => 2,
@@ -170,12 +189,12 @@ class PeriodeController extends Controller
                 'tanggal_selesai' => $semester2End,
             ]);
 
-            //Mengambil kembali Semester 1 dan 2
+            // Ambil kembali kedua record untuk mendapatkan ID parent hari libur.
             $periode1 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 1)->first();
             $periode2 = Periode::query()->where('tahun_ajaran', $tahunAjaran)->where('semester', 2)->first();
 
 
-            //Karena storeHariLiburs() membutuhkan object Periode sebagai parent
+            // Simpan hari libur hanya ke semester yang rentangnya memuat tanggal libur.
             if ($periode1) {
                 $this->storeHariLiburs($periode1, $validated);
             }
@@ -187,9 +206,17 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil disimpan.');
     }
 
+    /**
+     * Perbarui konfigurasi tahun ajaran, semester, hari libur, dan data terkait.
+     *
+     * Semua baris periode dikunci selama transaksi agar pembaruan dua semester
+     * tidak saling bertabrakan ketika ada request bersamaan.
+     */
     public function update(Request $request, $id)
     {
+        // Pastikan periode yang menjadi target memang ada sebelum memproses form.
         $periode = Periode::findOrFail($id);
+        // Validasi ulang seluruh konfigurasi, termasuk celah antarsemester untuk hari nasional.
         $validated = $request->validate([
             'tahun_ajaran' => [
                 'required',
@@ -214,8 +241,7 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal' => [
                 'required',
                 'date',
-                'after_or_equal:semester_1_tanggal_mulai',
-                'before_or_equal:semester_2_tanggal_selesai',
+                $this->nationalHolidayDateRule($request),
                 'distinct',
             ],
             'libur_nasional.*.nama_libur' => ['required', 'string', 'max:255'],
@@ -248,30 +274,32 @@ class PeriodeController extends Controller
             'libur_nasional.*.tanggal.before_or_equal' => 'Tanggal libur nasional harus berada dalam rentang periode.',
         ]);
 
-        // Konversi d/m/Y ke Y-m-d untuk database
+        // Normalisasi batas semester ke format Y-m-d sebelum update database.
         $validated['semester_1_tanggal_mulai'] = $this->parseDate($validated['semester_1_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_1_tanggal_selesai'] = $this->parseDate($validated['semester_1_tanggal_selesai'])->format('Y-m-d');
         $validated['semester_2_tanggal_mulai'] = $this->parseDate($validated['semester_2_tanggal_mulai'])->format('Y-m-d');
         $validated['semester_2_tanggal_selesai'] = $this->parseDate($validated['semester_2_tanggal_selesai'])->format('Y-m-d');
 
+        // Normalisasi tanggal setiap hari libur nasional agar konsisten dengan kolom date.
         foreach ($validated['libur_nasional'] ?? [] as &$libur) {
             $libur['tanggal'] = $this->parseDate($libur['tanggal'])->format('Y-m-d');
         }
 
-        // Perbarui periode, hari libur, dan data absensi secara atomik agar tetap konsisten.
+        // Perbarui periode, hari libur, dan pembersihan absensi secara atomik.
         DB::transaction(function () use ($id, $validated): void {
-            Periode::query()->orderBy('id')->lockForUpdate()->get(['id']); //Ambil data periode, urutkan berdasarkan id, lalu kunci baris tersebut selama transaksi database berlangsung.
-            $lockedPeriode = Periode::query()->findOrFail($id); //Kalau tidak ditemukan, findOrFail() akan menghasilkan error 404.
+            // Kunci seluruh daftar periode untuk mencegah update semester bersamaan.
+            Periode::query()->orderBy('id')->lockForUpdate()->get(['id']);
+            // Ambil ulang record target setelah lock diterapkan.
+            $lockedPeriode = Periode::query()->findOrFail($id);
             $tahunAjaran = trim($validated['tahun_ajaran']);
             $tahunAjaranLama = $lockedPeriode->tahun_ajaran;
 
-            //Mencari Semester 1 lama
+            // Cari kedua semester lama berdasarkan tahun ajaran sebelum perubahan.
             $semester1 = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaranLama)
                 ->where('semester', 1)
                 ->lockForUpdate()
                 ->first();
-            //Mencari Semester 2 lama
             $semester2 = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaranLama)
                 ->where('semester', 2)
@@ -279,14 +307,18 @@ class PeriodeController extends Controller
                 ->first();
 
             if ($semester1) {
+                // Simpan snapshot lama untuk activity log sebelum record diubah.
                 $oldData = $semester1->load('hariLiburs')->toArray(); //Ini menyimpan kondisi sebelum diubah.load()Memuat relasi hariLiburs dari periode tersebut.
+                // Perbarui metadata dan rentang Semester 1.
                 $semester1->update([
                     'tahun_ajaran' => $tahunAjaran,
                     'nama_periode' => "Semester Ganjil {$tahunAjaran}",
                     'tanggal_mulai' => $validated['semester_1_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_1_tanggal_selesai'],
                 ]);
-                $semester1->hariLiburs()->delete(); //Hapus hari libur lama
+                // Hapus daftar hari libur lama agar tidak menyisakan konfigurasi usang.
+                $semester1->hariLiburs()->delete();
+                // Simpan ulang hari libur terbaru sesuai rentang semester.
                 $this->storeHariLiburs($semester1, $validated); //Simpan hari libur dari form terbaru
                 $this->logUpdate(
                     'Periode',
@@ -295,6 +327,7 @@ class PeriodeController extends Controller
                     "Memperbarui periode {$semester1->namaLengkap()}"
                 );
             } else {
+                // Jika Semester 1 belum ada, buat record baru beserta hari liburnya.
                 $semester1 = Periode::create([
                     'tahun_ajaran' => $tahunAjaran,
                     'semester' => 1,
@@ -313,14 +346,17 @@ class PeriodeController extends Controller
             }
 
             if ($semester2) {
+                // Simpan snapshot lama Semester 2 untuk kebutuhan audit perubahan.
                 $oldData = $semester2->load('hariLiburs')->toArray(); ///Ini menyimpan kondisi sebelum diubah.load()Memuat relasi hariLiburs dari periode tersebut.
+                // Perbarui metadata dan rentang Semester 2.
                 $semester2->update([
                     'tahun_ajaran' => $tahunAjaran,
                     'nama_periode' => "Semester Genap {$tahunAjaran}",
                     'tanggal_mulai' => $validated['semester_2_tanggal_mulai'],
                     'tanggal_selesai' => $validated['semester_2_tanggal_selesai'],
                 ]);
-                $semester2->hariLiburs()->delete(); //Hapus hari libur lama
+                // Ganti konfigurasi hari libur lama dengan data terbaru dari form.
+                $semester2->hariLiburs()->delete();
                 $this->storeHariLiburs($semester2, $validated); ////Simpan hari libur dari form terbaru
                 $this->logUpdate(
                     'Periode',
@@ -329,6 +365,7 @@ class PeriodeController extends Controller
                     "Memperbarui periode {$semester2->namaLengkap()}"
                 );
             } else {
+                // Jika Semester 2 belum ada, buat record baru beserta hari liburnya.
                 $semester2 = Periode::create([
                     'tahun_ajaran' => $tahunAjaran,
                     'semester' => 2,
@@ -346,7 +383,8 @@ class PeriodeController extends Controller
                 );
             }
 
-            $periodeIds = Periode::query() //Mengambil ID periode
+            // Ambil ID kedua semester yang baru agar pembersihan absensi terbatas pada tahun ajaran ini.
+            $periodeIds = Periode::query()
                 ->where('tahun_ajaran', $tahunAjaran)
                 ->whereIn('semester', [1, 2])
                 ->pluck('id');
@@ -354,7 +392,7 @@ class PeriodeController extends Controller
             $tanggalMulaiPeriode = $validated['semester_1_tanggal_mulai'];
             $tanggalSelesaiPeriode = $validated['semester_2_tanggal_selesai'];
 
-            //Menghapus absensi di luar periode
+            // Hapus absensi milik kedua semester yang berada di luar rentang tahun ajaran baru.
             Absensi::query()
                 ->whereIn('periode_id', $periodeIds)
                 ->where(function ($query) use ($tanggalMulaiPeriode, $tanggalSelesaiPeriode): void {
@@ -367,9 +405,15 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Periode akademik Semester 1 dan Semester 2 berhasil diperbarui.');
     }
 
+    /**
+     * Reset seluruh konfigurasi periode dan riwayat absensi.
+     *
+     * Penghapusan dilakukan dalam transaksi agar periode dan absensi tidak
+     * berhenti pada kondisi setengah terhapus jika terjadi kegagalan database.
+     */
     public function reset(Request $request)
     {
-        // Reset total menghapus konfigurasi periode beserta seluruh riwayat absensi.
+        // Hapus absensi lebih dahulu, kemudian periode parent beserta hari liburnya.
         DB::transaction(function (): void {
             Absensi::query()->delete();
             Periode::query()->delete();
@@ -385,6 +429,7 @@ class PeriodeController extends Controller
      */
     private function storeHariLiburs(Periode $periode, array $validated): void
     {
+        // Simpan aturan mingguan sebagai data berulang untuk semester tersebut.
         foreach ($validated['libur_mingguan'] ?? [] as $libur) {
             $periode->hariLiburs()->create([
                 'tipe' => 'mingguan',
@@ -393,7 +438,15 @@ class PeriodeController extends Controller
             ]);
         }
 
+        // Simpan libur nasional hanya jika tanggalnya berada di dalam periode parent.
         foreach ($validated['libur_nasional'] ?? [] as $libur) {
+            $tanggal = Carbon::parse($libur['tanggal']);
+
+            if ($tanggal->lt($periode->tanggal_mulai) || $tanggal->gt($periode->tanggal_selesai)) {
+                // Lewati tanggal pada celah antarsemester agar tidak terikat ke periode yang salah.
+                continue;
+            }
+
             $periode->hariLiburs()->create([
                 'tipe' => 'nasional',
                 'tanggal' => $libur['tanggal'],
@@ -404,13 +457,45 @@ class PeriodeController extends Controller
     }
 
     /**
+     * Pastikan hari libur nasional berada di salah satu rentang semester.
+     */
+    private function nationalHolidayDateRule(Request $request): Closure
+    {
+        // Closure ini dipakai oleh validator untuk membaca empat batas semester dari request.
+        return function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+            try {
+                // Parse tanggal hari libur dan seluruh batas semester untuk perbandingan inklusif.
+                $tanggal = Carbon::parse((string) $value);
+                $semester1Mulai = Carbon::parse($request->input('semester_1_tanggal_mulai'));
+                $semester1Selesai = Carbon::parse($request->input('semester_1_tanggal_selesai'));
+                $semester2Mulai = Carbon::parse($request->input('semester_2_tanggal_mulai'));
+                $semester2Selesai = Carbon::parse($request->input('semester_2_tanggal_selesai'));
+            } catch (\Throwable) {
+                // Biarkan rule date bawaan Laravel melaporkan format tanggal yang tidak valid.
+                return;
+            }
+
+            // Hari libur sah jika berada di Semester 1 atau Semester 2, bukan di celah keduanya.
+            $diSemester1 = $tanggal->betweenIncluded($semester1Mulai, $semester1Selesai);
+            $diSemester2 = $tanggal->betweenIncluded($semester2Mulai, $semester2Selesai);
+
+            if (! $diSemester1 && ! $diSemester2) {
+                // Tolak tanggal sebelum Semester 1, setelah Semester 2, dan di antara keduanya.
+                $fail('Tanggal libur nasional harus berada di dalam rentang Semester 1 atau Semester 2.');
+            }
+        };
+    }
+
+    /**
      * Parse string tanggal support format d/m/Y dan Y-m-d
      */
     private function parseDate(string $date): Carbon
     {
+        // Tangani format tanggal Indonesia secara eksplisit sebelum mencoba parser umum Carbon.
         if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
             return Carbon::createFromFormat('d/m/Y', $date);
         }
+        // Format ISO/database dan format Carbon lain ditangani oleh parser umum.
         return Carbon::parse($date);
     }
 }
