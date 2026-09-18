@@ -259,6 +259,40 @@ class DataIntegrityTest extends TestCase
         $this->assertDatabaseMissing('periodes', ['nama_periode' => 'Semester Bertumpuk']);
     }
 
+    public function test_national_holiday_in_second_semester_is_preserved_with_weekly_holidays(): void
+    {
+        $operator = User::factory()->operator()->create();
+
+        $response = $this->actingAs($operator)->post(route('periode.store'), [
+            'tahun_ajaran' => '2026/2027',
+            'semester_1_tanggal_mulai' => '2026-07-01',
+            'semester_1_tanggal_selesai' => '2026-12-31',
+            'semester_2_tanggal_mulai' => '2027-01-01',
+            'semester_2_tanggal_selesai' => '2027-06-30',
+            'libur_mingguan' => [
+                ['hari' => 'Minggu', 'keterangan' => 'Libur Rutin Mingguan'],
+            ],
+            'libur_nasional' => [
+                [
+                    'tanggal' => '2027-03-11',
+                    'nama_libur' => 'Hari Raya Nyepi',
+                    'keterangan' => 'Libur nasional',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect(route('periode.index'));
+        $this->assertDatabaseHas('hari_liburs', [
+            'tipe' => 'nasional',
+            'tanggal' => '2027-03-11',
+            'nama_libur' => 'Hari Raya Nyepi',
+        ]);
+
+        $this->actingAs($operator)
+            ->get(route('periode.index'))
+            ->assertSee('Hari Raya Nyepi');
+    }
+
     public function test_single_operator_can_update_own_account(): void
     {
         $operator = User::factory()->operator()->create([
