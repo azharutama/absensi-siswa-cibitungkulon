@@ -67,7 +67,7 @@ class PeriodeController extends Controller
 
             // Libur nasional dapat berada di Semester 1 atau Semester 2.
             // Gabungkan keduanya agar update tidak menghapus data semester lain.
-            $liburNasional = $periodes->flatMap(fn ($semester) => $semester->hariLiburs
+            $liburNasional = $periodes->flatMap(fn($semester) => $semester->hariLiburs
                 ->where('tipe', 'nasional'))
                 ->sortBy('tanggal')
                 ->map(fn($item) => [
